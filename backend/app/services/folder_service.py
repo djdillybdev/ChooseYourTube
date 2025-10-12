@@ -1,8 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..db.crud import crud_folder, crud_channel
+from ..db.crud import crud_folder
 from ..db.models.folder import Folder
-from ..db.models.channel import Channel
 from ..schemas.folder import FolderCreate, FolderUpdate, FolderOut
 
 
