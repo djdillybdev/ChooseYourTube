@@ -15,7 +15,7 @@ from ..clients.youtube import YouTubeAPI
 INITIAL_VIDEO_FETCH_LIMIT = 1000
 VIDEO_BATCH_SIZE = 500
 
-YT_RSS_BASE_URL = 'https://www.youtube.com/feeds/videos.xml?channel_id='
+YT_RSS_BASE_URL = "https://www.youtube.com/feeds/videos.xml?channel_id="
 
 # Configurable with safe fallbacks
 SHORTS_MAX_SECONDS = getattr(
@@ -145,7 +145,10 @@ async def fetch_and_store_all_channel_videos_task(ctx, channel_id: str):
             print("No video IDs found. Exiting task.")
             return
 
-        await create_and_update_videos(video_ids, channel_id, db_session, youtube_client)
+        await create_and_update_videos(
+            video_ids, channel_id, db_session, youtube_client
+        )
+
 
 async def refresh_latest_channel_videos_task(ctx, channel_id: str):
     """
@@ -159,9 +162,9 @@ async def refresh_latest_channel_videos_task(ctx, channel_id: str):
         await refresh_latest_channel_videos(channel_id, db_session, youtube_client)
 
 
-
-
-async def refresh_latest_channel_videos(channel_id: str, db_session: AsyncSession, youtube_client: YouTubeAPI):
+async def refresh_latest_channel_videos(
+    channel_id: str, db_session: AsyncSession, youtube_client: YouTubeAPI
+):
     """
     Fetch and add the latest videos for a channel
     """
@@ -176,7 +179,7 @@ async def refresh_latest_channel_videos(channel_id: str, db_session: AsyncSessio
     video_entries = parsed_feed_data.entries
     for entry in video_entries:
         video_id = entry.yt_videoid
-        if 'shorts' not in entry.link:
+        if "shorts" not in entry.link:
             parsed_video_ids.append(video_id)
 
     total_parsed_videos = len(parsed_video_ids)
@@ -196,7 +199,7 @@ async def refresh_latest_channel_videos(channel_id: str, db_session: AsyncSessio
         if not channel:
             print(f"Channel {channel_id} not found in DB. Exiting task.")
             return
-        
+
         response = await youtube_client.playlist_items_list_async(
             part="snippet,contentDetails",
             playlistId=channel.uploads_playlist_id,
@@ -218,9 +221,17 @@ async def refresh_latest_channel_videos(channel_id: str, db_session: AsyncSessio
     else:
         video_ids_to_update = parsed_video_ids
 
-    await create_and_update_videos(video_ids_to_update, channel_id, db_session, youtube_client)
-            
-async def create_and_update_videos(video_ids: list[str], channel_id: str, db_session: AsyncSession, youtube_client: YouTubeAPI):
+    await create_and_update_videos(
+        video_ids_to_update, channel_id, db_session, youtube_client
+    )
+
+
+async def create_and_update_videos(
+    video_ids: list[str],
+    channel_id: str,
+    db_session: AsyncSession,
+    youtube_client: YouTubeAPI,
+):
     full_video_items = []
     print("get video items")
     for i in range(0, len(video_ids), 50):
@@ -263,6 +274,7 @@ async def create_and_update_videos(video_ids: list[str], channel_id: str, db_ses
         print("add videos to db")
         await crud_video.create_videos_bulk(db_session, videos_to_create)
         print("job success")
+
 
 async def get_video_by_id(video_id: str, db_session: AsyncSession) -> Video:
     video = await crud_video.get_video_by_id(db_session, video_id)

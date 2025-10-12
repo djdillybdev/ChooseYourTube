@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from .base import BaseSchema
 
 # --- Input Schemas ---
@@ -31,7 +31,4 @@ class FolderOut(BaseSchema):
     id: int
     name: str
     parent_id: int | None
-
-    # This tells Pydantic to expect a list of objects that also
-    # conform to the FolderOut schema.
-    children: list[FolderOut] = []
+    children: list["FolderOut"] = Field(default_factory=list)

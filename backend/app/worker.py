@@ -9,13 +9,16 @@ from .services import channel_service, video_service
 
 REDIS_SETTINGS = settings.get_redis_settings()
 
+
 async def startup(ctx):
     # Reuse a single ArqRedis connection for cron enqueues
     ctx["redis"] = await arq.create_pool(REDIS_SETTINGS)
 
+
 async def shutdown(ctx):
     # ArqRedis uses a pool; nothing special required, but keep for symmetry
     pass
+
 
 async def enqueue_channel_refreshes(ctx):
     """
@@ -30,8 +33,9 @@ async def enqueue_channel_refreshes(ctx):
         await ctx["redis"].enqueue_job(
             "refresh_latest_channel_videos_task",
             channel_id=ch.id,
-            _defer_by=timedelta(seconds=i * 3) # 3s spacing between jobs
+            _defer_by=timedelta(seconds=i * 3),  # 3s spacing between jobs
         )
+
 
 # This class defines the worker's configuration.
 # The `arq` CLI will look for a class named `WorkerSettings`.
@@ -48,9 +52,7 @@ class WorkerSettings:
         video_service.refresh_latest_channel_videos_task,
     ]
 
-    cron_jobs = [
-        cron(enqueue_channel_refreshes, minute=0)
-    ]
+    cron_jobs = [cron(enqueue_channel_refreshes, minute=0)]
 
     # Use the same Redis settings as our application
     on_startup = startup

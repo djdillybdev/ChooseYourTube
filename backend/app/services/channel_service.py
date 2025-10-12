@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..clients.youtube import YouTubeAPI
 from ..db.crud import crud_channel
 from ..db.models.channel import Channel
-from ..schemas.channel import ChannelCreate
+from ..schemas.channel import ChannelCreate, ChannelUpdate
 from .video_service import refresh_latest_channel_videos
 
 
@@ -34,18 +34,20 @@ async def get_all_channels(db_session: AsyncSession) -> list[Channel]:
     return await crud_channel.get_all_channels(db_session)
 
 
-async def refresh_channel_by_id(channel_id: str, db_session: AsyncSession, youtube_client: YouTubeAPI) -> Channel:
+async def refresh_channel_by_id(
+    channel_id: str, db_session: AsyncSession, youtube_client: YouTubeAPI
+) -> Channel:
     """
     Refresh the given channel to get its latest videos
     """
     channel = await crud_channel.get_channel_by_id(db_session, channel_id)
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
-    
+
     await refresh_latest_channel_videos(channel_id, db_session, youtube_client)
 
     return channel
-    
+
 
 async def add_new_channel(
     channel_data: ChannelCreate, db_session: AsyncSession, youtube_client: YouTubeAPI
@@ -99,6 +101,24 @@ async def add_new_channel(
     )
 
     return await crud_channel.create_channel(db_session, new_channel)
+
+
+async def update_channel(
+    channel_id: str, payload: ChannelUpdate, db_session: AsyncSession
+) -> Channel:
+    """
+    Updates a channel by its ID. Allows favoriting a channel and changing its folder.
+    """
+    channel = await crud_channel.get_channel_by_id(db_session, channel_id)
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    if payload.is_favorited is not None:
+        channel.is_favorited = payload.is_favorited
+    if payload.folder_id is not None or payload.folder_id is None:
+        channel.folder_id = payload.folder_id
+    await db_session.commit()
+    await db_session.refresh(channel)
+    return channel
 
 
 async def delete_channel_by_id(channel_id: str, db_session: AsyncSession) -> None:

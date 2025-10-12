@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .core.config import settings
-from .routers import channels, videos
+from .routers import channels, videos, folders
 
 logging.basicConfig(
     stream=sys.stdout, level=logging.DEBUG if settings.debug_logs else logging.INFO
@@ -30,6 +30,7 @@ app.add_middleware(
 
 app.include_router(channels.router)
 app.include_router(videos.router)
+app.include_router(folders.router)
 
 
 @app.get("/")

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status
 from ..dependencies import DBSessionDep, YouTubeAPIDep, ArqDep
-from ..schemas.channel import ChannelCreate, ChannelOut
+from ..schemas.channel import ChannelCreate, ChannelOut, ChannelUpdate
 from ..services import channel_service
 
 router = APIRouter(prefix="/channels", tags=["Channels"])
@@ -45,12 +45,22 @@ async def create_new_channel(
 
     return new_channel
 
-@router.post("/{channel_id}", response_model=ChannelOut)
-async def refresh_channel(channel_id: str, db_session: DBSessionDep, youtube_client: YouTubeAPIDep):
+
+@router.patch("/{channel_id}", response_model=ChannelOut)
+async def update_channel(channel_id: str, payload: ChannelUpdate, db_session: DBSessionDep):
+    return await channel_service.update_channel(channel_id, payload, db_session)
+
+
+@router.post("/{channel_id}/refresh", response_model=ChannelOut)
+async def refresh_channel(
+    channel_id: str, db_session: DBSessionDep, youtube_client: YouTubeAPIDep
+):
     """
     Refresh the given YouTube channel to add and update the first 50 videos in its uploads playlist
     """
-    return await channel_service.refresh_channel_by_id(channel_id, db_session, youtube_client)
+    return await channel_service.refresh_channel_by_id(
+        channel_id, db_session, youtube_client
+    )
 
 
 @router.delete("/{channel_id}", status_code=status.HTTP_200_OK)
