@@ -47,7 +47,9 @@ async def create_new_channel(
 
 
 @router.patch("/{channel_id}", response_model=ChannelOut)
-async def update_channel(channel_id: str, payload: ChannelUpdate, db_session: DBSessionDep):
+async def update_channel(
+    channel_id: str, payload: ChannelUpdate, db_session: DBSessionDep
+):
     return await channel_service.update_channel(channel_id, payload, db_session)
 
 

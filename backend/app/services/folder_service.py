@@ -77,4 +77,3 @@ async def update_folder(
     await db.commit()
     await db.refresh(folder)
     return folder
-
