@@ -34,6 +34,22 @@ services:
     command: ["uv","run","uvicorn","app.main:app","--host","0.0.0.0","--port","8009","--reload"]
     restart: unless-stopped
 
+  frontend:
+    image: node:20-alpine
+    container_name: yt_frontend
+    working_dir: /app/frontend
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8009
+      - CHOKIDAR_USEPOLLING=true
+    ports: ["5173:5173"]
+    depends_on: [api]
+    command: >-
+      sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm dev --host 0.0.0.0 --port 5173"
+    restart: unless-stopped
+
   worker:
     image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
     container_name: yt_worker
