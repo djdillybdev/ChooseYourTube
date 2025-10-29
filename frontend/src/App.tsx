@@ -1,5 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
+
 import { createChannel, fetchChannels, fetchVideosForChannel } from "./api";
+import "./App.css";
 import { Channel, Video } from "./types";
 
 function formatPublishedDate(date: string) {
