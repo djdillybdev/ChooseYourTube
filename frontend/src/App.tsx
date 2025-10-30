@@ -39,6 +39,9 @@ function App() {
   const [videosLoading, setVideosLoading] = useState(false)
   const [videosError, setVideosError] = useState<string | null>(null)
 
+  const [activeVideo, setActiveVideo] = useState<Video | null>(null)
+  const [isDescriptionExpanded, setDescriptionExpanded] = useState(false)
+
   const [handleInput, setHandleInput] = useState('')
   const [addChannelLoading, setAddChannelLoading] = useState(false)
   const [addChannelError, setAddChannelError] = useState<string | null>(null)
@@ -135,6 +138,41 @@ function App() {
       setAddChannelLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!activeVideo) {
+      return
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveVideo(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [activeVideo])
+
+  useEffect(() => {
+    setDescriptionExpanded(false)
+  }, [activeVideo])
+
+  const onVideoSelect = (video: Video) => {
+    setActiveVideo(video)
+  }
+
+  const onModalClose = () => {
+    setActiveVideo(null)
+  }
+
+  const toggleDescription = () => {
+    setDescriptionExpanded((prev) => !prev)
+  }
+
+  const activeVideoDescriptionId = activeVideo ? `video-modal-description-${activeVideo.id}` : undefined
 
   return (
     <div className="app">
@@ -244,7 +282,12 @@ function App() {
                 ) : null}
 
                 {videos.map((video) => (
-                  <article className="video-card" key={video.id}>
+                  <button
+                    key={video.id}
+                    type="button"
+                    className="video-card"
+                    onClick={() => onVideoSelect(video)}
+                  >
                     {video.thumbnail_url ? (
                       <img
                         src={video.thumbnail_url}
@@ -260,11 +303,8 @@ function App() {
                         {video.duration_seconds !== null ? ` · ${formatDuration(video.duration_seconds)}` : ''}
                         {video.is_short ? ' · Short' : ''}
                       </p>
-                      {video.description ? (
-                        <p className="video-card__description">{video.description}</p>
-                      ) : null}
                     </div>
-                  </article>
+                  </button>
                 ))}
               </div>
             </section>
@@ -276,6 +316,58 @@ function App() {
           </div>
         )}
       </main>
+
+      {activeVideo ? (
+        <div className="modal-overlay" role="presentation" onClick={onModalClose}>
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="video-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button type="button" className="modal__close" onClick={onModalClose} aria-label="Close video">
+              ×
+            </button>
+            <div className="modal__video">
+              <iframe
+                src={`https://www.youtube.com/embed/${activeVideo.id}`}
+                title={activeVideo.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+            <div className="modal__body">
+              <h3 id="video-modal-title">{activeVideo.title}</h3>
+              <p className="modal__meta">
+                Published {formatDate(activeVideo.published_at)}
+                {activeVideo.duration_seconds !== null ? ` · ${formatDuration(activeVideo.duration_seconds)}` : ''}
+                {activeVideo.is_short ? ' · Short' : ''}
+              </p>
+              {activeVideo.description ? (
+                <div className="modal__description">
+                  <button
+                    type="button"
+                    className="modal__description-toggle"
+                    onClick={toggleDescription}
+                    aria-expanded={isDescriptionExpanded}
+                    aria-controls={activeVideoDescriptionId}
+                  >
+                    {isDescriptionExpanded ? 'Hide description' : 'Show description'}
+                  </button>
+                  <p
+                    id={activeVideoDescriptionId}
+                    className="modal__description-text"
+                    hidden={!isDescriptionExpanded}
+                  >
+                    {activeVideo.description}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
