@@ -40,6 +40,7 @@ function App() {
   const [videosError, setVideosError] = useState<string | null>(null)
 
   const [activeVideo, setActiveVideo] = useState<Video | null>(null)
+  const [isDescriptionExpanded, setDescriptionExpanded] = useState(false)
 
   const [handleInput, setHandleInput] = useState('')
   const [addChannelLoading, setAddChannelLoading] = useState(false)
@@ -155,6 +156,10 @@ function App() {
     }
   }, [activeVideo])
 
+  useEffect(() => {
+    setDescriptionExpanded(false)
+  }, [activeVideo])
+
   const onVideoSelect = (video: Video) => {
     setActiveVideo(video)
   }
@@ -162,6 +167,12 @@ function App() {
   const onModalClose = () => {
     setActiveVideo(null)
   }
+
+  const toggleDescription = () => {
+    setDescriptionExpanded((prev) => !prev)
+  }
+
+  const activeVideoDescriptionId = activeVideo ? `video-modal-description-${activeVideo.id}` : undefined
 
   return (
     <div className="app">
@@ -334,7 +345,24 @@ function App() {
                 {activeVideo.is_short ? ' · Short' : ''}
               </p>
               {activeVideo.description ? (
-                <p className="modal__description">{activeVideo.description}</p>
+                <div className="modal__description">
+                  <button
+                    type="button"
+                    className="modal__description-toggle"
+                    onClick={toggleDescription}
+                    aria-expanded={isDescriptionExpanded}
+                    aria-controls={activeVideoDescriptionId}
+                  >
+                    {isDescriptionExpanded ? 'Hide description' : 'Show description'}
+                  </button>
+                  <p
+                    id={activeVideoDescriptionId}
+                    className="modal__description-text"
+                    hidden={!isDescriptionExpanded}
+                  >
+                    {activeVideo.description}
+                  </p>
+                </div>
               ) : null}
             </div>
           </div>
