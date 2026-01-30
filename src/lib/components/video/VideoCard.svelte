@@ -2,7 +2,7 @@
 	import type { VideoOut } from '$lib/types/api';
 	import { formatDuration } from '$lib/utils/formatDuration';
 	import { formatRelativeDate } from '$lib/utils/formatDate';
-	import { playVideo } from '$lib/stores/playerState.svelte';
+	import { playVideo, playerState } from '$lib/stores/playerState.svelte';
 	import { api } from '$lib/api';
 
 	interface Props {
@@ -50,7 +50,9 @@
 	}
 
 	function handlePlay() {
+		console.log('🎬 VideoCard: handlePlay called for video:', video.title, video.id);
 		playVideo(video);
+		console.log('🎬 VideoCard: playVideo() completed, playerState:', playerState.current);
 	}
 </script>
 

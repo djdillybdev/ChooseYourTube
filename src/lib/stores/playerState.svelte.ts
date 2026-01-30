@@ -71,20 +71,17 @@ function saveState(state: PlayerState) {
 function createPlayerState() {
 	let state = $state<PlayerState>(loadState());
 
-	// Auto-save to localStorage on changes
-	$effect(() => {
-		saveState(state);
-	});
-
 	return {
 		get current() {
 			return state;
 		},
 		set current(value: PlayerState) {
 			state = value;
+			saveState(state);
 		},
 		update(fn: (state: PlayerState) => PlayerState) {
 			state = fn(state);
+			saveState(state);
 		}
 	};
 }

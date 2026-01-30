@@ -60,20 +60,17 @@ function saveState(state: FilterState) {
 function createFilterState() {
 	let state = $state<FilterState>(loadState());
 
-	// Auto-save to localStorage on changes
-	$effect(() => {
-		saveState(state);
-	});
-
 	return {
 		get current() {
 			return state;
 		},
 		set current(value: FilterState) {
 			state = value;
+			saveState(state);
 		},
 		update(fn: (state: FilterState) => FilterState) {
 			state = fn(state);
+			saveState(state);
 		}
 	};
 }

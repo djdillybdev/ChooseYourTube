@@ -63,20 +63,17 @@ function saveState(state: UIState) {
 function createUIState() {
 	let state = $state<UIState>(loadState());
 
-	// Auto-save to localStorage on changes
-	$effect(() => {
-		saveState(state);
-	});
-
 	return {
 		get current() {
 			return state;
 		},
 		set current(value: UIState) {
 			state = value;
+			saveState(state);
 		},
 		update(fn: (state: UIState) => UIState) {
 			state = fn(state);
+			saveState(state);
 		}
 	};
 }

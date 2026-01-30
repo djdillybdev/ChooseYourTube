@@ -31,7 +31,7 @@
 		<TopBar />
 
 		<!-- Main content -->
-		<main class="flex-1 overflow-auto bg-base-200">
+		<main class="bg-base-200 flex-1 overflow-auto">
 			{@render children()}
 		</main>
 	</div>
