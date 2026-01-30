@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { uiState, toggleSidebar } from '$lib/stores/uiState.svelte';
-	import type { FolderOut } from '$lib/types/api';
+	import type { FolderOut, ChannelOut } from '$lib/types/api';
 	import AddChannelModal from '$lib/components/modals/AddChannelModal.svelte';
 	import CreateFolderModal from '$lib/components/modals/CreateFolderModal.svelte';
 
 	interface Props {
 		folders?: FolderOut[];
+		unfolderedChannels?: ChannelOut[];
 	}
 
-	let { folders = [] }: Props = $props();
+	let { folders = [], unfolderedChannels = [] }: Props = $props();
 
 	let showAddChannelModal = $state(false);
 	let showCreateFolderModal = $state(false);
@@ -31,14 +32,14 @@
 </script>
 
 <aside
-	class="sidebar flex h-full flex-col border-r border-base-300 bg-base-100 transition-all duration-300"
+	class="sidebar border-base-300 bg-base-100 flex h-full flex-col border-r transition-all duration-300"
 	class:collapsed={uiState.current.sidebarCollapsed}
 	style="width: {uiState.current.sidebarCollapsed ? '0' : uiState.current.sidebarWidth}px;"
 >
 	{#if !uiState.current.sidebarCollapsed}
 		<div class="flex h-full flex-col overflow-hidden">
 			<!-- Header -->
-			<div class="flex items-center justify-between border-b border-base-300 p-4">
+			<div class="border-base-300 flex items-center justify-between border-b p-4">
 				<h2 class="text-lg font-bold">ChooseYourTube</h2>
 				<button
 					class="btn btn-ghost btn-sm btn-square"
@@ -53,11 +54,7 @@
 						stroke="currentColor"
 						class="h-5 w-5"
 					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M6 18L18 6M6 6l12 12"
-						/>
+						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 					</svg>
 				</button>
 			</div>
@@ -92,7 +89,7 @@
 					</li>
 
 					{#if folders.length === 0}
-						<li class="text-sm text-base-content/60">
+						<li class="text-base-content/60 text-sm">
 							<span>No folders yet</span>
 						</li>
 					{:else}
@@ -121,7 +118,10 @@
 
 					<!-- Add Folder Button -->
 					<li class="mt-2">
-						<button class="btn btn-ghost btn-sm w-full justify-start gap-2" onclick={openCreateFolderModal}>
+						<button
+							class="btn btn-ghost btn-sm w-full justify-start gap-2"
+							onclick={openCreateFolderModal}
+						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								fill="none"
@@ -135,11 +135,56 @@
 							<span>New Folder</span>
 						</button>
 					</li>
+
+					<!-- Channels Section -->
+					<li class="menu-title mt-4">
+						<span>Channels</span>
+					</li>
+
+					<!-- TODO(human): Display the list of unfoldered channels here
+					     Use Svelte's {#if} and {#each} blocks to:
+					     1. Check if unfolderedChannels.length === 0, show "No channels yet"
+					     2. Otherwise, loop through unfolderedChannels and create an <li> for each
+					     3. Each channel should link to /channels/{channel.id}
+					     4. Display the channel title and optionally a thumbnail icon
+					     Reference the folders section above for the HTML structure pattern -->
+					{#if unfolderedChannels.length === 0}
+						<li class="text-base-content/60 text-sm">
+							<span>No channels yet</span>
+						</li>
+					{:else}
+						{#each unfolderedChannels as channel}
+							<li>
+								<a href="/channels/{channel.id}" class="flex items-center gap-2">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="h-5 w-5"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
+										/>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
+										/>
+									</svg>
+									<span>{channel.title}</span>
+								</a>
+							</li>
+						{/each}
+					{/if}
 				</ul>
 			</nav>
 
 			<!-- Footer Actions -->
-			<div class="border-t border-base-300 p-4">
+			<div class="border-base-300 border-t p-4">
 				<button class="btn btn-primary btn-sm w-full gap-2" onclick={openAddChannelModal}>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"

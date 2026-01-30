@@ -10,6 +10,7 @@
 		children: any;
 		data: {
 			folders: any[];
+			unfolderedChannels: any[];
 		};
 	}
 
@@ -22,7 +23,7 @@
 
 <div class="app-shell flex h-screen overflow-hidden">
 	<!-- Sidebar -->
-	<Sidebar folders={data.folders} />
+	<Sidebar folders={data.folders} unfolderedChannels={data.unfolderedChannels} />
 
 	<!-- Main content area -->
 	<div class="flex flex-1 flex-col overflow-hidden">
