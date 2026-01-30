@@ -16,6 +16,13 @@
 	let isSubmitting = $state(false);
 	let error = $state<string | null>(null);
 
+	let dialogElement: HTMLDialogElement;
+
+	// Open the dialog when component mounts
+	$effect(() => {
+		dialogElement?.showModal();
+	});
+
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		if (!handle.trim()) return;
@@ -43,10 +50,10 @@
 	}
 </script>
 
-<dialog class="modal modal-open">
+<dialog bind:this={dialogElement} class="modal modal-open">
 	<div class="modal-box">
 		<h3 class="text-lg font-bold">Add YouTube Channel</h3>
-		<p class="py-2 text-sm text-base-content/60">
+		<p class="text-base-content/60 py-2 text-sm">
 			Enter the channel handle (e.g., @mkbhd) or channel URL
 		</p>
 

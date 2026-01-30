@@ -1,4 +1,4 @@
-import { api } from '$lib/api';
+import { api, type VideoOut } from '$lib/api';
 import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 
@@ -18,20 +18,15 @@ export const load: PageLoad = async ({ params }) => {
 		// so we need to get videos by channel_ids
 		const channelIds = channelsResponse.items.map((ch) => ch.id);
 
-		let allVideos: any[] = [];
+		let allVideos: VideoOut[] = [];
 		if (channelIds.length > 0) {
-			// For now, we'll load videos without channel_id filter
-			// and filter client-side. In production, you'd want
-			// a better API endpoint for this.
 			const videosResponse = await api.videos.list({
+				channel_id: channelIds.join(','),
 				limit: 100,
 				offset: 0
 			});
 
-			// Filter videos to only those from channels in this folder
-			allVideos = videosResponse.items.filter((video) =>
-				channelIds.includes(video.channel_id)
-			);
+			allVideos = videosResponse.items;
 		}
 
 		return {

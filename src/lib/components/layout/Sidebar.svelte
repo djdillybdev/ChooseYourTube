@@ -1,34 +1,15 @@
 <script lang="ts">
 	import { uiState, toggleSidebar } from '$lib/stores/uiState.svelte';
 	import type { FolderOut, ChannelOut } from '$lib/types/api';
-	import AddChannelModal from '$lib/components/modals/AddChannelModal.svelte';
-	import CreateFolderModal from '$lib/components/modals/CreateFolderModal.svelte';
 
 	interface Props {
 		folders?: FolderOut[];
 		unfolderedChannels?: ChannelOut[];
+		onOpenAddChannel?: () => void;
+		onOpenCreateFolder?: () => void;
 	}
 
-	let { folders = [], unfolderedChannels = [] }: Props = $props();
-
-	let showAddChannelModal = $state(false);
-	let showCreateFolderModal = $state(false);
-
-	function openAddChannelModal() {
-		showAddChannelModal = true;
-	}
-
-	function closeAddChannelModal() {
-		showAddChannelModal = false;
-	}
-
-	function openCreateFolderModal() {
-		showCreateFolderModal = true;
-	}
-
-	function closeCreateFolderModal() {
-		showCreateFolderModal = false;
-	}
+	let { folders = [], unfolderedChannels = [], onOpenAddChannel, onOpenCreateFolder }: Props = $props();
 </script>
 
 <aside
@@ -120,7 +101,7 @@
 					<li class="mt-2">
 						<button
 							class="btn btn-ghost btn-sm w-full justify-start gap-2"
-							onclick={openCreateFolderModal}
+							onclick={onOpenCreateFolder}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -141,13 +122,6 @@
 						<span>Channels</span>
 					</li>
 
-					<!-- TODO(human): Display the list of unfoldered channels here
-					     Use Svelte's {#if} and {#each} blocks to:
-					     1. Check if unfolderedChannels.length === 0, show "No channels yet"
-					     2. Otherwise, loop through unfolderedChannels and create an <li> for each
-					     3. Each channel should link to /channels/{channel.id}
-					     4. Display the channel title and optionally a thumbnail icon
-					     Reference the folders section above for the HTML structure pattern -->
 					{#if unfolderedChannels.length === 0}
 						<li class="text-base-content/60 text-sm">
 							<span>No channels yet</span>
@@ -185,7 +159,7 @@
 
 			<!-- Footer Actions -->
 			<div class="border-base-300 border-t p-4">
-				<button class="btn btn-primary btn-sm w-full gap-2" onclick={openAddChannelModal}>
+				<button class="btn btn-primary btn-sm w-full gap-2" onclick={onOpenAddChannel}>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"
@@ -202,15 +176,6 @@
 		</div>
 	{/if}
 </aside>
-
-<!-- Modals -->
-{#if showAddChannelModal}
-	<AddChannelModal {folders} onClose={closeAddChannelModal} />
-{/if}
-
-{#if showCreateFolderModal}
-	<CreateFolderModal {folders} onClose={closeCreateFolderModal} />
-{/if}
 
 <style>
 	.sidebar.collapsed {

@@ -18,15 +18,32 @@
 	let { videos: videosParam, initialVideos = [], initialTotal = 0, initialHasMore = false, filters }: Props = $props();
 
 	// Use either the simple videos prop or the pagination props
-	let videos = $state<VideoOut[]>(videosParam ?? initialVideos);
-	let total = $state(initialTotal);
-	let hasMore = $state(initialHasMore);
+	let videos = $state<VideoOut[]>([]);
+	let total = $state(0);
+	let hasMore = $state(false);
 	let isLoading = $state(false);
 	let error = $state<string | null>(null);
-	let offset = $state((videosParam ?? initialVideos).length);
+	let offset = $state(0);
 
 	// Disable infinite scroll if using simple videos prop
-	let enableInfiniteScroll = $state(!videosParam);
+	let enableInfiniteScroll = $derived(videosParam === undefined);
+
+	// Sync local state when props change (handles navigation between pages)
+	$effect(() => {
+		if (videosParam !== undefined) {
+			// Simple mode: use provided videos directly
+			videos = videosParam;
+			total = videosParam.length;
+			hasMore = false;
+			offset = videosParam.length;
+		} else {
+			// Pagination mode: start with initial values
+			videos = initialVideos;
+			total = initialTotal;
+			hasMore = initialHasMore;
+			offset = initialVideos.length;
+		}
+	});
 
 	let loadMoreTrigger: HTMLDivElement;
 	let observer: IntersectionObserver;
