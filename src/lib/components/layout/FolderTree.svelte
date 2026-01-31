@@ -2,6 +2,7 @@
 	import type { FolderOut } from '$lib/types/api';
 	import { folderExpansion } from '$lib/stores/folderExpansion.svelte';
 	import { page } from '$app/stores';
+	import { api } from '$lib/api';
 
 	interface Props {
 		folder: FolderOut;
@@ -14,10 +15,88 @@
 	const isExpanded = $derived(folderExpansion.isExpanded(folder.id));
 	const isActive = $derived($page.params.id === folder.id.toString());
 
+	// Edit mode state
+	let isEditing = $state(false);
+	let editedName = $state(folder.name);
+	let inputElement: HTMLInputElement | undefined = $state();
+	let allowBlur = $state(false);
+
+	// Focus and select input when entering edit mode
+	$effect(() => {
+		if (isEditing && inputElement) {
+			inputElement.focus();
+			inputElement.select();
+			// Allow blur to cancel after input is focused
+			setTimeout(() => {
+				allowBlur = true;
+			}, 100);
+		}
+	});
+
 	function toggleExpand(e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
 		folderExpansion.toggle(folder.id);
+	}
+
+	function startEditing(e: MouseEvent) {
+		console.log('Starting edit mode for folder:', folder.name);
+		allowBlur = false;
+		isEditing = true;
+		editedName = folder.name;
+	}
+
+	function handleBlur() {
+		// Only cancel if we've given the input time to focus
+		if (allowBlur) {
+			cancelEdit();
+		}
+	}
+
+	function cancelEdit() {
+		isEditing = false;
+		editedName = folder.name;
+		allowBlur = false;
+	}
+
+	async function saveEdit() {
+		const trimmedName = editedName.trim();
+
+		// Validate name is not empty
+		if (!trimmedName) {
+			cancelEdit();
+			return;
+		}
+
+		// If name hasn't changed, just exit edit mode
+		if (trimmedName === folder.name) {
+			isEditing = false;
+			return;
+		}
+
+		// Optimistic update
+		const originalName = folder.name;
+		folder.name = trimmedName;
+		isEditing = false;
+
+		try {
+			await api.folders.update(folder.id, { name: trimmedName });
+			api.invalidate('/folders');
+		} catch (error) {
+			// Revert on error
+			folder.name = originalName;
+			console.error('Failed to update folder name:', error);
+			// TODO: Show error toast
+		}
+	}
+
+	function handleKeydown(e: KeyboardEvent) {
+		// Handle Enter and Escape keys
+		if (e.key === 'Enter') {
+			saveEdit();
+		} else if (e.key === 'Escape') {
+			cancelEdit();
+		}
 	}
 </script>
 
@@ -47,28 +126,67 @@
 			<span class="mr-1 w-4"></span>
 		{/if}
 
-		<!-- Folder link -->
-		<a
-			href="/folders/{folder.id}"
-			class="flex flex-1 items-center gap-2 rounded px-2 py-1.5 transition-colors hover:bg-base-200"
-			class:bg-base-200={isActive}
-		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke-width="1.5"
-				stroke="currentColor"
-				class="h-5 w-5"
+		<!-- Folder link (disabled when editing) -->
+		{#if isEditing}
+			<div
+				class="flex flex-1 items-center gap-2 rounded px-2 py-1.5"
+				class:bg-base-200={isActive}
 			>
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="1.5"
+					stroke="currentColor"
+					class="h-5 w-5"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
+					/>
+				</svg>
+				<!-- Edit mode: input field -->
+				<input
+					bind:this={inputElement}
+					bind:value={editedName}
+					onkeydown={handleKeydown}
+					onblur={handleBlur}
+					type="text"
+					class="input input-xs flex-1 px-1 text-sm"
 				/>
-			</svg>
-			<span class="text-sm">{folder.name}</span>
-		</a>
+			</div>
+		{:else}
+			<a
+				href="/folders/{folder.id}"
+				class="hover:bg-base-200 flex flex-1 items-center gap-2 rounded px-2 py-1.5 transition-colors"
+				class:bg-base-200={isActive}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="1.5"
+					stroke="currentColor"
+					class="h-5 w-5"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
+					/>
+				</svg>
+				<!-- Normal mode: editable text -->
+				<span
+					class="cursor-text text-sm"
+					ondblclick={startEditing}
+					role="button"
+					tabindex="0"
+				>
+					{folder.name}
+				</span>
+			</a>
+		{/if}
 	</div>
 
 	<!-- Recursively render children when expanded -->
