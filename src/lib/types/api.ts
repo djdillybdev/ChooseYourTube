@@ -9,7 +9,7 @@ export interface ChannelOut {
 	description: string | null;
 	thumbnail_url: string | null;
 	is_favorited: boolean;
-	folder_id: number | null;
+	folder_id: string | null;
 	created_at: string;
 	last_updated: string;
 	total_videos: number;
@@ -31,14 +31,14 @@ export interface VideoOut {
 }
 
 export interface FolderOut {
-	id: number;
+	id: string;
 	name: string;
-	parent_id: number | null;
+	parent_id: string | null;
 	children: FolderOut[];
 }
 
 export interface TagOut {
-	id: number;
+	id: string;
 	name: string;
 	created_at: string;
 }
@@ -47,30 +47,30 @@ export interface TagOut {
 
 export interface ChannelCreate {
 	handle: string;
-	folder_id?: number;
+	folder_id?: string;
 }
 
 export interface ChannelUpdate {
 	is_favorited?: boolean;
-	folder_id?: number | null;
-	tag_ids?: number[];
+	folder_id?: string | null;
+	tag_ids?: string[];
 }
 
 export interface VideoUpdate {
 	is_favorited?: boolean;
 	is_watched?: boolean;
 	is_short?: boolean;
-	tag_ids?: number[];
+	tag_ids?: string[];
 }
 
 export interface FolderCreate {
 	name: string;
-	parent_id?: number;
+	parent_id?: string;
 }
 
 export interface FolderUpdate {
 	name?: string;
-	parent_id?: number | null;
+	parent_id?: string | null;
 }
 
 export interface TagCreate {
@@ -98,7 +98,7 @@ export interface VideoFilters extends Record<string, unknown> {
 	is_watched?: boolean;
 	is_short?: boolean;
 	channel_id?: string;
-	tag_id?: number;
+	tag_id?: string;
 	published_after?: string;
 	published_before?: string;
 	limit?: number;
@@ -107,8 +107,8 @@ export interface VideoFilters extends Record<string, unknown> {
 
 export interface ChannelFilters extends Record<string, unknown> {
 	is_favorited?: boolean;
-	folder_id?: number;
-	tag_id?: number;
+	folder_id?: string;
+	tag_id?: string;
 	limit?: number;
 	offset?: number;
 }

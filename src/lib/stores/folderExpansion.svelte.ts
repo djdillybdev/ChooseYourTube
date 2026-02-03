@@ -8,7 +8,7 @@ import { SvelteSet } from 'svelte/reactivity';
 const STORAGE_KEY = 'chooseyourtube:expandedFolders';
 
 class FolderExpansionState {
-	private expanded = $state(new SvelteSet<number>());
+	private expanded = $state(new SvelteSet<string>());
 
 	constructor() {
 		// Load expansion state from localStorage on initialization
@@ -16,7 +16,7 @@ class FolderExpansionState {
 			const stored = localStorage.getItem(STORAGE_KEY);
 			if (stored) {
 				try {
-					const ids = JSON.parse(stored) as number[];
+					const ids = JSON.parse(stored) as string[];
 					this.expanded = new SvelteSet(ids);
 				} catch (error) {
 					console.error('Failed to parse folder expansion state:', error);
@@ -30,7 +30,7 @@ class FolderExpansionState {
 	 * Toggle expansion state for a folder.
 	 * If expanded, collapse it. If collapsed, expand it.
 	 */
-	toggle(folderId: number) {
+	toggle(folderId: string) {
 		// SvelteSet is reactive, so direct mutations trigger updates
 		if (this.expanded.has(folderId)) {
 			this.expanded.delete(folderId);
@@ -43,7 +43,7 @@ class FolderExpansionState {
 	/**
 	 * Check if a folder is currently expanded.
 	 */
-	isExpanded(folderId: number): boolean {
+	isExpanded(folderId: string): boolean {
 		return this.expanded.has(folderId);
 	}
 

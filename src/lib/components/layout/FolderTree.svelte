@@ -1,8 +1,11 @@
 <script lang="ts">
-	import type { FolderOut } from '$lib/types/api';
+	import type { ChannelOut, FolderOut } from '$lib/types/api';
 	import { folderExpansion } from '$lib/stores/folderExpansion.svelte';
 	import { page } from '$app/stores';
 	import { api } from '$lib/api';
+	import { dndzone, type DndEvent } from 'svelte-dnd-action';
+	import { flip } from 'svelte/animate';
+	import type { Channel } from 'diagnostics_channel';
 
 	interface Props {
 		folder: FolderOut;
@@ -14,6 +17,13 @@
 	const hasChildren = $derived(folder.children && folder.children.length > 0);
 	const isExpanded = $derived(folderExpansion.isExpanded(folder.id));
 	const isActive = $derived($page.params.id === folder.id.toString());
+
+	// Local state for dnd-action (must be a flat array of objects with 'id')
+	// We sync this with folder.children when props change
+	let items: (FolderOut | ChannelOut)[] = $state(folder.children || []);
+	$effect(() => {
+		items = folder.children || [];
+	});
 
 	// Edit mode state
 	let isEditing = $state(false);
@@ -38,6 +48,37 @@
 		e.stopPropagation();
 		folderExpansion.toggle(folder.id);
 	}
+
+	// Drag-and-drop handlers
+	const flipDurationMs = 200;
+
+	function handleDndConsider(e: CustomEvent<DndEvent<FolderOut | ChannelOut>>) {
+		items = e.detail.items;
+	}
+
+	async function handleDndFinalize(e: CustomEvent<DndEvent<FolderOut | ChannelOut>>) {
+		items = e.detail.items;
+		const { info } = e.detail;
+
+		if (info.trigger !== 'droppedIntoZone') return;
+
+		const droppedId = info.id;
+
+		const droppedItem = items.find(i => i.id === droppedId);
+		const isChannel = droppedItem && 'title' in droppedItem;
+
+		if (isChannel) {
+			// Update channel's folder_id
+			try {
+				await api.channels.update(droppedId, { folder_id: folder.id });
+				api.invalidate('/channels');
+			} catch (error) {
+				console.error('Failed to move channel to folder:', error);
+			}
+		}
+	}
+
+	// Start editing folder name
 
 	function startEditing(e: MouseEvent) {
 		console.log('Starting edit mode for folder:', folder.name);
@@ -128,10 +169,7 @@
 
 		<!-- Folder link (disabled when editing) -->
 		{#if isEditing}
-			<div
-				class="flex flex-1 items-center gap-2 rounded px-2 py-1.5"
-				class:bg-base-200={isActive}
-			>
+			<div class="flex flex-1 items-center gap-2 rounded px-2 py-1.5" class:bg-base-200={isActive}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"
@@ -177,12 +215,7 @@
 					/>
 				</svg>
 				<!-- Normal mode: editable text -->
-				<span
-					class="cursor-text text-sm"
-					ondblclick={startEditing}
-					role="button"
-					tabindex="0"
-				>
+				<span class="cursor-text text-sm" ondblclick={startEditing} role="button" tabindex="0">
 					{folder.name}
 				</span>
 			</a>

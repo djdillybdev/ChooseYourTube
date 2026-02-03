@@ -17,7 +17,7 @@ export class FoldersAPI {
 	/**
 	 * Get a single folder by ID
 	 */
-	async get(id: number): Promise<FolderOut> {
+	async get(id: string): Promise<FolderOut> {
 		return this.client.get<FolderOut>(`/folders/${id}`);
 	}
 
@@ -36,7 +36,7 @@ export class FoldersAPI {
 	/**
 	 * Update a folder (rename or move to different parent)
 	 */
-	async update(id: number, data: FolderUpdate): Promise<FolderOut> {
+	async update(id: string, data: FolderUpdate): Promise<FolderOut> {
 		const folder = await this.client.patch<FolderOut>(`/folders/${id}`, data);
 
 		// Invalidate folder tree cache
@@ -50,7 +50,7 @@ export class FoldersAPI {
 	 * Channels in this folder will be moved to root
 	 * Child folders will be moved up one level
 	 */
-	async delete(id: number): Promise<void> {
+	async delete(id: string): Promise<void> {
 		await this.client.delete(`/folders/${id}`);
 
 		// Invalidate caches

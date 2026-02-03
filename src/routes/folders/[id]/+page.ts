@@ -5,11 +5,11 @@ import type { PageLoad } from './$types';
 export const load: PageLoad = async ({ params }) => {
 	try {
 		// Load folder details
-		const folder = await api.folders.get(parseInt(params.id));
+		const folder = await api.folders.get(params.id);
 
 		// Load channels in this folder
 		const channelsResponse = await api.channels.list({
-			folder_id: parseInt(params.id),
+			folder_id: params.id,
 			limit: 100
 		});
 

@@ -25,7 +25,7 @@ export class TagsAPI {
 	/**
 	 * Get a single tag by ID
 	 */
-	async get(id: number): Promise<TagOut> {
+	async get(id: string): Promise<TagOut> {
 		return this.client.get<TagOut>(`/tags/${id}`);
 	}
 
@@ -44,7 +44,7 @@ export class TagsAPI {
 	/**
 	 * Update a tag's name
 	 */
-	async update(id: number, data: TagUpdate): Promise<TagOut> {
+	async update(id: string, data: TagUpdate): Promise<TagOut> {
 		const tag = await this.client.patch<TagOut>(`/tags/${id}`, data);
 
 		// Invalidate caches
@@ -58,7 +58,7 @@ export class TagsAPI {
 	 * Delete a tag by ID
 	 * This will also remove the tag from all associated channels and videos
 	 */
-	async delete(id: number): Promise<void> {
+	async delete(id: string): Promise<void> {
 		await this.client.delete(`/tags/${id}`);
 
 		// Invalidate caches (affects channels and videos too)
@@ -71,7 +71,7 @@ export class TagsAPI {
 	 * Get all videos associated with a tag
 	 */
 	async getVideos(
-		id: number,
+		id: string,
 		params?: { limit?: number; offset?: number }
 	): Promise<VideoOut[]> {
 		return this.client.get<VideoOut[]>(`/tags/${id}/videos`, params);
@@ -81,7 +81,7 @@ export class TagsAPI {
 	 * Get all channels associated with a tag
 	 */
 	async getChannels(
-		id: number,
+		id: string,
 		params?: { limit?: number; offset?: number }
 	): Promise<ChannelOut[]> {
 		return this.client.get<ChannelOut[]>(`/tags/${id}/channels`, params);

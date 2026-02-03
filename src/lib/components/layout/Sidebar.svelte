@@ -10,7 +10,12 @@
 		onOpenCreateFolder?: () => void;
 	}
 
-	let { folders = [], unfolderedChannels = [], onOpenAddChannel, onOpenCreateFolder }: Props = $props();
+	let {
+		folders = [],
+		unfolderedChannels = [],
+		onOpenAddChannel,
+		onOpenCreateFolder
+	}: Props = $props();
 
 	// Filter to only root folders (FolderTree handles children recursively)
 	const rootFolders = $derived(folders.filter((f) => f.parent_id === null));

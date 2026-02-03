@@ -6,8 +6,8 @@ interface FilterState extends Record<string, unknown> {
 	is_favorited: boolean | undefined;
 	is_short: boolean | undefined;
 	channel_id: string | undefined;
-	tag_id: number | undefined;
-	folder_id: number | undefined;
+	tag_id: string | undefined;
+	folder_id: string | undefined;
 	published_after: string | undefined;
 	published_before: string | undefined;
 }
@@ -120,7 +120,7 @@ export function setChannelFilter(channelId: string | undefined) {
 /**
  * Set tag filter
  */
-export function setTagFilter(tagId: number | undefined) {
+export function setTagFilter(tagId: string | undefined) {
 	filterState.update((state) => ({
 		...state,
 		tag_id: tagId
@@ -130,7 +130,7 @@ export function setTagFilter(tagId: number | undefined) {
 /**
  * Set folder filter
  */
-export function setFolderFilter(folderId: number | undefined) {
+export function setFolderFilter(folderId: string | undefined) {
 	filterState.update((state) => ({
 		...state,
 		folder_id: folderId
