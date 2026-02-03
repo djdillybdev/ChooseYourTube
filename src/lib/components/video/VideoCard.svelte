@@ -2,7 +2,8 @@
 	import type { VideoOut } from '$lib/types/api';
 	import { formatDuration } from '$lib/utils/formatDuration';
 	import { formatRelativeDate } from '$lib/utils/formatDate';
-	import { playVideo, playerState } from '$lib/stores/playerState.svelte';
+	import { playVideo } from '$lib/stores/playerState.svelte';
+	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
 
 	interface Props {
@@ -50,14 +51,14 @@
 	}
 
 	function handlePlay() {
-		console.log('🎬 VideoCard: handlePlay called for video:', video.title, video.id);
 		playVideo(video);
-		console.log('🎬 VideoCard: playVideo() completed, playerState:', playerState.current);
+		const returnUrl = window.location.pathname + window.location.search;
+		goto('/player?return=' + encodeURIComponent(returnUrl));
 	}
 </script>
 
 <div
-	class="video-card card bg-base-100 shadow-sm transition-all duration-200 hover:shadow-md"
+	class="video-card bg-base-100 border border-base-300 rounded-box transition-all duration-200 hover:border-primary"
 	class:opacity-60={video.is_watched}
 	onmouseenter={() => (isHovered = true)}
 	onmouseleave={() => (isHovered = false)}

@@ -12,7 +12,7 @@
 	let { folders, onClose, onSuccess }: Props = $props();
 
 	let handle = $state('');
-	let selectedFolderId = $state<number | undefined>(undefined);
+	let selectedFolderId = $state<string | undefined>(undefined);
 	let isSubmitting = $state(false);
 	let error = $state<string | null>(null);
 

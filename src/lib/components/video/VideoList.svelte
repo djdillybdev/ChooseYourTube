@@ -1,142 +1,26 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import type { VideoOut, VideoFilters } from '$lib/types/api';
-	import { api } from '$lib/api';
+	import type { VideoOut } from '$lib/types/api';
 	import VideoCard from './VideoCard.svelte';
-	import SkeletonCard from '../ui/SkeletonCard.svelte';
-	import ErrorState from '../ui/ErrorState.svelte';
 	import EmptyState from '../ui/EmptyState.svelte';
 
 	interface Props {
-		videos?: VideoOut[];
-		initialVideos?: VideoOut[];
-		initialTotal?: number;
-		initialHasMore?: boolean;
-		filters?: VideoFilters;
+		videos: VideoOut[];
 	}
 
-	let { videos: videosParam, initialVideos = [], initialTotal = 0, initialHasMore = false, filters }: Props = $props();
+	let { videos }: Props = $props();
 
-	// Use either the simple videos prop or the pagination props
-	let videos = $state<VideoOut[]>([]);
-	let total = $state(0);
-	let hasMore = $state(false);
-	let isLoading = $state(false);
-	let error = $state<string | null>(null);
-	let offset = $state(0);
-
-	// Disable infinite scroll if using simple videos prop
-	let enableInfiniteScroll = $derived(videosParam === undefined);
-
-	// Sync local state when props change (handles navigation between pages)
-	$effect(() => {
-		if (videosParam !== undefined) {
-			// Simple mode: use provided videos directly
-			videos = videosParam;
-			total = videosParam.length;
-			hasMore = false;
-			offset = videosParam.length;
-		} else {
-			// Pagination mode: start with initial values
-			videos = initialVideos;
-			total = initialTotal;
-			hasMore = initialHasMore;
-			offset = initialVideos.length;
-		}
-	});
-
-	let loadMoreTrigger: HTMLDivElement;
-	let observer: IntersectionObserver;
-
-	async function loadMore() {
-		if (isLoading || !hasMore) return;
-
-		isLoading = true;
-		error = null;
-
-		try {
-			const response = await api.videos.list({
-				...filters,
-				limit: 50,
-				offset
-			});
-
-			videos = [...videos, ...response.items];
-			total = response.total;
-			hasMore = response.has_more;
-			offset += response.items.length;
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to load more videos';
-			console.error('Failed to load more videos:', err);
-		} finally {
-			isLoading = false;
-		}
-	}
-
+	/** Optimistic update for watched / favorite toggles */
 	function handleVideoUpdate(updated: VideoOut) {
 		videos = videos.map((v) => (v.id === updated.id ? updated : v));
 	}
-
-	onMount(() => {
-		// Only set up intersection observer if infinite scroll is enabled
-		if (enableInfiniteScroll) {
-			observer = new IntersectionObserver(
-				(entries) => {
-					if (entries[0].isIntersecting && hasMore && !isLoading) {
-						loadMore();
-					}
-				},
-				{
-					threshold: 0.1,
-					rootMargin: '100px'
-				}
-			);
-
-			if (loadMoreTrigger) {
-				observer.observe(loadMoreTrigger);
-			}
-		}
-
-		return () => {
-			if (observer) {
-				observer.disconnect();
-			}
-		};
-	});
 </script>
 
-<div class="video-list space-y-4">
-	<!-- Video cards -->
+<div class="video-list space-y-3">
 	{#each videos as video (video.id)}
 		<VideoCard {video} onUpdate={handleVideoUpdate} />
 	{/each}
 
-	<!-- Loading skeleton while fetching more -->
-	{#if isLoading}
-		{#each Array(3) as _}
-			<SkeletonCard />
-		{/each}
-	{/if}
-
-	<!-- Error state -->
-	{#if error}
-		<ErrorState message={error} onRetry={loadMore} />
-	{/if}
-
-	<!-- Load more trigger (invisible) -->
-	{#if enableInfiniteScroll && hasMore && !isLoading && !error}
-		<div bind:this={loadMoreTrigger} class="h-4"></div>
-	{/if}
-
-	<!-- End of list message -->
-	{#if enableInfiniteScroll && !hasMore && videos.length > 0 && !isLoading}
-		<div class="py-4 text-center text-sm text-base-content/60">
-			You've reached the end! ({total} total {total === 1 ? 'video' : 'videos'})
-		</div>
-	{/if}
-
-	<!-- Empty state -->
-	{#if videos.length === 0 && !isLoading && !error}
+	{#if videos.length === 0}
 		<EmptyState
 			title="No videos found"
 			message="Try adjusting your filters or add some channels to get started."

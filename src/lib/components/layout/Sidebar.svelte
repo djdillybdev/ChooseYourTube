@@ -2,19 +2,16 @@
 	import { uiState, toggleSidebar } from '$lib/stores/uiState.svelte';
 	import type { FolderOut, ChannelOut } from '$lib/types/api';
 	import FolderTree from './FolderTree.svelte';
+	import { openAddChannel, openCreateFolder } from '$lib/stores/modalState.svelte';
 
 	interface Props {
 		folders?: FolderOut[];
 		unfolderedChannels?: ChannelOut[];
-		onOpenAddChannel?: () => void;
-		onOpenCreateFolder?: () => void;
 	}
 
 	let {
 		folders = [],
-		unfolderedChannels = [],
-		onOpenAddChannel,
-		onOpenCreateFolder
+		unfolderedChannels = []
 	}: Props = $props();
 
 	// Filter to only root folders (FolderTree handles children recursively)
@@ -92,7 +89,7 @@
 					<li class="mt-2">
 						<button
 							class="btn btn-ghost btn-sm w-full justify-start gap-2"
-							onclick={onOpenCreateFolder}
+							onclick={openCreateFolder}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -150,7 +147,7 @@
 
 			<!-- Footer Actions -->
 			<div class="border-base-300 border-t p-4">
-				<button class="btn btn-primary btn-sm w-full gap-2" onclick={onOpenAddChannel}>
+				<button class="btn btn-primary btn-sm w-full gap-2" onclick={openAddChannel}>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"

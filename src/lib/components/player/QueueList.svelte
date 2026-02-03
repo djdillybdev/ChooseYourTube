@@ -154,7 +154,7 @@
 	}
 
 	.queue-item.active {
-		background-color: oklch(var(--p) / 0.1);
-		border-left: 4px solid oklch(var(--p));
+		background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+		border-left: 4px solid var(--color-primary);
 	}
 </style>

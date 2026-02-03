@@ -17,6 +17,7 @@ interface UIState {
 	viewMode: ViewMode;
 	feedLayout: FeedLayout;
 	tvGridColumns: number;
+	pageSize: number;
 }
 
 /**
@@ -27,7 +28,8 @@ const defaultState: UIState = {
 	sidebarWidth: 280,
 	viewMode: 'feed',
 	feedLayout: 'comfortable',
-	tvGridColumns: 4
+	tvGridColumns: 4,
+	pageSize: 24
 };
 
 /**
@@ -127,5 +129,16 @@ export function setTVGridColumns(columns: number) {
 	uiState.update((state) => ({
 		...state,
 		tvGridColumns: Math.max(2, Math.min(6, columns))
+	}));
+}
+
+/**
+ * Set page size for paginated views
+ */
+export function setPageSize(size: number) {
+	const allowed = [12, 24, 48, 100];
+	uiState.update((state) => ({
+		...state,
+		pageSize: allowed.includes(size) ? size : 24
 	}));
 }

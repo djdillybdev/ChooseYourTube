@@ -1,26 +1,32 @@
 import { api } from '$lib/api';
+import type { PageLoad } from './$types';
 
-export async function load() {
+export const load: PageLoad = async ({ url }) => {
+	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+	const pageSize = Number(url.searchParams.get('pageSize')) || 24;
+	const offset = (page - 1) * pageSize;
+
 	try {
-		// Load unwatched videos (default filter)
 		const response = await api.videos.list({
 			is_watched: false,
-			limit: 50,
-			offset: 0
+			limit: pageSize,
+			offset
 		});
 
 		return {
 			videos: response.items,
 			total: response.total,
-			hasMore: response.has_more
+			page,
+			pageSize
 		};
 	} catch (error) {
 		console.error('Failed to load inbox videos:', error);
 		return {
 			videos: [],
 			total: 0,
-			hasMore: false,
+			page: 1,
+			pageSize,
 			error: error instanceof Error ? error.message : 'Failed to load videos'
 		};
 	}
-}
+};

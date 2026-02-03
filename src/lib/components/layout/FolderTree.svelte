@@ -6,6 +6,7 @@
 	import { dndzone, type DndEvent } from 'svelte-dnd-action';
 	import { flip } from 'svelte/animate';
 	import type { Channel } from 'diagnostics_channel';
+	import { openEditFolder } from '$lib/stores/modalState.svelte';
 
 	interface Props {
 		folder: FolderOut;
@@ -142,7 +143,7 @@
 </script>
 
 <li>
-	<div class="flex items-center" style="padding-left: {depth * 1}rem">
+	<div class="group flex items-center" style="padding-left: {depth * 1}rem">
 		<!-- Chevron button (only if folder has children) -->
 		{#if hasChildren}
 			<button
@@ -219,6 +220,19 @@
 					{folder.name}
 				</span>
 			</a>
+		{/if}
+
+		<!-- Three-dot menu button (hover-reveal) -->
+		{#if !isEditing}
+			<button
+				class="opacity-0 group-hover:opacity-100 btn btn-ghost btn-xs btn-square transition-opacity"
+				onclick={(e) => { e.stopPropagation(); openEditFolder(folder); }}
+				aria-label="Edit folder"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4">
+					<path d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM11.25 18.75a.75.75 0 111.5 0 .75.75 0 01-1.5 0z" />
+				</svg>
+			</button>
 		{/if}
 	</div>
 
