@@ -7,6 +7,9 @@ export const load: PageLoad = async ({ url }) => {
 	const offset = (page - 1) * pageSize;
 
 	try {
+		// Invalidate video list cache to ensure fresh paginated results
+		api.invalidate('videos/');
+
 		const response = await api.videos.list({
 			is_watched: false,
 			limit: pageSize,

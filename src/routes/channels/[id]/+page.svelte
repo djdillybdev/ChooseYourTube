@@ -1,9 +1,13 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 	import VideoList from '$lib/components/video/VideoList.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import PaginationControls from '$lib/components/ui/PaginationControls.svelte';
 	import { filterState } from '$lib/stores/filterState.svelte';
 	import { formatRelativeDate } from '$lib/utils/formatDate';
+	import { uiState } from '$lib/stores/uiState.svelte';
 	import { api } from '$lib/api';
 
 	interface Props {
@@ -14,21 +18,6 @@
 
 	let isRefreshing = $state(false);
 	let refreshError = $state<string | null>(null);
-
-	// Filter videos based on filter state
-	let filteredVideos = $derived(() => {
-		let videos = data.videos;
-
-		if (filterState.current.is_watched !== undefined) {
-			videos = videos.filter((v) => v.is_watched === filterState.current.is_watched);
-		}
-
-		if (filterState.current.is_favorited !== undefined) {
-			videos = videos.filter((v) => v.is_favorited === filterState.current.is_favorited);
-		}
-
-		return videos;
-	});
 
 	async function handleRefresh() {
 		isRefreshing = true;
@@ -45,6 +34,19 @@
 			isRefreshing = false;
 		}
 	}
+
+	/**
+	 * Sync the persisted pageSize preference into the URL on first visit.
+	 * Uses replaceState so it doesn't pollute history.
+	 */
+	onMount(() => {
+		const url = new URL(window.location.href);
+		if (!url.searchParams.has('pageSize')) {
+			url.searchParams.set('pageSize', String(uiState.current.pageSize));
+			if (!url.searchParams.has('page')) url.searchParams.set('page', '1');
+			goto(url.pathname + url.search, { replaceState: true });
+		}
+	});
 </script>
 
 <svelte:head>
@@ -54,7 +56,7 @@
 <div class="container mx-auto max-w-7xl p-6">
 	<!-- Channel Header -->
 	<div class="mb-6">
-		<div class="flex items-start gap-6 mb-4">
+		<div class="mb-4 flex items-start gap-6">
 			<!-- Channel Thumbnail -->
 			{#if data.channel.thumbnail_url}
 				<img
@@ -82,9 +84,9 @@
 			{/if}
 
 			<!-- Channel Info -->
-			<div class="flex-1 min-w-0">
-				<h1 class="text-3xl font-bold mb-1">{data.channel.title}</h1>
-				<p class="text-base-content/60 mb-2">@{data.channel.handle}</p>
+			<div class="min-w-0 flex-1">
+				<h1 class="mb-1 text-3xl font-bold">{data.channel.title}</h1>
+				<p class="mb-2 text-base-content/60">@{data.channel.handle}</p>
 
 				<div class="flex items-center gap-4 text-sm text-base-content/60">
 					<span>{data.total} videos</span>
@@ -99,13 +101,9 @@
 			</div>
 
 			<!-- Refresh Button -->
-			<button
-				class="btn btn-primary gap-2"
-				onclick={handleRefresh}
-				disabled={isRefreshing}
-			>
+			<button class="btn gap-2 btn-primary" onclick={handleRefresh} disabled={isRefreshing}>
 				{#if isRefreshing}
-					<span class="loading loading-spinner loading-sm"></span>
+					<span class="loading loading-sm loading-spinner"></span>
 					Refreshing...
 				{:else}
 					<svg
@@ -163,8 +161,14 @@
 	</div>
 
 	<!-- Videos List -->
-	{#if filteredVideos().length > 0}
-		<VideoList videos={filteredVideos()} />
+	{#if data.videos.length > 0}
+		<VideoList videos={data.videos} />
+		<PaginationControls
+			total={data.total}
+			currentPage={data.page}
+			pageSize={data.pageSize}
+			basePath={`/channels/${data.channel.id}`}
+		/>
 	{:else}
 		<EmptyState
 			icon="video"

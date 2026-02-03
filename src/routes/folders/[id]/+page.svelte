@@ -3,6 +3,7 @@
 	import ChannelCard from '$lib/components/channel/ChannelCard.svelte';
 	import VideoList from '$lib/components/video/VideoList.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import PaginationControls from '$lib/components/ui/PaginationControls.svelte';
 
 	interface Props {
 		data: PageData;
@@ -18,7 +19,7 @@
 <div class="container mx-auto max-w-7xl p-6">
 	<!-- Folder Header -->
 	<div class="mb-6">
-		<div class="flex items-center gap-3 mb-2">
+		<div class="mb-2 flex items-center gap-3">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				fill="none"
@@ -36,9 +37,10 @@
 			<h1 class="text-3xl font-bold">{data.folder.name}</h1>
 		</div>
 		<p class="text-base-content/60">
-			{data.channels.length} {data.channels.length === 1 ? 'channel' : 'channels'}
-			{#if data.videos.length > 0}
-				· {data.videos.length} {data.videos.length === 1 ? 'video' : 'videos'}
+			{data.channels.length}
+			{data.channels.length === 1 ? 'channel' : 'channels'}
+			{#if data.total > 0}
+				· {data.total} {data.total === 1 ? 'video' : 'videos'}
 			{/if}
 		</p>
 	</div>
@@ -46,8 +48,8 @@
 	<!-- Channels Section -->
 	{#if data.channels.length > 0}
 		<div class="mb-8">
-			<h2 class="text-xl font-semibold mb-4">Channels</h2>
-			<div class="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+			<h2 class="mb-4 text-xl font-semibold">Channels</h2>
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each data.channels as channel (channel.id)}
 					<ChannelCard {channel} />
 				{/each}
@@ -57,9 +59,15 @@
 
 	<!-- Videos Section -->
 	<div>
-		<h2 class="text-xl font-semibold mb-4">Videos</h2>
+		<h2 class="mb-4 text-xl font-semibold">Videos</h2>
 		{#if data.videos.length > 0}
 			<VideoList videos={data.videos} />
+			<PaginationControls
+				total={data.total}
+				currentPage={data.page}
+				pageSize={data.pageSize}
+				basePath={`/folders/${data.folder.id}`}
+			/>
 		{:else if data.channels.length === 0}
 			<EmptyState
 				icon="folder"

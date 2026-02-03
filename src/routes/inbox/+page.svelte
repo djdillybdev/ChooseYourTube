@@ -22,12 +22,10 @@
 			url.searchParams.set('pageSize', String(uiState.current.pageSize));
 			if (!url.searchParams.has('page')) url.searchParams.set('page', '1');
 			goto(url.pathname + url.search, { replaceState: true });
+		} else {
+			// Update stored preference when URL has pageSize
+			setPageSize(data.pageSize);
 		}
-	});
-
-	/** Keep the persisted preference in sync when pageSize changes via the dropdown */
-	$effect(() => {
-		setPageSize(data.pageSize);
 	});
 </script>
 
@@ -35,7 +33,8 @@
 	<div class="mb-6">
 		<h1 class="text-2xl font-bold">Inbox</h1>
 		<p class="text-sm text-base-content/60">
-			{data.total} {data.total === 1 ? 'video' : 'videos'}
+			{data.total}
+			{data.total === 1 ? 'video' : 'videos'}
 		</p>
 	</div>
 
