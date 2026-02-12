@@ -6,11 +6,18 @@
 	import PaginationControls from '$lib/components/ui/PaginationControls.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import { uiState, setPageSize } from '$lib/stores/uiState.svelte';
+	import { createChannelMap } from '$lib/utils/channelLookup';
 
 	interface Props {
 		data: PageData;
 	}
 	let { data }: Props = $props();
+
+	// Access parent layout data (SvelteKit merges layout + page data)
+	const channels = $derived((data as any).channels ?? []);
+	const channelMap = $derived(
+		channels.length > 0 ? createChannelMap(channels) : undefined
+	);
 
 	/**
 	 * Sync the persisted pageSize preference into the URL on first visit.
@@ -41,7 +48,7 @@
 	{#if data.error}
 		<ErrorState message={data.error} />
 	{:else}
-		<VideoList videos={data.videos} />
+		<VideoList videos={data.videos} {channelMap} />
 
 		<PaginationControls
 			total={data.total}

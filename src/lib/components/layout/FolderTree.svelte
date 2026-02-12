@@ -2,7 +2,6 @@
 	import type { ChannelOut, FolderOut } from '$lib/types/api';
 	import { folderExpansion } from '$lib/stores/folderExpansion.svelte';
 	import { page } from '$app/stores';
-	import { openEditFolder } from '$lib/stores/modalState.svelte';
 	import ChannelTreeItem from './ChannelTreeItem.svelte';
 
 	interface Props {
@@ -22,9 +21,6 @@
 	const isExpanded = $derived(folderExpansion.isExpanded(folder.id));
 	const isActive = $derived($page.params.id === folder.id.toString());
 
-	// Track hover state for this folder
-	let isHovered = $state(false);
-
 	function toggleExpand(e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
@@ -36,8 +32,6 @@
 	<div
 		class="folder-item flex items-center"
 		style="padding-left: {depth * 1}rem"
-		onmouseenter={() => (isHovered = true)}
-		onmouseleave={() => (isHovered = false)}
 	>
 		<!-- Chevron button (only if folder has children) -->
 		{#if hasChildren}
@@ -66,7 +60,7 @@
 		<!-- Folder link -->
 		<a
 			href="/folders/{folder.id}"
-			class="flex flex-1 items-center gap-2 rounded px-2 py-1.5 transition-colors hover:bg-base-200"
+			class="flex flex-1 items-center gap-2 rounded px-2 py-1.5 transition-colors"
 			class:bg-base-200={isActive}
 		>
 			<svg
@@ -85,29 +79,6 @@
 			</svg>
 			<span class="text-sm">{folder.name}</span>
 		</a>
-
-		<!-- Three-dot menu button (hover-reveal) -->
-		{#if isHovered}
-			<button
-				class="btn btn-square btn-ghost btn-xs"
-				onclick={(e) => {
-					e.stopPropagation();
-					openEditFolder(folder);
-				}}
-				aria-label="Edit folder"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 24 24"
-					fill="currentColor"
-					class="h-4 w-4"
-				>
-					<path
-						d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM11.25 18.75a.75.75 0 111.5 0 .75.75 0 01-1.5 0z"
-					/>
-				</svg>
-			</button>
-		{/if}
 	</div>
 
 	{#if hasChildren && isExpanded}

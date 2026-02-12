@@ -5,6 +5,21 @@
 	import YouTubePlayer from '$lib/components/player/YouTubePlayer.svelte';
 	import PlayerControls from '$lib/components/player/PlayerControls.svelte';
 	import QueueList from '$lib/components/player/QueueList.svelte';
+	import { createChannelMap, getChannelTitle } from '$lib/utils/channelLookup';
+	import type { ChannelOut } from '$lib/types/api';
+	import type { PageData } from './$types';
+
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
+
+	// Access parent layout data
+	const channels = $derived((data as any).channels ?? []);
+	const channelMap = $derived(
+		channels.length > 0 ? createChannelMap(channels) : undefined
+	);
 
 	let showQueue = $state(false);
 	let returnUrl = $state('/inbox');
@@ -106,7 +121,11 @@
 				{playerState.current.currentVideo?.title}
 			</h2>
 			<p class="text-sm text-base-content/60">
-				{playerState.current.currentVideo?.channel_id}
+				{#if channelMap && playerState.current.currentVideo}
+					{getChannelTitle(playerState.current.currentVideo.channel_id, channelMap)}
+				{:else}
+					{playerState.current.currentVideo?.channel_id}
+				{/if}
 			</p>
 		</div>
 
@@ -118,7 +137,7 @@
 		<!-- Queue (collapsible) -->
 		{#if showQueue}
 			<div class="max-h-64 overflow-y-auto border-t border-base-300">
-				<QueueList />
+				<QueueList {channelMap} />
 			</div>
 		{/if}
 	</div>

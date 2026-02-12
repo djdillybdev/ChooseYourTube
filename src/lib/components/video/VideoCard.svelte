@@ -1,17 +1,19 @@
 <script lang="ts">
-	import type { VideoOut } from '$lib/types/api';
+	import type { VideoOut, ChannelOut } from '$lib/types/api';
 	import { formatDuration } from '$lib/utils/formatDuration';
 	import { formatRelativeDate } from '$lib/utils/formatDate';
 	import { playVideo } from '$lib/stores/playerState.svelte';
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
+	import { getChannelTitle } from '$lib/utils/channelLookup';
 
 	interface Props {
 		video: VideoOut;
+		channelMap?: Map<string, ChannelOut>;
 		onUpdate?: (video: VideoOut) => void;
 	}
 
-	let { video, onUpdate }: Props = $props();
+	let { video, channelMap, onUpdate }: Props = $props();
 
 	let isHovered = $state(false);
 	let isUpdating = $state(false);
@@ -134,7 +136,13 @@
 				<!-- Title and metadata -->
 				<div>
 					<h3 class="line-clamp-2 leading-tight font-semibold">{video.title}</h3>
-					<p class="mt-1 text-sm text-base-content/60">Channel ID: {video.channel_id}</p>
+					<p class="mt-1 text-sm text-base-content/60">
+						{#if channelMap}
+							{getChannelTitle(video.channel_id, channelMap)}
+						{:else}
+							Channel ID: {video.channel_id}
+						{/if}
+					</p>
 					<p class="text-xs text-base-content/40">
 						{formatRelativeDate(video.published_at)}
 						{#if video.is_short}

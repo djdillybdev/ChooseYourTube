@@ -25,14 +25,16 @@ export const load: LayoutLoad = async ({ depends }) => {
 		);
 		return {
 			folders,
-			unfolderedChannels
+			unfolderedChannels,
+			channels
 		};
 	} catch (error) {
 		console.error('Failed to load data:', error);
 		// Return empty arrays on error to prevent layout from breaking
 		return {
 			folders: [] as FolderOut[],
-			unfolderedChannels: [] as ChannelOut[]
+			unfolderedChannels: [] as ChannelOut[],
+			channels: [] as ChannelOut[]
 		};
 	}
 };

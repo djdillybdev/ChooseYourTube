@@ -6,6 +6,14 @@
 		clearQueue
 	} from '$lib/stores/playerState.svelte';
 	import { formatDuration } from '$lib/utils/formatDuration';
+	import { getChannelTitle } from '$lib/utils/channelLookup';
+	import type { ChannelOut } from '$lib/types/api';
+
+	interface Props {
+		channelMap?: Map<string, ChannelOut>;
+	}
+
+	let { channelMap }: Props = $props();
 
 	let isDragging = $state(false);
 </script>
@@ -119,7 +127,11 @@
 							{video.title}
 						</p>
 						<p class="text-xs text-base-content/60">
-							{video.channel_id}
+							{#if channelMap}
+								{getChannelTitle(video.channel_id, channelMap)}
+							{:else}
+								{video.channel_id}
+							{/if}
 						</p>
 					</div>
 

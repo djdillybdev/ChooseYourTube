@@ -1,13 +1,14 @@
 <script lang="ts">
-	import type { VideoOut } from '$lib/types/api';
+	import type { VideoOut, ChannelOut } from '$lib/types/api';
 	import VideoCard from './VideoCard.svelte';
 	import EmptyState from '../ui/EmptyState.svelte';
 
 	interface Props {
 		videos: VideoOut[];
+		channelMap?: Map<string, ChannelOut>;
 	}
 
-	let { videos }: Props = $props();
+	let { videos, channelMap }: Props = $props();
 
 	/** Optimistic update for watched / favorite toggles */
 	function handleVideoUpdate(updated: VideoOut) {
@@ -17,7 +18,7 @@
 
 <div class="video-list space-y-3">
 	{#each videos as video (video.id)}
-		<VideoCard {video} onUpdate={handleVideoUpdate} />
+		<VideoCard {video} {channelMap} onUpdate={handleVideoUpdate} />
 	{/each}
 
 	{#if videos.length === 0}

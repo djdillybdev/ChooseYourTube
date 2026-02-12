@@ -14,6 +14,7 @@
 		data: {
 			folders: any[];
 			unfolderedChannels: any[];
+			channels: any[];
 		};
 	}
 
