@@ -8,7 +8,7 @@
 	<div class="flex items-center gap-2">
 		{#if uiState.current.sidebarCollapsed}
 			<button
-				class="btn btn-ghost btn-sm btn-square"
+				class="btn btn-square btn-ghost btn-sm"
 				onclick={toggleSidebar}
 				aria-label="Open sidebar"
 			>
@@ -35,21 +35,21 @@
 		<!-- Watch status filter -->
 		<div class="join">
 			<button
-				class="btn btn-sm join-item"
+				class="btn join-item btn-sm"
 				class:btn-active={filterState.current.is_watched === undefined}
 				onclick={() => setWatchedFilter(undefined)}
 			>
 				All
 			</button>
 			<button
-				class="btn btn-sm join-item"
+				class="btn join-item btn-sm"
 				class:btn-active={filterState.current.is_watched === false}
 				onclick={() => setWatchedFilter(false)}
 			>
 				Unwatched
 			</button>
 			<button
-				class="btn btn-sm join-item"
+				class="btn join-item btn-sm"
 				class:btn-active={filterState.current.is_watched === true}
 				onclick={() => setWatchedFilter(true)}
 			>
@@ -61,7 +61,7 @@
 	<!-- Right: Actions -->
 	<div class="flex items-center gap-2">
 		<!-- Refresh button -->
-		<button class="btn btn-ghost btn-sm btn-square" aria-label="Refresh">
+		<button class="btn btn-square btn-ghost btn-sm" aria-label="Refresh">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				fill="none"

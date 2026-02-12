@@ -70,10 +70,7 @@ export class TagsAPI {
 	/**
 	 * Get all videos associated with a tag
 	 */
-	async getVideos(
-		id: string,
-		params?: { limit?: number; offset?: number }
-	): Promise<VideoOut[]> {
+	async getVideos(id: string, params?: { limit?: number; offset?: number }): Promise<VideoOut[]> {
 		return this.client.get<VideoOut[]>(`/tags/${id}/videos`, params);
 	}
 

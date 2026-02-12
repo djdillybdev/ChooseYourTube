@@ -27,7 +27,7 @@
 	<p class="mb-4 text-sm text-base-content/60">{message}</p>
 
 	{#if onRetry}
-		<button class="btn btn-primary btn-sm" onclick={onRetry}>
+		<button class="btn btn-sm btn-primary" onclick={onRetry}>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				fill="none"

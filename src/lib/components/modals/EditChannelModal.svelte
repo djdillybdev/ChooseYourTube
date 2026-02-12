@@ -66,16 +66,31 @@
 	}
 </script>
 
-<dialog bind:this={dialogElement} class="modal modal-open">
+<dialog bind:this={dialogElement} class="modal-open modal">
 	<div class="modal-box">
 		<!-- Channel identity (read-only header) -->
 		<div class="mb-4 flex items-center gap-3">
 			{#if channel.thumbnail_url}
-				<img src={channel.thumbnail_url} alt={channel.title} class="h-12 w-12 rounded-full object-cover" />
+				<img
+					src={channel.thumbnail_url}
+					alt={channel.title}
+					class="h-12 w-12 rounded-full object-cover"
+				/>
 			{:else}
 				<div class="flex h-12 w-12 items-center justify-center rounded-full bg-base-300">
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-6 w-6 text-base-content/40">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						class="h-6 w-6 text-base-content/40"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
+						/>
 					</svg>
 				</div>
 			{/if}
@@ -89,7 +104,12 @@
 			<!-- Favorite toggle -->
 			<div class="flex items-center justify-between">
 				<span class="label-text">Favorite</span>
-				<input type="checkbox" class="toggle toggle-primary" bind:checked={isFavorited} disabled={isSubmitting} />
+				<input
+					type="checkbox"
+					class="toggle toggle-primary"
+					bind:checked={isFavorited}
+					disabled={isSubmitting}
+				/>
 			</div>
 
 			<!-- Folder select -->
@@ -97,7 +117,12 @@
 				<label class="label" for="edit-ch-folder">
 					<span class="label-text">Folder</span>
 				</label>
-				<select id="edit-ch-folder" bind:value={selectedFolder} disabled={isSubmitting} class="select select-bordered w-full">
+				<select
+					id="edit-ch-folder"
+					bind:value={selectedFolder}
+					disabled={isSubmitting}
+					class="select-bordered select w-full"
+				>
 					<option value={null}>No folder</option>
 					{#each flatFolders as f}
 						<option value={f.id}>{f.name}</option>
@@ -108,8 +133,18 @@
 			<!-- Error -->
 			{#if error}
 				<div class="alert alert-error">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-6 w-6 shrink-0 stroke-current"
+						fill="none"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
 					</svg>
 					<span>{error}</span>
 				</div>
@@ -117,13 +152,20 @@
 
 			<!-- Actions -->
 			<div class="modal-action">
-				<button type="button" class="btn btn-ghost btn-sm text-error" onclick={handleDelete} disabled={isSubmitting}>
+				<button
+					type="button"
+					class="btn text-error btn-ghost btn-sm"
+					onclick={handleDelete}
+					disabled={isSubmitting}
+				>
 					Delete
 				</button>
 				<div class="flex-1"></div>
-				<button type="button" class="btn btn-ghost" onclick={onClose} disabled={isSubmitting}>Cancel</button>
+				<button type="button" class="btn btn-ghost" onclick={onClose} disabled={isSubmitting}
+					>Cancel</button
+				>
 				<button type="submit" class="btn btn-primary" disabled={isSubmitting}>
-					{#if isSubmitting}<span class="loading loading-spinner loading-sm"></span>{/if}
+					{#if isSubmitting}<span class="loading loading-sm loading-spinner"></span>{/if}
 					Save
 				</button>
 			</div>

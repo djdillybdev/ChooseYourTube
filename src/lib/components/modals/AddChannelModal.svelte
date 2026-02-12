@@ -50,10 +50,10 @@
 	}
 </script>
 
-<dialog bind:this={dialogElement} class="modal modal-open">
+<dialog bind:this={dialogElement} class="modal-open modal">
 	<div class="modal-box">
 		<h3 class="text-lg font-bold">Add YouTube Channel</h3>
-		<p class="text-base-content/60 py-2 text-sm">
+		<p class="py-2 text-sm text-base-content/60">
 			Enter the channel handle (e.g., @mkbhd) or channel URL
 		</p>
 
@@ -69,7 +69,7 @@
 					placeholder="@channelhandle or youtube.com/..."
 					bind:value={handle}
 					disabled={isSubmitting}
-					class="input input-bordered w-full"
+					class="input-bordered input w-full"
 					required
 				/>
 			</div>
@@ -83,7 +83,7 @@
 					id="folder-select"
 					bind:value={selectedFolderId}
 					disabled={isSubmitting}
-					class="select select-bordered w-full"
+					class="select-bordered select w-full"
 				>
 					<option value={undefined}>No folder</option>
 					{#each folders as folder}
@@ -119,7 +119,7 @@
 				</button>
 				<button type="submit" class="btn btn-primary" disabled={isSubmitting || !handle.trim()}>
 					{#if isSubmitting}
-						<span class="loading loading-spinner loading-sm"></span>
+						<span class="loading loading-sm loading-spinner"></span>
 						Adding...
 					{:else}
 						Add Channel

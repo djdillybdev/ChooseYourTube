@@ -25,14 +25,11 @@
 </svelte:head>
 
 <div class="app-shell flex h-screen overflow-hidden">
-	<Sidebar
-		folders={data.folders}
-		unfolderedChannels={data.unfolderedChannels}
-	/>
+	<Sidebar folders={data.folders} unfolderedChannels={data.unfolderedChannels} />
 
 	<div class="flex flex-1 flex-col overflow-hidden">
 		<TopBar />
-		<main class="bg-base-200 flex-1 overflow-auto">
+		<main class="flex-1 overflow-auto bg-base-200">
 			{@render children()}
 		</main>
 	</div>
@@ -53,9 +50,5 @@
 	/>
 {/if}
 {#if modalState.current.type === 'editFolder'}
-	<EditFolderModal
-		folder={modalState.current.folder}
-		folders={data.folders}
-		onClose={closeModal}
-	/>
+	<EditFolderModal folder={modalState.current.folder} folders={data.folders} onClose={closeModal} />
 {/if}

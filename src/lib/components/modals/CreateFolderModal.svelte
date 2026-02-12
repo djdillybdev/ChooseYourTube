@@ -50,7 +50,7 @@
 	}
 </script>
 
-<dialog bind:this={dialogElement} class="modal modal-open">
+<dialog bind:this={dialogElement} class="modal-open modal">
 	<div class="modal-box">
 		<h3 class="text-lg font-bold">Create New Folder</h3>
 		<p class="py-2 text-sm text-base-content/60">
@@ -69,7 +69,7 @@
 					placeholder="My Folder"
 					bind:value={name}
 					disabled={isSubmitting}
-					class="input input-bordered w-full"
+					class="input-bordered input w-full"
 					required
 				/>
 			</div>
@@ -83,7 +83,7 @@
 					id="parent-folder-select"
 					bind:value={selectedParentId}
 					disabled={isSubmitting}
-					class="select select-bordered w-full"
+					class="select-bordered select w-full"
 				>
 					<option value={undefined}>No parent (top level)</option>
 					{#each folders as folder}
@@ -119,7 +119,7 @@
 				</button>
 				<button type="submit" class="btn btn-primary" disabled={isSubmitting || !name.trim()}>
 					{#if isSubmitting}
-						<span class="loading loading-spinner loading-sm"></span>
+						<span class="loading loading-sm loading-spinner"></span>
 						Creating...
 					{:else}
 						Create Folder

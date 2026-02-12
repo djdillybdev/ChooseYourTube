@@ -96,11 +96,22 @@
 	}
 </script>
 
-<dialog bind:this={dialogElement} class="modal modal-open">
+<dialog bind:this={dialogElement} class="modal-open modal">
 	<div class="modal-box">
 		<div class="mb-4 flex items-center gap-3">
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-8 w-8 text-primary">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				class="h-8 w-8 text-primary"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
+				/>
 			</svg>
 			<h3 class="text-lg font-bold">Edit Folder</h3>
 		</div>
@@ -110,14 +121,26 @@
 				<label class="label" for="edit-folder-name">
 					<span class="label-text">Name</span>
 				</label>
-				<input id="edit-folder-name" type="text" bind:value={name} disabled={isSubmitting} class="input input-bordered w-full" required />
+				<input
+					id="edit-folder-name"
+					type="text"
+					bind:value={name}
+					disabled={isSubmitting}
+					class="input-bordered input w-full"
+					required
+				/>
 			</div>
 
 			<div class="form-control">
 				<label class="label" for="edit-folder-parent">
 					<span class="label-text">Parent Folder</span>
 				</label>
-				<select id="edit-folder-parent" bind:value={selectedParentId} disabled={isSubmitting} class="select select-bordered w-full">
+				<select
+					id="edit-folder-parent"
+					bind:value={selectedParentId}
+					disabled={isSubmitting}
+					class="select-bordered select w-full"
+				>
 					<option value={null}>Top level (no parent)</option>
 					{#each parentOptions() as f}
 						<option value={f.id}>{f.name}</option>
@@ -128,8 +151,18 @@
 			<!-- Error -->
 			{#if error}
 				<div class="alert alert-error">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-6 w-6 shrink-0 stroke-current"
+						fill="none"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
 					</svg>
 					<span>{error}</span>
 				</div>
@@ -137,13 +170,20 @@
 
 			<!-- Actions -->
 			<div class="modal-action">
-				<button type="button" class="btn btn-ghost btn-sm text-error" onclick={handleDelete} disabled={isSubmitting}>
+				<button
+					type="button"
+					class="btn text-error btn-ghost btn-sm"
+					onclick={handleDelete}
+					disabled={isSubmitting}
+				>
 					Delete
 				</button>
 				<div class="flex-1"></div>
-				<button type="button" class="btn btn-ghost" onclick={onClose} disabled={isSubmitting}>Cancel</button>
+				<button type="button" class="btn btn-ghost" onclick={onClose} disabled={isSubmitting}
+					>Cancel</button
+				>
 				<button type="submit" class="btn btn-primary" disabled={isSubmitting}>
-					{#if isSubmitting}<span class="loading loading-spinner loading-sm"></span>{/if}
+					{#if isSubmitting}<span class="loading loading-sm loading-spinner"></span>{/if}
 					Save
 				</button>
 			</div>

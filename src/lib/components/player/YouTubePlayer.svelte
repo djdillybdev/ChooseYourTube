@@ -112,10 +112,8 @@
 	<div bind:this={playerElement} class="h-full w-full"></div>
 
 	{#if !isReady}
-		<div
-			class="absolute inset-0 flex items-center justify-center bg-black/80 text-base-content"
-		>
-			<span class="loading loading-spinner loading-lg"></span>
+		<div class="absolute inset-0 flex items-center justify-center bg-black/80 text-base-content">
+			<span class="loading loading-lg loading-spinner"></span>
 		</div>
 	{/if}
 </div>

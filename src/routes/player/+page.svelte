@@ -38,15 +38,27 @@
 
 <!-- Full-viewport overlay – covers sidebar rendered by root layout -->
 <div class="fixed inset-0 z-50 flex flex-col bg-base-100">
-
 	<!-- Header -->
-	<header class="flex shrink-0 items-center justify-between border-b border-base-300 bg-base-100 px-6 py-2">
+	<header
+		class="flex shrink-0 items-center justify-between border-b border-base-300 bg-base-100 px-6 py-2"
+	>
 		<button
 			class="flex items-center gap-2 text-sm text-base-content/70 transition-colors hover:text-base-content"
 			onclick={handleBack}
 		>
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				class="h-4 w-4"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+				/>
 			</svg>
 			Back
 		</button>
@@ -61,11 +73,18 @@
 				<span class="badge badge-sm badge-primary">{playerState.current.queue.length}</span>
 			</button>
 			<button
-				class="btn btn-ghost btn-sm btn-square"
+				class="btn btn-square btn-ghost btn-sm"
 				onclick={handleClose}
 				aria-label="Close player"
 			>
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.5"
+					class="h-5 w-5"
+				>
 					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 				</svg>
 			</button>
@@ -74,7 +93,7 @@
 
 	<!-- Video (fills remaining height, centred) -->
 	<div class="flex min-h-0 flex-1 items-center justify-center bg-base-200 p-6">
-		<div class="w-full max-w-4xl aspect-video">
+		<div class="aspect-video w-full max-w-4xl">
 			<YouTubePlayer />
 		</div>
 	</div>
@@ -82,7 +101,7 @@
 	<!-- Bottom panel -->
 	<div class="shrink-0 border-t border-base-300 bg-base-100">
 		<!-- Video info -->
-		<div class="px-6 pb-1 pt-4">
+		<div class="px-6 pt-4 pb-1">
 			<h2 class="text-lg font-semibold text-base-content">
 				{playerState.current.currentVideo?.title}
 			</h2>
@@ -93,10 +112,7 @@
 
 		<!-- Playback controls -->
 		<div class="px-6 pb-3">
-			<PlayerControls
-				onToggleQueue={() => (showQueue = !showQueue)}
-				showQueue={showQueue}
-			/>
+			<PlayerControls onToggleQueue={() => (showQueue = !showQueue)} {showQueue} />
 		</div>
 
 		<!-- Queue (collapsible) -->

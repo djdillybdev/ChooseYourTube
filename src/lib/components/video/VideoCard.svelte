@@ -58,7 +58,7 @@
 </script>
 
 <div
-	class="video-card bg-base-100 border border-base-300 rounded-box transition-all duration-200 hover:border-primary"
+	class="video-card rounded-box border border-base-300 bg-base-100 transition-all duration-200 hover:border-primary"
 	class:opacity-60={video.is_watched}
 	onmouseenter={() => (isHovered = true)}
 	onmouseleave={() => (isHovered = false)}
@@ -104,7 +104,7 @@
 				<!-- Duration overlay -->
 				{#if video.duration_seconds}
 					<div
-						class="absolute bottom-1 right-1 rounded bg-base-100/90 px-1.5 py-0.5 text-xs font-semibold"
+						class="absolute right-1 bottom-1 rounded bg-base-100/90 px-1.5 py-0.5 text-xs font-semibold"
 					>
 						{formatDuration(video.duration_seconds)}
 					</div>
@@ -112,7 +112,7 @@
 
 				<!-- Watched indicator -->
 				{#if video.is_watched}
-					<div class="absolute left-1 top-1 rounded-full bg-success p-1">
+					<div class="absolute top-1 left-1 rounded-full bg-success p-1">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"
@@ -133,12 +133,12 @@
 			<div class="flex min-w-0 flex-1 flex-col justify-between">
 				<!-- Title and metadata -->
 				<div>
-					<h3 class="line-clamp-2 font-semibold leading-tight">{video.title}</h3>
+					<h3 class="line-clamp-2 leading-tight font-semibold">{video.title}</h3>
 					<p class="mt-1 text-sm text-base-content/60">Channel ID: {video.channel_id}</p>
 					<p class="text-xs text-base-content/40">
 						{formatRelativeDate(video.published_at)}
 						{#if video.is_short}
-							<span class="badge badge-sm ml-2">Short</span>
+							<span class="ml-2 badge badge-sm">Short</span>
 						{/if}
 					</p>
 				</div>
@@ -147,7 +147,7 @@
 				{#if isHovered}
 					<div class="mt-2 flex gap-2">
 						<button
-							class="btn btn-ghost btn-sm btn-square"
+							class="btn btn-square btn-ghost btn-sm"
 							class:btn-active={video.is_watched}
 							onclick={handleMarkWatched}
 							disabled={isUpdating}
@@ -176,7 +176,7 @@
 						</button>
 
 						<button
-							class="btn btn-ghost btn-sm btn-square"
+							class="btn btn-square btn-ghost btn-sm"
 							class:btn-active={video.is_favorited}
 							class:text-warning={video.is_favorited}
 							onclick={handleToggleFavorite}
@@ -201,7 +201,7 @@
 						</button>
 
 						<button
-							class="btn btn-primary btn-sm gap-1"
+							class="btn gap-1 btn-sm btn-primary"
 							onclick={(e) => {
 								e.stopPropagation();
 								handlePlay();

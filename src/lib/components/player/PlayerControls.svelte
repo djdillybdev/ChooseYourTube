@@ -52,7 +52,7 @@
 	<!-- Play/Pause and Skip -->
 	<div class="flex items-center gap-1">
 		<button
-			class="btn btn-ghost btn-sm btn-square"
+			class="btn btn-square btn-ghost btn-sm"
 			onclick={playPrevious}
 			disabled={playerState.current.queueIndex === 0}
 			aria-label="Previous"
@@ -70,7 +70,7 @@
 		</button>
 
 		<button
-			class="btn btn-primary btn-sm btn-circle"
+			class="btn btn-circle btn-sm btn-primary"
 			onclick={togglePlayPause}
 			aria-label={playerState.current.isPlaying ? 'Pause' : 'Play'}
 		>
@@ -81,7 +81,9 @@
 					fill="currentColor"
 					class="h-5 w-5"
 				>
-					<path d="M5.75 3a.75.75 0 00-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V3.75A.75.75 0 007.25 3h-1.5zM12.75 3a.75.75 0 00-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V3.75a.75.75 0 00-.75-.75h-1.5z" />
+					<path
+						d="M5.75 3a.75.75 0 00-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V3.75A.75.75 0 007.25 3h-1.5zM12.75 3a.75.75 0 00-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V3.75a.75.75 0 00-.75-.75h-1.5z"
+					/>
 				</svg>
 			{:else}
 				<svg
@@ -98,7 +100,7 @@
 		</button>
 
 		<button
-			class="btn btn-ghost btn-sm btn-square"
+			class="btn btn-square btn-ghost btn-sm"
 			onclick={playNext}
 			disabled={!playerState.current.queue.length ||
 				(playerState.current.queueIndex >= playerState.current.queue.length - 1 &&
@@ -133,7 +135,7 @@
 	<!-- Volume control -->
 	<div class="flex items-center gap-2">
 		<button
-			class="btn btn-ghost btn-sm btn-square"
+			class="btn btn-square btn-ghost btn-sm"
 			onclick={toggleMute}
 			aria-label={isMuted ? 'Unmute' : 'Mute'}
 		>
@@ -182,14 +184,14 @@
 			max="100"
 			value={playerState.current.volume}
 			oninput={handleVolumeChange}
-			class="range range-xs range-primary w-20"
+			class="range w-20 range-primary range-xs"
 			aria-label="Volume"
 		/>
 	</div>
 
 	<!-- Repeat mode -->
 	<button
-		class="btn btn-ghost btn-sm btn-square"
+		class="btn btn-square btn-ghost btn-sm"
 		class:btn-active={playerState.current.repeatMode !== 'none'}
 		onclick={cycleRepeatMode}
 		aria-label="Repeat: {playerState.current.repeatMode}"
@@ -210,7 +212,7 @@
 					d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3"
 				/>
 			</svg>
-			<span class="absolute bottom-1 right-1 text-xs font-bold">1</span>
+			<span class="absolute right-1 bottom-1 text-xs font-bold">1</span>
 		{:else}
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -232,7 +234,7 @@
 	<!-- Queue toggle -->
 	{#if onToggleQueue}
 		<button
-			class="btn btn-ghost btn-sm btn-square"
+			class="btn btn-square btn-ghost btn-sm"
 			class:btn-active={showQueue}
 			onclick={onToggleQueue}
 			aria-label="Toggle queue"
@@ -252,7 +254,7 @@
 				/>
 			</svg>
 			{#if playerState.current.queue.length > 0}
-				<div class="badge badge-primary badge-xs absolute -right-1 -top-1">
+				<div class="absolute -top-1 -right-1 badge badge-xs badge-primary">
 					{playerState.current.queue.length}
 				</div>
 			{/if}

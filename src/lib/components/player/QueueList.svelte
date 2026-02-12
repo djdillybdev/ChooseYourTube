@@ -1,5 +1,10 @@
 <script lang="ts">
-	import { playerState, jumpToQueueItem, removeFromQueue, clearQueue } from '$lib/stores/playerState.svelte';
+	import {
+		playerState,
+		jumpToQueueItem,
+		removeFromQueue,
+		clearQueue
+	} from '$lib/stores/playerState.svelte';
 	import { formatDuration } from '$lib/utils/formatDuration';
 
 	let isDragging = $state(false);
@@ -101,7 +106,7 @@
 						<!-- Duration -->
 						{#if video.duration_seconds}
 							<div
-								class="absolute bottom-0.5 right-0.5 rounded bg-base-100/90 px-1 text-xs font-semibold"
+								class="absolute right-0.5 bottom-0.5 rounded bg-base-100/90 px-1 text-xs font-semibold"
 							>
 								{formatDuration(video.duration_seconds)}
 							</div>
@@ -120,7 +125,7 @@
 
 					<!-- Remove button -->
 					<button
-						class="btn btn-ghost btn-sm btn-square shrink-0"
+						class="btn btn-square shrink-0 btn-ghost btn-sm"
 						onclick={(e) => {
 							e.stopPropagation();
 							removeFromQueue(video.id);

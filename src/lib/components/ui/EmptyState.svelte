@@ -63,11 +63,7 @@
 			stroke="currentColor"
 			class="mb-4 h-16 w-16 text-base-content/40"
 		>
-			<path
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-			/>
+			<path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 			<path
 				stroke-linecap="round"
 				stroke-linejoin="round"
