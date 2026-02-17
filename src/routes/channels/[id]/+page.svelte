@@ -5,6 +5,7 @@
 	import VideoList from '$lib/components/video/VideoList.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import PaginationControls from '$lib/components/ui/PaginationControls.svelte';
+	import SearchBar from '$lib/components/ui/SearchBar.svelte';
 	import { filterState } from '$lib/stores/filterState.svelte';
 	import { formatRelativeDate } from '$lib/utils/formatDate';
 	import { uiState } from '$lib/stores/uiState.svelte';
@@ -154,6 +155,15 @@
 		</div>
 	</div>
 
+	<!-- Search bar -->
+	<div class="mb-4">
+		<SearchBar
+			basePath="/channels/{data.channel.id}"
+			initialValue={data.search}
+			placeholder="Search in {data.channel.title}..."
+		/>
+	</div>
+
 	<!-- Filter Toggle -->
 	<div class="mb-4 flex items-center gap-2">
 		<span class="text-sm font-medium">Filter:</span>
@@ -199,11 +209,13 @@
 		/>
 	{:else}
 		<EmptyState
-			icon="video"
+			icon={data.search ? 'search' : 'video'}
 			title="No videos found"
-			message={filterState.current.is_watched !== undefined
-				? 'Try changing the filter'
-				: 'Refresh the channel to fetch new videos'}
+			message={data.search
+				? `No results for "${data.search}". Try a different search term.`
+				: filterState.current.is_watched !== undefined
+					? 'Try changing the filter'
+					: 'Refresh the channel to fetch new videos'}
 		/>
 	{/if}
 </div>

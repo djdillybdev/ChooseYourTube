@@ -103,6 +103,7 @@ export interface VideoFilters extends Record<string, unknown> {
 	published_before?: string;
 	limit?: number;
 	offset?: number;
+	search?: string;
 }
 
 export interface ChannelFilters extends Record<string, unknown> {

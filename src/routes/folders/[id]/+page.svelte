@@ -4,6 +4,7 @@
 	import VideoList from '$lib/components/video/VideoList.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import PaginationControls from '$lib/components/ui/PaginationControls.svelte';
+	import SearchBar from '$lib/components/ui/SearchBar.svelte';
 	import { openEditFolder } from '$lib/stores/modalState.svelte';
 	import { createChannelMap } from '$lib/utils/channelLookup';
 
@@ -92,6 +93,16 @@
 	<!-- Videos Section -->
 	<div>
 		<h2 class="mb-4 text-xl font-semibold">Videos</h2>
+
+		<!-- Search bar -->
+		<div class="mb-4">
+			<SearchBar
+				basePath="/folders/{data.folder.id}"
+				initialValue={data.search}
+				placeholder="Search in folder..."
+			/>
+		</div>
+
 		{#if data.videos.length > 0}
 			<VideoList videos={data.videos} {channelMap} />
 			<PaginationControls
@@ -99,6 +110,12 @@
 				currentPage={data.page}
 				pageSize={data.pageSize}
 				basePath={`/folders/${data.folder.id}`}
+			/>
+		{:else if data.search}
+			<EmptyState
+				icon="search"
+				title="No videos found"
+				message={`No results for "${data.search}". Try a different search term.`}
 			/>
 		{:else if data.channels.length === 0}
 			<EmptyState

@@ -5,6 +5,7 @@ import type { PageLoad } from './$types';
 export const load: PageLoad = async ({ params, url }) => {
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 	const pageSize = Number(url.searchParams.get('pageSize')) || 24;
+	const search = url.searchParams.get('search') || undefined;
 	const offset = (page - 1) * pageSize;
 
 	try {
@@ -26,6 +27,7 @@ export const load: PageLoad = async ({ params, url }) => {
 		if (channelIds.length > 0) {
 			videosResponse = await api.videos.list({
 				channel_id: channelIds.join(','),
+				search,
 				limit: pageSize,
 				offset
 			});
@@ -37,7 +39,8 @@ export const load: PageLoad = async ({ params, url }) => {
 			videos: videosResponse.items,
 			page,
 			pageSize,
-			total: videosResponse.total
+			total: videosResponse.total,
+			search
 		};
 	} catch (err) {
 		console.error('Failed to load folder:', err);

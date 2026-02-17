@@ -13,7 +13,11 @@
 	let totalPages = $derived(Math.max(1, Math.ceil(total / pageSize)));
 
 	function navigateTo(page: number, size: number = pageSize) {
-		goto(`${basePath}?page=${page}&pageSize=${size}`);
+		const url = new URL(window.location.href);
+		url.searchParams.set('page', String(page));
+		url.searchParams.set('pageSize', String(size));
+		// Preserves search param (and any other params)
+		goto(url.pathname + url.search);
 	}
 
 	/** Sliding window of up to 5 page numbers centred on currentPage */

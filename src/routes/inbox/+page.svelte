@@ -5,6 +5,8 @@
 	import VideoList from '$lib/components/video/VideoList.svelte';
 	import PaginationControls from '$lib/components/ui/PaginationControls.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
+	import EmptyState from '$lib/components/ui/EmptyState.svelte';
+	import SearchBar from '$lib/components/ui/SearchBar.svelte';
 	import { uiState, setPageSize } from '$lib/stores/uiState.svelte';
 	import { createChannelMap } from '$lib/utils/channelLookup';
 
@@ -45,8 +47,21 @@
 		</p>
 	</div>
 
+	<!-- Search bar -->
+	<div class="mb-4">
+		<SearchBar basePath="/inbox" initialValue={data.search} placeholder="Search unwatched videos..." />
+	</div>
+
 	{#if data.error}
 		<ErrorState message={data.error} />
+	{:else if data.videos.length === 0}
+		<EmptyState
+			icon={data.search ? 'search' : 'video'}
+			title="No videos found"
+			message={data.search
+				? `No results for "${data.search}". Try a different search term.`
+				: 'No unwatched videos. Check back later or adjust your subscriptions!'}
+		/>
 	{:else}
 		<VideoList videos={data.videos} {channelMap} />
 
