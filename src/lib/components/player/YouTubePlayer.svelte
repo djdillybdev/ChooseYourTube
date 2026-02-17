@@ -16,10 +16,11 @@
 			videoId: playerState.current.currentVideo?.id || '',
 			playerVars: {
 				autoplay: 1,
-				controls: 0, // We'll use custom controls
+				controls: 1,
 				modestbranding: 1,
 				rel: 0,
-				fs: 1 // Allow fullscreen
+				fs: 1, // Allow fullscreen
+				playsinline: 1
 			},
 			events: {
 				onReady: handlePlayerReady,
@@ -29,7 +30,7 @@
 		});
 	}
 
-	function handlePlayerReady(event: YT.PlayerEvent) {
+	function handlePlayerReady() {
 		isReady = true;
 		if (playerState.current.currentVideo) {
 			player?.loadVideoById(playerState.current.currentVideo.id);

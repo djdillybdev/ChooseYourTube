@@ -3,10 +3,8 @@
 	import { goto } from '$app/navigation';
 	import { playerState, closePlayer, initializeQueue } from '$lib/stores/playerState.svelte';
 	import YouTubePlayer from '$lib/components/player/YouTubePlayer.svelte';
-	import PlayerControls from '$lib/components/player/PlayerControls.svelte';
 	import QueueList from '$lib/components/player/QueueList.svelte';
 	import { createChannelMap, getChannelTitle } from '$lib/utils/channelLookup';
-	import type { ChannelOut } from '$lib/types/api';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -17,12 +15,17 @@
 
 	// Access parent layout data
 	const channels = $derived((data as any).channels ?? []);
-	const channelMap = $derived(
-		channels.length > 0 ? createChannelMap(channels) : undefined
-	);
+	const channelMap = $derived(channels.length > 0 ? createChannelMap(channels) : undefined);
+	const currentVideoId = $derived(playerState.current.currentVideo?.id ?? null);
 
 	let showQueue = $state(false);
+	let showDescription = $state(false);
 	let returnUrl = $state('/inbox');
+
+	$effect(() => {
+		currentVideoId;
+		showDescription = false;
+	});
 
 	onMount(() => {
 		returnUrl = new URLSearchParams(window.location.search).get('return') ?? '/inbox';
@@ -110,25 +113,38 @@
 	{#if !playerState.current.isQueueReady && playerState.current.isQueueSyncing}
 		<div class="flex min-h-0 flex-1 items-center justify-center bg-base-200 p-6">
 			<div class="flex items-center gap-3 text-sm text-base-content/70">
-				<span class="loading loading-spinner loading-md"></span>
+				<span class="loading loading-md loading-spinner"></span>
 				Loading queue...
 			</div>
 		</div>
 	{:else}
-		<!-- Video (fills remaining height, centred) -->
-		<div class="flex min-h-0 flex-1 items-center justify-center bg-base-200 p-6">
-			<div class="aspect-video w-full max-w-4xl">
-				{#key playerState.current.currentVideo?.id}
-					<YouTubePlayer />
-				{/key}
+		<!-- Video area with optional right queue panel -->
+		<div class="relative z-0 flex min-h-0 flex-1 overflow-hidden bg-base-200 p-6">
+			<div class="flex min-h-0 w-full flex-col gap-4 lg:flex-row lg:items-start lg:justify-center">
+				<div class="flex min-h-0 flex-1 items-center justify-center">
+					<div class="aspect-video w-full max-w-4xl">
+						{#key playerState.current.currentVideo?.id}
+							<YouTubePlayer />
+						{/key}
+					</div>
+				</div>
+
+				{#if showQueue}
+					<aside
+						class="flex min-h-0 w-full shrink-0 overflow-hidden rounded-lg border border-base-300 bg-base-100 lg:w-96"
+						aria-label="Queue panel"
+					>
+						<QueueList {channelMap} />
+					</aside>
+				{/if}
 			</div>
 		</div>
 	{/if}
 
 	<!-- Bottom panel -->
-	<div class="shrink-0 border-t border-base-300 bg-base-100">
+	<div class="relative z-20 shrink-0 border-t border-base-300 bg-base-100">
 		<!-- Video info -->
-		<div class="px-6 pt-4 pb-1">
+		<div class="px-6 pt-4 pb-4">
 			<h2 class="text-lg font-semibold text-base-content">
 				{playerState.current.currentVideo?.title}
 			</h2>
@@ -139,18 +155,32 @@
 					{playerState.current.currentVideo?.channel_id}
 				{/if}
 			</p>
-		</div>
 
-		<!-- Playback controls -->
-		<div class="px-6 pb-3">
-			<PlayerControls onToggleQueue={() => (showQueue = !showQueue)} {showQueue} />
-		</div>
+			<div class="mt-3">
+				<button
+					class="btn btn-ghost btn-xs"
+					onclick={() => (showDescription = !showDescription)}
+					aria-expanded={showDescription}
+					aria-controls="video-description-panel"
+				>
+					{showDescription ? 'Hide description' : 'Show description'}
+				</button>
 
-		<!-- Queue (collapsible) -->
-		{#if showQueue}
-			<div class="max-h-64 overflow-y-auto border-t border-base-300">
-				<QueueList {channelMap} />
+				{#if showDescription}
+					<div
+						id="video-description-panel"
+						class="mt-2 max-h-40 overflow-y-auto rounded-md bg-base-200 px-3 py-2 text-sm text-base-content/80"
+					>
+						{#if playerState.current.currentVideo?.description}
+							<p class="break-words whitespace-pre-wrap">
+								{playerState.current.currentVideo.description}
+							</p>
+						{:else}
+							<p class="text-base-content/60 italic">No description available.</p>
+						{/if}
+					</div>
+				{/if}
 			</div>
-		{/if}
+		</div>
 	</div>
 </div>
