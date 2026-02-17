@@ -34,6 +34,7 @@ export interface FolderOut {
 	id: string;
 	name: string;
 	parent_id: string | null;
+	position: number;
 	children: FolderOut[];
 }
 
@@ -65,12 +66,14 @@ export interface VideoUpdate {
 
 export interface FolderCreate {
 	name: string;
-	parent_id?: string;
+	parent_id?: string | null;
+	position?: number | null;
 }
 
 export interface FolderUpdate {
 	name?: string;
 	parent_id?: string | null;
+	position?: number | null;
 }
 
 export interface TagCreate {
@@ -103,7 +106,9 @@ export interface VideoFilters extends Record<string, unknown> {
 	published_before?: string;
 	limit?: number;
 	offset?: number;
-	search?: string;
+	q?: string;
+	order_by?: string;
+	order_direction?: 'asc' | 'desc';
 }
 
 export interface ChannelFilters extends Record<string, unknown> {

@@ -17,9 +17,7 @@
 
 	// Access parent layout data (SvelteKit merges layout + page data)
 	const channels = $derived((data as any).channels ?? []);
-	const channelMap = $derived(
-		channels.length > 0 ? createChannelMap(channels) : undefined
-	);
+	const channelMap = $derived(channels.length > 0 ? createChannelMap(channels) : undefined);
 
 	/**
 	 * Sync the persisted pageSize preference into the URL on first visit.
@@ -49,17 +47,17 @@
 
 	<!-- Search bar -->
 	<div class="mb-4">
-		<SearchBar basePath="/inbox" initialValue={data.search} placeholder="Search unwatched videos..." />
+		<SearchBar basePath="/inbox" initialValue={data.q} placeholder="Search unwatched videos..." />
 	</div>
 
 	{#if data.error}
 		<ErrorState message={data.error} />
 	{:else if data.videos.length === 0}
 		<EmptyState
-			icon={data.search ? 'search' : 'video'}
+			icon={data.q ? 'search' : 'video'}
 			title="No videos found"
-			message={data.search
-				? `No results for "${data.search}". Try a different search term.`
+			message={data.q
+				? `No results for "${data.q}". Try a different search term.`
 				: 'No unwatched videos. Check back later or adjust your subscriptions!'}
 		/>
 	{:else}

@@ -4,7 +4,7 @@ import type { PageLoad } from './$types';
 export const load: PageLoad = async ({ url }) => {
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 	const pageSize = Number(url.searchParams.get('pageSize')) || 24;
-	const search = url.searchParams.get('search') || undefined;
+	const q = url.searchParams.get('q') || undefined;
 	const offset = (page - 1) * pageSize;
 
 	try {
@@ -13,7 +13,8 @@ export const load: PageLoad = async ({ url }) => {
 
 		const response = await api.videos.list({
 			is_watched: false,
-			search,
+			q,
+			order_by: q ? 'relevance' : undefined,
 			limit: pageSize,
 			offset
 		});
@@ -23,7 +24,7 @@ export const load: PageLoad = async ({ url }) => {
 			total: response.total,
 			page,
 			pageSize,
-			search
+			q
 		};
 	} catch (error) {
 		console.error('Failed to load inbox videos:', error);
@@ -32,7 +33,7 @@ export const load: PageLoad = async ({ url }) => {
 			total: 0,
 			page: 1,
 			pageSize,
-			search,
+			q,
 			error: error instanceof Error ? error.message : 'Failed to load videos'
 		};
 	}

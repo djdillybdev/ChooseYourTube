@@ -32,16 +32,16 @@
 	}
 
 	/**
-	 * Updates URL with search parameter and resets to page 1.
+	 * Updates URL with q parameter and resets to page 1.
 	 * Preserves other URL params like pageSize.
 	 */
 	function updateSearchParam(query: string) {
 		const url = new URL(window.location.href);
 
 		if (query) {
-			url.searchParams.set('search', query);
+			url.searchParams.set('q', query);
 		} else {
-			url.searchParams.delete('search');
+			url.searchParams.delete('q');
 		}
 
 		// Reset to page 1 when search changes (new search = new result set)
@@ -83,7 +83,7 @@
 		<!-- Search input -->
 		<input
 			type="text"
-			class="input input-bordered w-full pl-10 pr-10"
+			class="input-bordered input w-full pr-10 pl-10"
 			{placeholder}
 			bind:value={searchQuery}
 			oninput={handleInput}
@@ -94,7 +94,7 @@
 		{#if searchQuery}
 			<button
 				type="button"
-				class="btn btn-ghost btn-sm btn-circle absolute inset-y-0 right-1 my-auto"
+				class="btn absolute inset-y-0 right-1 my-auto btn-circle btn-ghost btn-sm"
 				onclick={clearSearch}
 				aria-label="Clear search"
 			>

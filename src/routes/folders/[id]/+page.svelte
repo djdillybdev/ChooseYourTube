@@ -56,7 +56,7 @@
 
 			<!-- Right: Edit button -->
 			<button
-				class="btn btn-ghost btn-sm btn-square"
+				class="btn btn-square btn-ghost btn-sm"
 				onclick={() => openEditFolder(data.folder)}
 				aria-label="Edit folder"
 			>
@@ -98,7 +98,7 @@
 		<div class="mb-4">
 			<SearchBar
 				basePath="/folders/{data.folder.id}"
-				initialValue={data.search}
+				initialValue={data.q}
 				placeholder="Search in folder..."
 			/>
 		</div>
@@ -111,11 +111,11 @@
 				pageSize={data.pageSize}
 				basePath={`/folders/${data.folder.id}`}
 			/>
-		{:else if data.search}
+		{:else if data.q}
 			<EmptyState
 				icon="search"
 				title="No videos found"
-				message={`No results for "${data.search}". Try a different search term.`}
+				message={`No results for "${data.q}". Try a different search term.`}
 			/>
 		{:else if data.channels.length === 0}
 			<EmptyState

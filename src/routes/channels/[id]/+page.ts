@@ -5,7 +5,7 @@ import type { PageLoad } from './$types';
 export const load: PageLoad = async ({ params, url }) => {
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 	const pageSize = Number(url.searchParams.get('pageSize')) || 24;
-	const search = url.searchParams.get('search') || undefined;
+	const q = url.searchParams.get('q') || undefined;
 	const offset = (page - 1) * pageSize;
 
 	try {
@@ -14,7 +14,8 @@ export const load: PageLoad = async ({ params, url }) => {
 			api.channels.get(params.id),
 			api.videos.list({
 				channel_id: params.id,
-				search,
+				q,
+				order_by: q ? 'relevance' : undefined,
 				limit: pageSize,
 				offset
 			})
@@ -26,7 +27,7 @@ export const load: PageLoad = async ({ params, url }) => {
 			total: videosResponse.total,
 			page,
 			pageSize,
-			search
+			q
 		};
 	} catch (err) {
 		console.error('Failed to load channel:', err);
