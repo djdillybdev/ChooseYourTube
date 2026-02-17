@@ -44,6 +44,20 @@ export interface TagOut {
 	created_at: string;
 }
 
+export interface PlaylistOut {
+	id: string;
+	name: string;
+	description: string | null;
+	is_system: boolean;
+	created_at: string;
+}
+
+export interface PlaylistDetailOut extends PlaylistOut {
+	current_position: number | null;
+	total_videos: number;
+	video_ids: string[];
+}
+
 // ===== Create/Update Schemas =====
 
 export interface ChannelCreate {
@@ -84,6 +98,40 @@ export interface TagUpdate {
 	name: string;
 }
 
+export interface PlaylistCreate {
+	name: string;
+	description?: string | null;
+	is_system?: boolean;
+}
+
+export interface PlaylistUpdate {
+	name?: string | null;
+	description?: string | null;
+}
+
+export interface PlaylistSetVideos {
+	video_ids: string[];
+}
+
+export interface PlaylistAddVideo {
+	video_id: string;
+	position?: number | null;
+}
+
+export interface PlaylistAddVideos {
+	video_ids: string[];
+	position?: number | null;
+}
+
+export interface PlaylistMoveVideo {
+	video_id: string;
+	new_position: number;
+}
+
+export interface PlaylistSetPosition {
+	current_position?: number | null;
+}
+
 // ===== Pagination =====
 
 export interface PaginatedResponse<T> {
@@ -122,6 +170,12 @@ export interface ChannelFilters extends Record<string, unknown> {
 export interface TagFilters extends Record<string, unknown> {
 	limit?: number;
 	offset?: number;
+}
+
+export interface PlaylistFilters extends Record<string, unknown> {
+	limit?: number;
+	offset?: number;
+	is_system?: boolean | null;
 }
 
 // ===== Error Handling =====

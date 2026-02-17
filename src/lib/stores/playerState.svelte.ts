@@ -1,4 +1,14 @@
 import type { VideoOut } from '$lib/types/api';
+import {
+	addVideoToQueue,
+	clearQueueVideos,
+	ensureQueuePlaylist,
+	hydrateQueueVideos,
+	loadQueueDetail,
+	moveQueueVideo,
+	removeVideoFromQueue,
+	setQueuePosition
+} from '$lib/services/queuePlaylist';
 
 /**
  * Player size options
@@ -17,11 +27,22 @@ interface PlayerState {
 	currentVideo: VideoOut | null;
 	queue: VideoOut[];
 	queueIndex: number;
+	queuePlaylistId: string | null;
+	isQueueReady: boolean;
+	isQueueSyncing: boolean;
+	queueError: string | null;
 	isPlaying: boolean;
 	volume: number;
 	playerSize: PlayerSize;
 	repeatMode: RepeatMode;
 	shuffleEnabled: boolean;
+}
+
+interface PersistedPlayerState {
+	volume?: number;
+	playerSize?: PlayerSize;
+	repeatMode?: RepeatMode;
+	shuffleEnabled?: boolean;
 }
 
 /**
@@ -31,6 +52,10 @@ const defaultState: PlayerState = {
 	currentVideo: null,
 	queue: [],
 	queueIndex: 0,
+	queuePlaylistId: null,
+	isQueueReady: false,
+	isQueueSyncing: false,
+	queueError: null,
 	isPlaying: false,
 	volume: 75,
 	playerSize: 'compact',
@@ -39,27 +64,42 @@ const defaultState: PlayerState = {
 };
 
 /**
- * Load state from localStorage
+ * Load state from localStorage (preferences only)
  */
 function loadState(): PlayerState {
 	if (typeof window === 'undefined') return defaultState;
 
 	try {
 		const stored = localStorage.getItem('cyt:player');
-		return stored ? { ...defaultState, ...JSON.parse(stored) } : defaultState;
+		if (!stored) return defaultState;
+
+		const parsed = JSON.parse(stored) as PersistedPlayerState;
+		return {
+			...defaultState,
+			volume: parsed.volume ?? defaultState.volume,
+			playerSize: parsed.playerSize ?? defaultState.playerSize,
+			repeatMode: parsed.repeatMode ?? defaultState.repeatMode,
+			shuffleEnabled: parsed.shuffleEnabled ?? defaultState.shuffleEnabled
+		};
 	} catch {
 		return defaultState;
 	}
 }
 
 /**
- * Save state to localStorage
+ * Save state to localStorage (preferences only)
  */
 function saveState(state: PlayerState) {
 	if (typeof window === 'undefined') return;
 
 	try {
-		localStorage.setItem('cyt:player', JSON.stringify(state));
+		const persisted: PersistedPlayerState = {
+			volume: state.volume,
+			playerSize: state.playerSize,
+			repeatMode: state.repeatMode,
+			shuffleEnabled: state.shuffleEnabled
+		};
+		localStorage.setItem('cyt:player', JSON.stringify(persisted));
 	} catch (error) {
 		console.error('Failed to save player state:', error);
 	}
@@ -88,167 +128,344 @@ function createPlayerState() {
 
 export const playerState = createPlayerState();
 
-/**
- * Play a video (sets as current and starts playback)
- */
-export function playVideo(video: VideoOut) {
-	playerState.update((state) => {
-		// Check if video is already in queue
-		const existingIndex = state.queue.findIndex((v) => v.id === video.id);
+let queueInitPromise: Promise<void> | null = null;
+let queueMutationChain: Promise<void> = Promise.resolve();
 
-		if (existingIndex >= 0) {
-			// Video is in queue, jump to it
-			return {
-				...state,
-				currentVideo: video,
-				isPlaying: true,
-				queueIndex: existingIndex
-			};
-		} else {
-			// Video not in queue, add it and play
-			const newQueue = [...state.queue, video];
-			return {
-				...state,
-				currentVideo: video,
-				isPlaying: true,
-				queue: newQueue,
-				queueIndex: newQueue.length - 1
-			};
-		}
-	});
-}
-
-/**
- * Add video to queue
- */
-export function addToQueue(video: VideoOut, position: 'next' | 'end' = 'end') {
-	playerState.update((state) => {
-		// Don't add duplicates
-		if (state.queue.some((v) => v.id === video.id)) {
-			return state;
-		}
-
-		if (position === 'next') {
-			// Insert after current video
-			const newQueue = [
-				...state.queue.slice(0, state.queueIndex + 1),
-				video,
-				...state.queue.slice(state.queueIndex + 1)
-			];
-			return { ...state, queue: newQueue };
-		} else {
-			// Add to end
-			return { ...state, queue: [...state.queue, video] };
-		}
-	});
-}
-
-/**
- * Remove video from queue
- */
-export function removeFromQueue(videoId: string) {
-	playerState.update((state) => {
-		const newQueue = state.queue.filter((v) => v.id !== videoId);
-		const newIndex = Math.min(state.queueIndex, newQueue.length - 1);
-
+function normalizeQueueState(state: PlayerState, queue: VideoOut[], position: number | null): PlayerState {
+	if (position === null || position < 0 || position >= queue.length) {
 		return {
 			...state,
-			queue: newQueue,
-			queueIndex: newIndex
+			queue,
+			queueIndex: 0,
+			currentVideo: null
+		};
+	}
+
+	return {
+		...state,
+		queue,
+		queueIndex: position,
+		currentVideo: queue[position] ?? null
+	};
+}
+
+function setQueueError(error: unknown) {
+	playerState.update((state) => ({
+		...state,
+		queueError: error instanceof Error ? error.message : 'Queue operation failed'
+	}));
+}
+
+function runQueuedMutation<T>(mutation: () => Promise<T>): Promise<T> {
+	const task = queueMutationChain.then(mutation, mutation);
+	queueMutationChain = task.then(
+		() => undefined,
+		() => undefined
+	);
+	return task;
+}
+
+async function syncFromPlaylistDetail(
+	playlistId: string,
+	options: { setPlaying?: boolean; clearError?: boolean } = {}
+) {
+	const detail = await loadQueueDetail(playlistId);
+	const queue = await hydrateQueueVideos(detail.video_ids);
+
+	playerState.update((state) => {
+		const normalized = normalizeQueueState(state, queue, detail.current_position);
+		return {
+			...normalized,
+			queuePlaylistId: playlistId,
+			isQueueReady: true,
+			isQueueSyncing: false,
+			queueError: options.clearError ? null : state.queueError,
+			isPlaying: options.setPlaying ?? state.isPlaying
 		};
 	});
 }
 
 /**
- * Play next video in queue
+ * Ensure queue playlist exists and load queue state.
  */
-export function playNext() {
-	playerState.update((state) => {
-		if (state.queueIndex < state.queue.length - 1) {
-			// Play next in queue
-			return {
+export async function initializeQueue(force = false): Promise<void> {
+	if (!force && playerState.current.isQueueReady) {
+		return;
+	}
+
+	if (!force && queueInitPromise) {
+		return queueInitPromise;
+	}
+
+	queueInitPromise = (async () => {
+		playerState.update((state) => ({
+			...state,
+			isQueueSyncing: true,
+			queueError: null
+		}));
+
+		try {
+			const playlist = await ensureQueuePlaylist();
+			await syncFromPlaylistDetail(playlist.id, { clearError: true });
+		} catch (error) {
+			setQueueError(error);
+			playerState.update((state) => ({
 				...state,
-				queueIndex: state.queueIndex + 1,
-				currentVideo: state.queue[state.queueIndex + 1],
-				isPlaying: true
-			};
-		} else if (state.repeatMode === 'all' && state.queue.length > 0) {
-			// Loop back to start
-			return {
-				...state,
-				queueIndex: 0,
-				currentVideo: state.queue[0],
-				isPlaying: true
-			};
-		} else {
-			// End of queue
-			return {
+				isQueueReady: false,
+				isQueueSyncing: false
+			}));
+		}
+	})();
+
+	try {
+		await queueInitPromise;
+	} finally {
+		queueInitPromise = null;
+	}
+}
+
+/**
+ * Play a video. If it is not already queued, insert it next.
+ */
+export async function playVideo(video: VideoOut): Promise<void> {
+	await initializeQueue();
+	const playlistId = playerState.current.queuePlaylistId;
+	if (!playlistId) return;
+
+	await runQueuedMutation(async () => {
+		playerState.update((state) => ({ ...state, isQueueSyncing: true, queueError: null }));
+
+		try {
+			const currentState = playerState.current;
+			const existingIndex = currentState.queue.findIndex((v) => v.id === video.id);
+
+			if (existingIndex >= 0) {
+				await setQueuePosition(playlistId, existingIndex);
+				await syncFromPlaylistDetail(playlistId, { setPlaying: true, clearError: true });
+				return;
+			}
+
+			const insertPosition =
+				currentState.queue.length === 0
+					? 0
+					: Math.min(currentState.queueIndex + 1, currentState.queue.length);
+
+			await addVideoToQueue(playlistId, video.id, insertPosition);
+			await setQueuePosition(playlistId, insertPosition);
+			await syncFromPlaylistDetail(playlistId, { setPlaying: true, clearError: true });
+		} catch (error) {
+			setQueueError(error);
+			playerState.update((state) => ({ ...state, isQueueSyncing: false }));
+		}
+	});
+}
+
+/**
+ * Add video to queue without starting playback.
+ */
+export async function addToQueue(video: VideoOut, position: 'next' | 'end' = 'end'): Promise<void> {
+	await initializeQueue();
+	const playlistId = playerState.current.queuePlaylistId;
+	if (!playlistId) return;
+
+	await runQueuedMutation(async () => {
+		playerState.update((state) => ({ ...state, isQueueSyncing: true, queueError: null }));
+
+		try {
+			const currentState = playerState.current;
+			const existingIndex = currentState.queue.findIndex((v) => v.id === video.id);
+			if (existingIndex >= 0) {
+				playerState.update((state) => ({ ...state, isQueueSyncing: false }));
+				return;
+			}
+
+			const insertPosition =
+				position === 'next'
+					? currentState.queue.length === 0
+						? 0
+						: Math.min(currentState.queueIndex + 1, currentState.queue.length)
+					: undefined;
+
+			await addVideoToQueue(playlistId, video.id, insertPosition);
+			await syncFromPlaylistDetail(playlistId, { clearError: true });
+		} catch (error) {
+			setQueueError(error);
+			playerState.update((state) => ({ ...state, isQueueSyncing: false }));
+		}
+	});
+}
+
+/**
+ * Remove a video from queue.
+ */
+export async function removeFromQueue(videoId: string): Promise<void> {
+	await initializeQueue();
+	const playlistId = playerState.current.queuePlaylistId;
+	if (!playlistId) return;
+
+	await runQueuedMutation(async () => {
+		playerState.update((state) => ({ ...state, isQueueSyncing: true, queueError: null }));
+
+		try {
+			await removeVideoFromQueue(playlistId, videoId);
+			await syncFromPlaylistDetail(playlistId, { clearError: true });
+		} catch (error) {
+			setQueueError(error);
+			playerState.update((state) => ({ ...state, isQueueSyncing: false }));
+		}
+	});
+}
+
+/**
+ * Move a queue item to a new position.
+ */
+export async function moveQueueItem(videoId: string, newPosition: number): Promise<void> {
+	await initializeQueue();
+	const playlistId = playerState.current.queuePlaylistId;
+	if (!playlistId) return;
+
+	await runQueuedMutation(async () => {
+		playerState.update((state) => ({ ...state, isQueueSyncing: true, queueError: null }));
+
+		try {
+			await moveQueueVideo(playlistId, videoId, newPosition);
+			await syncFromPlaylistDetail(playlistId, { clearError: true });
+		} catch (error) {
+			setQueueError(error);
+			playerState.update((state) => ({ ...state, isQueueSyncing: false }));
+		}
+	});
+}
+
+/**
+ * Play next video in queue.
+ */
+export async function playNext(): Promise<void> {
+	await initializeQueue();
+	const playlistId = playerState.current.queuePlaylistId;
+	if (!playlistId) return;
+
+	await runQueuedMutation(async () => {
+		const state = playerState.current;
+		if (!state.queue.length) {
+			playerState.update((s) => ({ ...s, isPlaying: false }));
+			return;
+		}
+
+		if (state.repeatMode === 'one' && state.queueIndex < state.queue.length) {
+			playerState.update((s) => ({ ...s, isPlaying: true }));
+			return;
+		}
+
+		const nextIndex = state.queueIndex + 1;
+		if (nextIndex < state.queue.length) {
+			try {
+				playerState.update((s) => ({ ...s, isQueueSyncing: true, queueError: null }));
+				await setQueuePosition(playlistId, nextIndex);
+				await syncFromPlaylistDetail(playlistId, { setPlaying: true, clearError: true });
+			} catch (error) {
+				setQueueError(error);
+				playerState.update((s) => ({ ...s, isQueueSyncing: false }));
+			}
+			return;
+		}
+
+		if (state.repeatMode === 'all') {
+			try {
+				playerState.update((s) => ({ ...s, isQueueSyncing: true, queueError: null }));
+				await setQueuePosition(playlistId, 0);
+				await syncFromPlaylistDetail(playlistId, { setPlaying: true, clearError: true });
+			} catch (error) {
+				setQueueError(error);
+				playerState.update((s) => ({ ...s, isQueueSyncing: false }));
+			}
+			return;
+		}
+
+		playerState.update((s) => ({ ...s, isPlaying: false }));
+	});
+}
+
+/**
+ * Play previous video in queue.
+ */
+export async function playPrevious(): Promise<void> {
+	await initializeQueue();
+	const playlistId = playerState.current.queuePlaylistId;
+	if (!playlistId) return;
+
+	await runQueuedMutation(async () => {
+		const state = playerState.current;
+		if (state.queueIndex <= 0) return;
+
+		playerState.update((s) => ({ ...s, isQueueSyncing: true, queueError: null }));
+		try {
+			await setQueuePosition(playlistId, state.queueIndex - 1);
+			await syncFromPlaylistDetail(playlistId, { setPlaying: true, clearError: true });
+		} catch (error) {
+			setQueueError(error);
+			playerState.update((s) => ({ ...s, isQueueSyncing: false }));
+		}
+	});
+}
+
+/**
+ * Jump to specific video in queue.
+ */
+export async function jumpToQueueItem(index: number): Promise<void> {
+	await initializeQueue();
+	const playlistId = playerState.current.queuePlaylistId;
+	if (!playlistId) return;
+	if (index < 0 || index >= playerState.current.queue.length) return;
+
+	await runQueuedMutation(async () => {
+		playerState.update((state) => ({ ...state, isQueueSyncing: true, queueError: null }));
+		try {
+			await setQueuePosition(playlistId, index);
+			await syncFromPlaylistDetail(playlistId, { setPlaying: true, clearError: true });
+		} catch (error) {
+			setQueueError(error);
+			playerState.update((state) => ({ ...state, isQueueSyncing: false }));
+		}
+	});
+}
+
+/**
+ * Clear entire queue and stop playback.
+ */
+export async function clearQueue(): Promise<void> {
+	await initializeQueue();
+	const playlistId = playerState.current.queuePlaylistId;
+	if (!playlistId) return;
+
+	await runQueuedMutation(async () => {
+		playerState.update((state) => ({ ...state, isQueueSyncing: true, queueError: null }));
+		try {
+			await clearQueueVideos(playlistId);
+			await syncFromPlaylistDetail(playlistId, { clearError: true });
+			playerState.update((state) => ({
 				...state,
 				isPlaying: false
-			};
+			}));
+		} catch (error) {
+			setQueueError(error);
+			playerState.update((state) => ({ ...state, isQueueSyncing: false }));
 		}
 	});
 }
 
 /**
- * Play previous video in queue
- */
-export function playPrevious() {
-	playerState.update((state) => {
-		if (state.queueIndex > 0) {
-			return {
-				...state,
-				queueIndex: state.queueIndex - 1,
-				currentVideo: state.queue[state.queueIndex - 1],
-				isPlaying: true
-			};
-		}
-		return state;
-	});
-}
-
-/**
- * Jump to specific video in queue
- */
-export function jumpToQueueItem(index: number) {
-	playerState.update((state) => {
-		if (index >= 0 && index < state.queue.length) {
-			return {
-				...state,
-				queueIndex: index,
-				currentVideo: state.queue[index],
-				isPlaying: true
-			};
-		}
-		return state;
-	});
-}
-
-/**
- * Clear entire queue and stop playback
- */
-export function clearQueue() {
-	playerState.update((state) => ({
-		...state,
-		queue: [],
-		queueIndex: 0,
-		currentVideo: null,
-		isPlaying: false
-	}));
-}
-
-/**
- * Toggle play/pause
+ * Toggle play/pause.
  */
 export function togglePlayPause() {
 	playerState.update((state) => ({
 		...state,
-		isPlaying: !state.isPlaying
+		isPlaying: state.currentVideo ? !state.isPlaying : false
 	}));
 }
 
 /**
- * Set volume (0-100)
+ * Set volume (0-100).
  */
 export function setVolume(volume: number) {
 	playerState.update((state) => ({
@@ -258,7 +475,7 @@ export function setVolume(volume: number) {
 }
 
 /**
- * Set player size
+ * Set player size.
  */
 export function setPlayerSize(size: PlayerSize) {
 	playerState.update((state) => ({
@@ -268,7 +485,7 @@ export function setPlayerSize(size: PlayerSize) {
 }
 
 /**
- * Cycle repeat mode
+ * Cycle repeat mode.
  */
 export function cycleRepeatMode() {
 	playerState.update((state) => {
@@ -284,7 +501,7 @@ export function cycleRepeatMode() {
 }
 
 /**
- * Toggle shuffle mode
+ * Toggle shuffle mode.
  */
 export function toggleShuffle() {
 	playerState.update((state) => ({
@@ -294,12 +511,21 @@ export function toggleShuffle() {
 }
 
 /**
- * Close player (stop playback and clear current video)
+ * Close player (stop playback and clear current video).
  */
-export function closePlayer() {
+export async function closePlayer() {
+	const playlistId = playerState.current.queuePlaylistId;
 	playerState.update((state) => ({
 		...state,
 		currentVideo: null,
 		isPlaying: false
 	}));
+
+	if (!playlistId) return;
+
+	try {
+		await setQueuePosition(playlistId, null);
+	} catch (error) {
+		setQueueError(error);
+	}
 }

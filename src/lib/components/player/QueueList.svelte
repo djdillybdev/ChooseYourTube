@@ -3,7 +3,8 @@
 		playerState,
 		jumpToQueueItem,
 		removeFromQueue,
-		clearQueue
+		clearQueue,
+		moveQueueItem
 	} from '$lib/stores/playerState.svelte';
 	import { formatDuration } from '$lib/utils/formatDuration';
 	import { getChannelTitle } from '$lib/utils/channelLookup';
@@ -15,7 +16,34 @@
 
 	let { channelMap }: Props = $props();
 
-	let isDragging = $state(false);
+	let dragIndex = $state<number | null>(null);
+
+	async function handleQueueItemClick(index: number) {
+		if (playerState.current.isQueueSyncing) return;
+		await jumpToQueueItem(index);
+	}
+
+	async function handleRemove(videoId: string) {
+		if (playerState.current.isQueueSyncing) return;
+		await removeFromQueue(videoId);
+	}
+
+	function handleDragStart(index: number) {
+		dragIndex = index;
+	}
+
+	async function handleDrop(index: number) {
+		if (dragIndex === null || dragIndex === index) {
+			dragIndex = null;
+			return;
+		}
+
+		const draggedVideo = playerState.current.queue[dragIndex];
+		dragIndex = null;
+		if (!draggedVideo || playerState.current.isQueueSyncing) return;
+
+		await moveQueueItem(draggedVideo.id, index);
+	}
 </script>
 
 <div class="queue-list flex flex-col border-t border-base-300 bg-base-100">
@@ -25,9 +53,19 @@
 			Queue ({playerState.current.queue.length})
 		</h3>
 		{#if playerState.current.queue.length > 0}
-			<button class="btn btn-ghost btn-xs" onclick={clearQueue}>Clear All</button>
+			<button
+				class="btn btn-ghost btn-xs"
+				onclick={() => void clearQueue()}
+				disabled={playerState.current.isQueueSyncing}
+			>
+				Clear All
+			</button>
 		{/if}
 	</div>
+
+	{#if playerState.current.queueError}
+		<div class="px-4 py-2 text-xs text-error">{playerState.current.queueError}</div>
+	{/if}
 
 	<!-- Queue items -->
 	<div class="max-h-96 overflow-y-auto">
@@ -48,7 +86,7 @@
 					/>
 				</svg>
 				<p class="text-sm text-base-content/60">Queue is empty</p>
-				<p class="text-xs text-base-content/40">Click play on videos to add them</p>
+				<p class="text-xs text-base-content/40">Use Play or queue actions on a video</p>
 			</div>
 		{:else}
 			{#each playerState.current.queue as video, index (video.id)}
@@ -56,12 +94,16 @@
 				<div
 					class="queue-item flex w-full cursor-pointer items-start gap-3 border-b border-base-300 p-3 text-left transition-colors hover:bg-base-200"
 					class:active={isActive}
+					class:dragging={dragIndex === index}
 					role="button"
 					tabindex="0"
-					onclick={() => jumpToQueueItem(index)}
-					onkeydown={(e) => e.key === 'Enter' && jumpToQueueItem(index)}
+					draggable={!playerState.current.isQueueSyncing}
+					ondragstart={() => handleDragStart(index)}
+					ondragover={(e) => e.preventDefault()}
+					ondrop={() => void handleDrop(index)}
+					onclick={() => void handleQueueItemClick(index)}
+					onkeydown={(e) => e.key === 'Enter' && void handleQueueItemClick(index)}
 				>
-					<!-- Index / Playing indicator -->
 					<div class="flex h-12 w-8 shrink-0 items-center justify-center">
 						{#if index === playerState.current.queueIndex}
 							<svg
@@ -79,7 +121,6 @@
 						{/if}
 					</div>
 
-					<!-- Thumbnail -->
 					<div class="relative shrink-0">
 						{#if video.thumbnail_url}
 							<img
@@ -111,7 +152,6 @@
 							</div>
 						{/if}
 
-						<!-- Duration -->
 						{#if video.duration_seconds}
 							<div
 								class="absolute right-0.5 bottom-0.5 rounded bg-base-100/90 px-1 text-xs font-semibold"
@@ -121,7 +161,6 @@
 						{/if}
 					</div>
 
-					<!-- Video info -->
 					<div class="min-w-0 flex-1">
 						<p class="line-clamp-2 text-sm font-medium" class:text-primary={isActive}>
 							{video.title}
@@ -135,13 +174,13 @@
 						</p>
 					</div>
 
-					<!-- Remove button -->
 					<button
 						class="btn btn-square shrink-0 btn-ghost btn-sm"
 						onclick={(e) => {
 							e.stopPropagation();
-							removeFromQueue(video.id);
+							void handleRemove(video.id);
 						}}
+						disabled={playerState.current.isQueueSyncing}
 						aria-label="Remove from queue"
 					>
 						<svg
@@ -173,5 +212,9 @@
 	.queue-item.active {
 		background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
 		border-left: 4px solid var(--color-primary);
+	}
+
+	.queue-item.dragging {
+		opacity: 0.5;
 	}
 </style>

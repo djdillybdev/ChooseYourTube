@@ -2,7 +2,7 @@
 	import type { VideoOut, ChannelOut } from '$lib/types/api';
 	import { formatDuration } from '$lib/utils/formatDuration';
 	import { formatRelativeDate } from '$lib/utils/formatDate';
-	import { playVideo } from '$lib/stores/playerState.svelte';
+	import { playVideo, addToQueue } from '$lib/stores/playerState.svelte';
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
 	import { getChannelTitle } from '$lib/utils/channelLookup';
@@ -52,10 +52,15 @@
 		}
 	}
 
-	function handlePlay() {
-		playVideo(video);
+	async function handlePlay() {
+		await playVideo(video);
 		const returnUrl = window.location.pathname + window.location.search;
 		goto('/player?return=' + encodeURIComponent(returnUrl));
+	}
+
+	async function handleAddToQueue(e: MouseEvent, position: 'next' | 'end') {
+		e.stopPropagation();
+		await addToQueue(video, position);
 	}
 </script>
 
@@ -64,10 +69,10 @@
 	class:opacity-60={video.is_watched}
 	onmouseenter={() => (isHovered = true)}
 	onmouseleave={() => (isHovered = false)}
-	onclick={handlePlay}
+	onclick={() => void handlePlay()}
 	role="button"
 	tabindex="0"
-	onkeydown={(e) => e.key === 'Enter' && handlePlay()}
+	onkeydown={(e) => e.key === 'Enter' && void handlePlay()}
 >
 	<div class="card-body p-4">
 		<div class="flex gap-4">
@@ -212,7 +217,7 @@
 							class="btn gap-1 btn-sm btn-primary"
 							onclick={(e) => {
 								e.stopPropagation();
-								handlePlay();
+								void handlePlay();
 							}}
 							aria-label="Play video"
 						>
@@ -227,6 +232,22 @@
 								/>
 							</svg>
 							Play
+						</button>
+
+						<button
+							class="btn btn-sm btn-ghost"
+							onclick={(e) => void handleAddToQueue(e, 'next')}
+							aria-label="Add next"
+						>
+							Add Next
+						</button>
+
+						<button
+							class="btn btn-sm btn-ghost"
+							onclick={(e) => void handleAddToQueue(e, 'end')}
+							aria-label="Add to queue"
+						>
+							Add End
 						</button>
 					</div>
 				{/if}

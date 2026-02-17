@@ -3,6 +3,7 @@ import { VideosAPI } from './videos';
 import { ChannelsAPI } from './channels';
 import { FoldersAPI } from './folders';
 import { TagsAPI } from './tags';
+import { PlaylistsAPI } from './playlists';
 
 /**
  * Unified API interface providing access to all backend resources
@@ -12,6 +13,7 @@ interface API {
 	channels: ChannelsAPI;
 	folders: FoldersAPI;
 	tags: TagsAPI;
+	playlists: PlaylistsAPI;
 	invalidateAll: () => void;
 	invalidate: (pattern: string) => void;
 }
@@ -25,6 +27,7 @@ function createAPI(client: APIClient): API {
 		channels: new ChannelsAPI(client),
 		folders: new FoldersAPI(client),
 		tags: new TagsAPI(client),
+		playlists: new PlaylistsAPI(client),
 		invalidateAll: () => client.invalidateCache(),
 		invalidate: (pattern: string) => client.invalidateCache(pattern)
 	};

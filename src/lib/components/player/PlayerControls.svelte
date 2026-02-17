@@ -53,7 +53,7 @@
 	<div class="flex items-center gap-1">
 		<button
 			class="btn btn-square btn-ghost btn-sm"
-			onclick={playPrevious}
+			onclick={() => void playPrevious()}
 			disabled={playerState.current.queueIndex === 0}
 			aria-label="Previous"
 		>
@@ -101,7 +101,7 @@
 
 		<button
 			class="btn btn-square btn-ghost btn-sm"
-			onclick={playNext}
+			onclick={() => void playNext()}
 			disabled={!playerState.current.queue.length ||
 				(playerState.current.queueIndex >= playerState.current.queue.length - 1 &&
 					playerState.current.repeatMode !== 'all')}

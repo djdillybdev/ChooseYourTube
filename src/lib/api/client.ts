@@ -135,6 +135,16 @@ export class APIClient {
 	}
 
 	/**
+	 * Convenience method for PUT requests
+	 */
+	async put<T>(endpoint: string, body: unknown): Promise<T> {
+		return this.fetch<T>(endpoint, {
+			method: 'PUT',
+			body: JSON.stringify(body)
+		});
+	}
+
+	/**
 	 * Convenience method for DELETE requests
 	 */
 	async delete(endpoint: string): Promise<void> {

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { playerState, playNext, togglePlayPause } from '$lib/stores/playerState.svelte';
+	import { playerState, playNext } from '$lib/stores/playerState.svelte';
 
 	let playerElement: HTMLDivElement;
 	let player: YT.Player | null = null;
 	let isReady = $state(false);
+	let isAdvancingQueue = false;
 
 	function initializePlayer() {
 		if (!playerElement || !window.YT || player) return;
@@ -46,21 +47,28 @@
 		// Update playing state
 		if (state === window.YT.PlayerState.PLAYING) {
 			playerState.update((s) => ({ ...s, isPlaying: true }));
-		} else if (
-			state === window.YT.PlayerState.PAUSED ||
-			state === window.YT.PlayerState.BUFFERING
-		) {
+		} else if (state === window.YT.PlayerState.PAUSED) {
 			playerState.update((s) => ({ ...s, isPlaying: false }));
 		} else if (state === window.YT.PlayerState.ENDED) {
 			// Video ended, play next
-			playNext();
+			if (!isAdvancingQueue) {
+				isAdvancingQueue = true;
+				void playNext().finally(() => {
+					isAdvancingQueue = false;
+				});
+			}
 		}
 	}
 
 	function handleError(event: YT.OnErrorEvent) {
 		console.error('YouTube Player Error:', event.data);
 		// Skip to next video on error
-		playNext();
+		if (!isAdvancingQueue) {
+			isAdvancingQueue = true;
+			void playNext().finally(() => {
+				isAdvancingQueue = false;
+			});
+		}
 	}
 
 	// Watch for video changes

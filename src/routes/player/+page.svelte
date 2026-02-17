@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { playerState, closePlayer } from '$lib/stores/playerState.svelte';
+	import { playerState, closePlayer, initializeQueue } from '$lib/stores/playerState.svelte';
 	import YouTubePlayer from '$lib/components/player/YouTubePlayer.svelte';
 	import PlayerControls from '$lib/components/player/PlayerControls.svelte';
 	import QueueList from '$lib/components/player/QueueList.svelte';
@@ -27,10 +27,11 @@
 	onMount(() => {
 		returnUrl = new URLSearchParams(window.location.search).get('return') ?? '/inbox';
 
-		if (!playerState.current.currentVideo) {
-			goto(returnUrl, { replaceState: true });
-			return;
-		}
+		void initializeQueue().then(() => {
+			if (!playerState.current.currentVideo && playerState.current.queue.length === 0) {
+				goto(returnUrl, { replaceState: true });
+			}
+		});
 
 		const onKey = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') goto(returnUrl);
@@ -43,7 +44,7 @@
 		goto(returnUrl);
 	}
 	function handleClose() {
-		closePlayer();
+		void closePlayer();
 	}
 </script>
 
@@ -106,12 +107,23 @@
 		</div>
 	</header>
 
-	<!-- Video (fills remaining height, centred) -->
-	<div class="flex min-h-0 flex-1 items-center justify-center bg-base-200 p-6">
-		<div class="aspect-video w-full max-w-4xl">
-			<YouTubePlayer />
+	{#if !playerState.current.isQueueReady && playerState.current.isQueueSyncing}
+		<div class="flex min-h-0 flex-1 items-center justify-center bg-base-200 p-6">
+			<div class="flex items-center gap-3 text-sm text-base-content/70">
+				<span class="loading loading-spinner loading-md"></span>
+				Loading queue...
+			</div>
 		</div>
-	</div>
+	{:else}
+		<!-- Video (fills remaining height, centred) -->
+		<div class="flex min-h-0 flex-1 items-center justify-center bg-base-200 p-6">
+			<div class="aspect-video w-full max-w-4xl">
+				{#key playerState.current.currentVideo?.id}
+					<YouTubePlayer />
+				{/key}
+			</div>
+		</div>
+	{/if}
 
 	<!-- Bottom panel -->
 	<div class="shrink-0 border-t border-base-300 bg-base-100">
