@@ -3,6 +3,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import TopBar from '$lib/components/layout/TopBar.svelte';
+	import type { ChannelOut, TagOut } from '$lib/types/api';
 	import { modalState, closeModal } from '$lib/stores/modalState.svelte';
 	import AddChannelModal from '$lib/components/modals/AddChannelModal.svelte';
 	import CreateFolderModal from '$lib/components/modals/CreateFolderModal.svelte';
@@ -14,7 +15,8 @@
 		data: {
 			folders: any[];
 			unfolderedChannels: any[];
-			channels: any[];
+			channels: ChannelOut[];
+			tags: TagOut[];
 		};
 	}
 
@@ -29,7 +31,7 @@
 	<Sidebar folders={data.folders} unfolderedChannels={data.unfolderedChannels} />
 
 	<div class="flex flex-1 flex-col overflow-hidden">
-		<TopBar />
+		<TopBar channels={data.channels} tags={data.tags} />
 		<main class="flex-1 overflow-auto bg-base-200">
 			{@render children()}
 		</main>

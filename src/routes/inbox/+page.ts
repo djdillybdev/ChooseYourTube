@@ -1,4 +1,5 @@
 import { api } from '$lib/api';
+import { parseVideoFilterQuery } from '$lib/utils/videoFilterQuery';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ url }) => {
@@ -6,15 +7,15 @@ export const load: PageLoad = async ({ url }) => {
 	const pageSize = Number(url.searchParams.get('pageSize')) || 24;
 	const q = url.searchParams.get('q') || undefined;
 	const offset = (page - 1) * pageSize;
+	const { apiFilters } = parseVideoFilterQuery(url, { defaultWatched: false });
 
 	try {
 		// Invalidate video list cache to ensure fresh paginated results
 		api.invalidate('videos/');
 
 		const response = await api.videos.list({
-			is_watched: false,
+			...apiFilters,
 			q,
-			order_by: q ? 'relevance' : undefined,
 			limit: pageSize,
 			offset
 		});

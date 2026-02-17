@@ -6,7 +6,6 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import PaginationControls from '$lib/components/ui/PaginationControls.svelte';
 	import SearchBar from '$lib/components/ui/SearchBar.svelte';
-	import { filterState } from '$lib/stores/filterState.svelte';
 	import { formatRelativeDate } from '$lib/utils/formatDate';
 	import { uiState } from '$lib/stores/uiState.svelte';
 	import { api } from '$lib/api';
@@ -164,40 +163,6 @@
 		/>
 	</div>
 
-	<!-- Filter Toggle -->
-	<div class="mb-4 flex items-center gap-2">
-		<span class="text-sm font-medium">Filter:</span>
-		<div class="btn-group">
-			<button
-				class="btn btn-sm"
-				class:btn-active={filterState.current.is_watched === undefined}
-				onclick={() => {
-					filterState.update((state) => ({ ...state, is_watched: undefined }));
-				}}
-			>
-				All
-			</button>
-			<button
-				class="btn btn-sm"
-				class:btn-active={filterState.current.is_watched === false}
-				onclick={() => {
-					filterState.update((state) => ({ ...state, is_watched: false }));
-				}}
-			>
-				Unwatched
-			</button>
-			<button
-				class="btn btn-sm"
-				class:btn-active={filterState.current.is_watched === true}
-				onclick={() => {
-					filterState.update((state) => ({ ...state, is_watched: true }));
-				}}
-			>
-				Watched
-			</button>
-		</div>
-	</div>
-
 	<!-- Videos List -->
 	{#if data.videos.length > 0}
 		<VideoList videos={data.videos} {channelMap} />
@@ -213,9 +178,7 @@
 			title="No videos found"
 			message={data.q
 				? `No results for "${data.q}". Try a different search term.`
-				: filterState.current.is_watched !== undefined
-					? 'Try changing the filter'
-					: 'Refresh the channel to fetch new videos'}
+				: 'Try adjusting filters or refreshing the channel to fetch new videos'}
 		/>
 	{/if}
 </div>

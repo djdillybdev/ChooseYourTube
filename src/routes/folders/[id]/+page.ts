@@ -1,4 +1,5 @@
 import { api, type VideoOut } from '$lib/api';
+import { parseVideoFilterQuery } from '$lib/utils/videoFilterQuery';
 import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 
@@ -7,6 +8,7 @@ export const load: PageLoad = async ({ params, url }) => {
 	const pageSize = Number(url.searchParams.get('pageSize')) || 24;
 	const q = url.searchParams.get('q') || undefined;
 	const offset = (page - 1) * pageSize;
+	const { apiFilters } = parseVideoFilterQuery(url);
 
 	try {
 		// Load folder details
@@ -25,10 +27,31 @@ export const load: PageLoad = async ({ params, url }) => {
 
 		let videosResponse = { items: [] as VideoOut[], total: 0 };
 		if (channelIds.length > 0) {
+			let effectiveChannelIds = channelIds;
+			if (apiFilters.channel_id) {
+				const requestedChannelIds = apiFilters.channel_id
+					.split(',')
+					.map((id) => id.trim())
+					.filter(Boolean);
+				effectiveChannelIds = requestedChannelIds.filter((id) => channelIds.includes(id));
+			}
+
+			if (effectiveChannelIds.length === 0) {
+				return {
+					folder,
+					channels: channelsResponse.items,
+					videos: [] as VideoOut[],
+					page,
+					pageSize,
+					total: 0,
+					q
+				};
+			}
+
 			videosResponse = await api.videos.list({
-				channel_id: channelIds.join(','),
+				...apiFilters,
+				channel_id: effectiveChannelIds.join(','),
 				q,
-				order_by: q ? 'relevance' : undefined,
 				limit: pageSize,
 				offset
 			});

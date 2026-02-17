@@ -1,13 +1,14 @@
 import { api } from '$lib/api';
-import type { FolderOut, ChannelOut } from '$lib/types/api';
+import type { FolderOut, ChannelOut, TagOut } from '$lib/types/api';
 import type { LayoutLoad } from './$types';
 
 export const load: LayoutLoad = async ({ depends }) => {
 	depends('app:folders');
 	depends('app:channels');
+	depends('app:tags');
 
 	try {
-		const folders = await api.folders.getTree();
+		const [folders, tagsResponse] = await Promise.all([api.folders.getTree(), api.tags.list({ limit: 200 })]);
 		const channels = [];
 
 		let channelsResponse = await api.channels.list();
@@ -26,7 +27,8 @@ export const load: LayoutLoad = async ({ depends }) => {
 		return {
 			folders,
 			unfolderedChannels,
-			channels
+			channels,
+			tags: tagsResponse.items
 		};
 	} catch (error) {
 		console.error('Failed to load data:', error);
@@ -34,7 +36,8 @@ export const load: LayoutLoad = async ({ depends }) => {
 		return {
 			folders: [] as FolderOut[],
 			unfolderedChannels: [] as ChannelOut[],
-			channels: [] as ChannelOut[]
+			channels: [] as ChannelOut[],
+			tags: [] as TagOut[]
 		};
 	}
 };

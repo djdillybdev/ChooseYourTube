@@ -1,4 +1,5 @@
 import { api } from '$lib/api';
+import { parseVideoFilterQuery } from '$lib/utils/videoFilterQuery';
 import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 
@@ -7,15 +8,15 @@ export const load: PageLoad = async ({ params, url }) => {
 	const pageSize = Number(url.searchParams.get('pageSize')) || 24;
 	const q = url.searchParams.get('q') || undefined;
 	const offset = (page - 1) * pageSize;
+	const { apiFilters } = parseVideoFilterQuery(url, { forcedChannelId: params.id });
 
 	try {
 		// Load channel details and videos in parallel
 		const [channel, videosResponse] = await Promise.all([
 			api.channels.get(params.id),
 			api.videos.list({
-				channel_id: params.id,
+				...apiFilters,
 				q,
-				order_by: q ? 'relevance' : undefined,
 				limit: pageSize,
 				offset
 			})

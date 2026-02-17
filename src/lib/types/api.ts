@@ -155,7 +155,7 @@ export interface VideoFilters extends Record<string, unknown> {
 	limit?: number;
 	offset?: number;
 	q?: string;
-	order_by?: string;
+	order_by?: 'published_at' | 'title' | 'created_at' | 'duration_seconds' | 'relevance';
 	order_direction?: 'asc' | 'desc';
 }
 
