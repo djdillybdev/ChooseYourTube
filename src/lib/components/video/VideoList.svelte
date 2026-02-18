@@ -6,9 +6,11 @@
 	interface Props {
 		videos: VideoOut[];
 		channelMap?: Map<string, ChannelOut>;
+		onPlay?: (video: VideoOut) => Promise<void>;
+		showQueueActions?: boolean;
 	}
 
-	let { videos, channelMap }: Props = $props();
+	let { videos, channelMap, onPlay, showQueueActions = true }: Props = $props();
 
 	/** Optimistic update for watched / favorite toggles */
 	function handleVideoUpdate(updated: VideoOut) {
@@ -18,7 +20,7 @@
 
 <div class="video-list space-y-3">
 	{#each videos as video (video.id)}
-		<VideoCard {video} {channelMap} onUpdate={handleVideoUpdate} />
+		<VideoCard {video} {channelMap} onUpdate={handleVideoUpdate} {onPlay} {showQueueActions} />
 	{/each}
 
 	{#if videos.length === 0}

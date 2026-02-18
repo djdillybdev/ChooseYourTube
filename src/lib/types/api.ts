@@ -48,7 +48,13 @@ export interface PlaylistOut {
 	id: string;
 	name: string;
 	description: string | null;
+	thumbnail_url?: string | null;
 	is_system: boolean;
+	source_type: string;
+	source_channel_id?: string | null;
+	source_youtube_playlist_id?: string | null;
+	source_is_active: boolean;
+	source_last_synced_at?: string | null;
 	created_at: string;
 }
 
@@ -56,6 +62,21 @@ export interface PlaylistDetailOut extends PlaylistOut {
 	current_position: number | null;
 	total_videos: number;
 	video_ids: string[];
+}
+
+export interface ChannelPlaylistOut {
+	id: string;
+	name: string;
+	description: string | null;
+	thumbnail_url: string | null;
+	is_system: boolean;
+	source_type: string;
+	source_channel_id: string | null;
+	source_youtube_playlist_id: string | null;
+	source_is_active: boolean;
+	source_last_synced_at: string | null;
+	total_videos: number;
+	created_at: string;
 }
 
 export interface UserRead {
@@ -184,6 +205,12 @@ export interface PlaylistFilters extends Record<string, unknown> {
 	limit?: number;
 	offset?: number;
 	is_system?: boolean | null;
+}
+
+export interface ChannelPlaylistFilters extends Record<string, unknown> {
+	include_inactive?: boolean;
+	limit?: number;
+	offset?: number;
 }
 
 // ===== Error Handling =====

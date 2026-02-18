@@ -11,9 +11,11 @@
 		video: VideoOut;
 		channelMap?: Map<string, ChannelOut>;
 		onUpdate?: (video: VideoOut) => void;
+		onPlay?: (video: VideoOut) => Promise<void>;
+		showQueueActions?: boolean;
 	}
 
-	let { video, channelMap, onUpdate }: Props = $props();
+	let { video, channelMap, onUpdate, onPlay, showQueueActions = true }: Props = $props();
 
 	let isHovered = $state(false);
 	let isUpdating = $state(false);
@@ -53,7 +55,11 @@
 	}
 
 	async function handlePlay() {
-		await playVideo(video);
+		if (onPlay) {
+			await onPlay(video);
+		} else {
+			await playVideo(video);
+		}
 		const returnUrl = window.location.pathname + window.location.search;
 		goto('/player?return=' + encodeURIComponent(returnUrl));
 	}
@@ -234,21 +240,23 @@
 							Play
 						</button>
 
-						<button
-							class="btn btn-sm btn-ghost"
-							onclick={(e) => void handleAddToQueue(e, 'next')}
-							aria-label="Add next"
-						>
-							Add Next
-						</button>
+						{#if showQueueActions}
+							<button
+								class="btn btn-sm btn-ghost"
+								onclick={(e) => void handleAddToQueue(e, 'next')}
+								aria-label="Add next"
+							>
+								Add Next
+							</button>
 
-						<button
-							class="btn btn-sm btn-ghost"
-							onclick={(e) => void handleAddToQueue(e, 'end')}
-							aria-label="Add to queue"
-						>
-							Add End
-						</button>
+							<button
+								class="btn btn-sm btn-ghost"
+								onclick={(e) => void handleAddToQueue(e, 'end')}
+								aria-label="Add to queue"
+							>
+								Add End
+							</button>
+						{/if}
 					</div>
 				{/if}
 			</div>

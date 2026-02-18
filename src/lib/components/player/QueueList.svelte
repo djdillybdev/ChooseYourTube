@@ -14,19 +14,20 @@
 		channelMap?: Map<string, ChannelOut>;
 	}
 
-	let { channelMap }: Props = $props();
+let { channelMap }: Props = $props();
 
-	let dragIndex = $state<number | null>(null);
+let dragIndex = $state<number | null>(null);
+const isQueueMutable = $derived(playerState.current.queueMutable);
 
 	async function handleQueueItemClick(index: number) {
 		if (playerState.current.isQueueSyncing) return;
 		await jumpToQueueItem(index);
 	}
 
-	async function handleRemove(videoId: string) {
-		if (playerState.current.isQueueSyncing) return;
-		await removeFromQueue(videoId);
-	}
+async function handleRemove(videoId: string) {
+	if (playerState.current.isQueueSyncing || !isQueueMutable) return;
+	await removeFromQueue(videoId);
+}
 
 	function handleDragStart(index: number) {
 		dragIndex = index;
@@ -40,7 +41,7 @@
 
 		const draggedVideo = playerState.current.queue[dragIndex];
 		dragIndex = null;
-		if (!draggedVideo || playerState.current.isQueueSyncing) return;
+		if (!draggedVideo || playerState.current.isQueueSyncing || !isQueueMutable) return;
 
 		await moveQueueItem(draggedVideo.id, index);
 	}
@@ -52,7 +53,10 @@
 		<h3 class="text-sm font-semibold">
 			Queue ({playerState.current.queue.length})
 		</h3>
-		{#if playerState.current.queue.length > 0}
+		{#if playerState.current.queueMode === 'playlist'}
+			<span class="badge badge-sm">Playlist queue</span>
+		{/if}
+		{#if playerState.current.queue.length > 0 && isQueueMutable}
 			<button
 				class="btn btn-ghost btn-xs"
 				onclick={() => void clearQueue()}
@@ -97,8 +101,8 @@
 					class:dragging={dragIndex === index}
 					role="button"
 					tabindex="0"
-					draggable={!playerState.current.isQueueSyncing}
-					ondragstart={() => handleDragStart(index)}
+					draggable={isQueueMutable && !playerState.current.isQueueSyncing}
+					ondragstart={() => isQueueMutable && handleDragStart(index)}
 					ondragover={(e) => e.preventDefault()}
 					ondrop={() => void handleDrop(index)}
 					onclick={() => void handleQueueItemClick(index)}
@@ -174,26 +178,28 @@
 						</p>
 					</div>
 
-					<button
-						class="btn btn-square shrink-0 btn-ghost btn-sm"
-						onclick={(e) => {
-							e.stopPropagation();
-							void handleRemove(video.id);
-						}}
-						disabled={playerState.current.isQueueSyncing}
-						aria-label="Remove from queue"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="h-4 w-4"
+					{#if isQueueMutable}
+						<button
+							class="btn btn-square shrink-0 btn-ghost btn-sm"
+							onclick={(e) => {
+								e.stopPropagation();
+								void handleRemove(video.id);
+							}}
+							disabled={playerState.current.isQueueSyncing}
+							aria-label="Remove from queue"
 						>
-							<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-						</svg>
-					</button>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="1.5"
+								stroke="currentColor"
+								class="h-4 w-4"
+							>
+								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+					{/if}
 				</div>
 			{/each}
 		{/if}

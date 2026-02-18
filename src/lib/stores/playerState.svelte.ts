@@ -28,6 +28,9 @@ interface PlayerState {
 	queue: VideoOut[];
 	queueIndex: number;
 	queuePlaylistId: string | null;
+	queueMode: 'system' | 'playlist';
+	queueMutable: boolean;
+	activeSourcePlaylistId: string | null;
 	isQueueReady: boolean;
 	isQueueSyncing: boolean;
 	queueError: string | null;
@@ -53,6 +56,9 @@ const defaultState: PlayerState = {
 	queue: [],
 	queueIndex: 0,
 	queuePlaylistId: null,
+	queueMode: 'system',
+	queueMutable: true,
+	activeSourcePlaylistId: null,
 	isQueueReady: false,
 	isQueueSyncing: false,
 	queueError: null,
@@ -167,7 +173,13 @@ function runQueuedMutation<T>(mutation: () => Promise<T>): Promise<T> {
 
 async function syncFromPlaylistDetail(
 	playlistId: string,
-	options: { setPlaying?: boolean; clearError?: boolean } = {}
+	options: {
+		setPlaying?: boolean;
+		clearError?: boolean;
+		queueMode?: 'system' | 'playlist';
+		queueMutable?: boolean;
+		activeSourcePlaylistId?: string | null;
+	} = {}
 ) {
 	const detail = await loadQueueDetail(playlistId);
 	const queue = await hydrateQueueVideos(detail.video_ids);
@@ -177,6 +189,9 @@ async function syncFromPlaylistDetail(
 		return {
 			...normalized,
 			queuePlaylistId: playlistId,
+			queueMode: options.queueMode ?? state.queueMode,
+			queueMutable: options.queueMutable ?? state.queueMutable,
+			activeSourcePlaylistId: options.activeSourcePlaylistId ?? state.activeSourcePlaylistId,
 			isQueueReady: true,
 			isQueueSyncing: false,
 			queueError: options.clearError ? null : state.queueError,
@@ -206,7 +221,12 @@ export async function initializeQueue(force = false): Promise<void> {
 
 		try {
 			const playlist = await ensureQueuePlaylist();
-			await syncFromPlaylistDetail(playlist.id, { clearError: true });
+			await syncFromPlaylistDetail(playlist.id, {
+				clearError: true,
+				queueMode: 'system',
+				queueMutable: true,
+				activeSourcePlaylistId: null
+			});
 		} catch (error) {
 			setQueueError(error);
 			playerState.update((state) => ({
@@ -228,7 +248,7 @@ export async function initializeQueue(force = false): Promise<void> {
  * Play a video. If it is not already queued, insert it next.
  */
 export async function playVideo(video: VideoOut): Promise<void> {
-	await initializeQueue();
+	await initializeQueue(playerState.current.queueMode === 'playlist');
 	const playlistId = playerState.current.queuePlaylistId;
 	if (!playlistId) return;
 
@@ -261,10 +281,41 @@ export async function playVideo(video: VideoOut): Promise<void> {
 }
 
 /**
+ * Play from an existing playlist using the playlist order as queue.
+ * Queue content/order are read-only in this mode.
+ */
+export async function playFromPlaylist(playlistId: string, videoId: string): Promise<void> {
+	await runQueuedMutation(async () => {
+		playerState.update((state) => ({ ...state, isQueueSyncing: true, queueError: null }));
+
+		try {
+			const detail = await loadQueueDetail(playlistId);
+			const startPosition = detail.video_ids.indexOf(videoId);
+			if (startPosition < 0) {
+				throw new Error('Video not found in playlist');
+			}
+
+			await setQueuePosition(playlistId, startPosition);
+			await syncFromPlaylistDetail(playlistId, {
+				setPlaying: true,
+				clearError: true,
+				queueMode: 'playlist',
+				queueMutable: false,
+				activeSourcePlaylistId: playlistId
+			});
+		} catch (error) {
+			setQueueError(error);
+			playerState.update((state) => ({ ...state, isQueueSyncing: false }));
+		}
+	});
+}
+
+/**
  * Add video to queue without starting playback.
  */
 export async function addToQueue(video: VideoOut, position: 'next' | 'end' = 'end'): Promise<void> {
 	await initializeQueue();
+	if (!playerState.current.queueMutable) return;
 	const playlistId = playerState.current.queuePlaylistId;
 	if (!playlistId) return;
 
@@ -300,6 +351,7 @@ export async function addToQueue(video: VideoOut, position: 'next' | 'end' = 'en
  */
 export async function removeFromQueue(videoId: string): Promise<void> {
 	await initializeQueue();
+	if (!playerState.current.queueMutable) return;
 	const playlistId = playerState.current.queuePlaylistId;
 	if (!playlistId) return;
 
@@ -321,6 +373,7 @@ export async function removeFromQueue(videoId: string): Promise<void> {
  */
 export async function moveQueueItem(videoId: string, newPosition: number): Promise<void> {
 	await initializeQueue();
+	if (!playerState.current.queueMutable) return;
 	const playlistId = playerState.current.queuePlaylistId;
 	if (!playlistId) return;
 
@@ -435,6 +488,7 @@ export async function jumpToQueueItem(index: number): Promise<void> {
  */
 export async function clearQueue(): Promise<void> {
 	await initializeQueue();
+	if (!playerState.current.queueMutable) return;
 	const playlistId = playerState.current.queuePlaylistId;
 	if (!playlistId) return;
 

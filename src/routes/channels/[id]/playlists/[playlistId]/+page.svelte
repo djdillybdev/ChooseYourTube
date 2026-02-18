@@ -1,29 +1,29 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
 	import VideoList from '$lib/components/video/VideoList.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import PaginationControls from '$lib/components/ui/PaginationControls.svelte';
-	import SearchBar from '$lib/components/ui/SearchBar.svelte';
-	import { formatRelativeDate } from '$lib/utils/formatDate';
-	import { uiState } from '$lib/stores/uiState.svelte';
-	import { api } from '$lib/api';
-	import { openEditChannel } from '$lib/stores/modalState.svelte';
-	import { createChannelMap } from '$lib/utils/channelLookup';
 	import ChannelContentTabs from '$lib/components/channel/ChannelContentTabs.svelte';
+	import { createChannelMap } from '$lib/utils/channelLookup';
+	import { formatRelativeDate } from '$lib/utils/formatDate';
+	import { playFromPlaylist } from '$lib/stores/playerState.svelte';
+	import type { VideoOut } from '$lib/types/api';
+	import { openEditChannel } from '$lib/stores/modalState.svelte';
+	import { api } from '$lib/api';
 
 	interface Props {
 		data: PageData;
 	}
 
 	let { data }: Props = $props();
-
-	// Create map from the single channel we loaded
 	const channelMap = $derived(createChannelMap([data.channel]));
-
 	let isRefreshing = $state(false);
 	let refreshError = $state<string | null>(null);
+
+	async function handlePlay(video: VideoOut) {
+		await playFromPlaylist(data.playlist.id, video.id);
+	}
 
 	async function handleRefresh() {
 		isRefreshing = true;
@@ -37,35 +37,20 @@
 			await invalidateAll();
 		} catch (err) {
 			refreshError = err instanceof Error ? err.message : 'Failed to refresh channel';
-			console.error('Failed to refresh channel:', err);
+			console.error('Failed to refresh channel playlists:', err);
 		} finally {
 			isRefreshing = false;
 		}
 	}
-
-	/**
-	 * Sync the persisted pageSize preference into the URL on first visit.
-	 * Uses replaceState so it doesn't pollute history.
-	 */
-	onMount(() => {
-		const url = new URL(window.location.href);
-		if (!url.searchParams.has('pageSize')) {
-			url.searchParams.set('pageSize', String(uiState.current.pageSize));
-			if (!url.searchParams.has('page')) url.searchParams.set('page', '1');
-			goto(url.pathname + url.search, { replaceState: true });
-		}
-	});
 </script>
 
 <svelte:head>
-	<title>{data.channel.title} - ChooseYourTube</title>
+	<title>{data.playlist.name} - {data.channel.title} - ChooseYourTube</title>
 </svelte:head>
 
 <div class="container mx-auto max-w-7xl p-6">
-	<!-- Channel Header -->
 	<div class="mb-6">
 		<div class="mb-4 flex items-start gap-6">
-			<!-- Channel Thumbnail -->
 			{#if data.channel.thumbnail_url}
 				<img
 					src={data.channel.thumbnail_url}
@@ -91,24 +76,20 @@
 				</div>
 			{/if}
 
-			<!-- Channel Info -->
 			<div class="min-w-0 flex-1">
 				<h1 class="mb-1 text-3xl font-bold">{data.channel.title}</h1>
 				<p class="mb-2 text-base-content/60">@{data.channel.handle}</p>
-
 				<div class="flex items-center gap-4 text-sm text-base-content/60">
-					<span>{data.total} videos</span>
-					{#if data.channel.last_updated}
-						<span>Updated {formatRelativeDate(data.channel.last_updated)}</span>
+					<span>{data.total} videos in playlist</span>
+					{#if data.playlist.source_last_synced_at}
+						<span>Synced {formatRelativeDate(data.playlist.source_last_synced_at)}</span>
 					{/if}
 				</div>
-
 				{#if refreshError}
 					<div class="mt-2 text-sm text-error">{refreshError}</div>
 				{/if}
 			</div>
 
-			<!-- Action buttons: Edit + Refresh -->
 			<div class="flex items-center gap-2">
 				<button
 					class="btn btn-square btn-ghost btn-sm"
@@ -130,7 +111,6 @@
 						/>
 					</svg>
 				</button>
-
 				<button class="btn gap-2 btn-primary" onclick={handleRefresh} disabled={isRefreshing}>
 					{#if isRefreshing}
 						<span class="loading loading-sm loading-spinner"></span>
@@ -157,33 +137,31 @@
 		</div>
 	</div>
 
-	<ChannelContentTabs channelId={data.channel.id} active="videos" />
+	<ChannelContentTabs channelId={data.channel.id} active="playlists" />
 
-	<!-- Search bar -->
-	<div class="mb-4">
-		<SearchBar
-			basePath="/channels/{data.channel.id}"
-			initialValue={data.q}
-			placeholder="Search in {data.channel.title}..."
-		/>
+	<div class="mb-4 rounded-box border border-base-300 bg-base-100 p-4">
+		<div class="flex items-center justify-between gap-3">
+			<div class="min-w-0">
+				<h2 class="truncate text-xl font-semibold">{data.playlist.name}</h2>
+				{#if data.playlist.description}
+					<p class="mt-1 text-sm text-base-content/70">{data.playlist.description}</p>
+				{/if}
+			</div>
+			{#if !data.playlist.source_is_active}
+				<span class="badge badge-warning">Inactive</span>
+			{/if}
+		</div>
 	</div>
 
-	<!-- Videos List -->
 	{#if data.videos.length > 0}
-		<VideoList videos={data.videos} {channelMap} />
+		<VideoList videos={data.videos} {channelMap} onPlay={handlePlay} showQueueActions={false} />
 		<PaginationControls
 			total={data.total}
 			currentPage={data.page}
 			pageSize={data.pageSize}
-			basePath={`/channels/${data.channel.id}`}
+			basePath={`/channels/${data.channel.id}/playlists/${data.playlist.id}`}
 		/>
 	{:else}
-		<EmptyState
-			icon={data.q ? 'search' : 'video'}
-			title="No videos found"
-			message={data.q
-				? `No results for "${data.q}". Try a different search term.`
-				: 'Try adjusting filters or refreshing the channel to fetch new videos'}
-		/>
+		<EmptyState icon="video" title="No videos found" message="This playlist has no available videos." />
 	{/if}
 </div>

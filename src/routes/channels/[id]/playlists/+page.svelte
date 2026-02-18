@@ -1,27 +1,18 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
-	import VideoList from '$lib/components/video/VideoList.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import PaginationControls from '$lib/components/ui/PaginationControls.svelte';
-	import SearchBar from '$lib/components/ui/SearchBar.svelte';
-	import { formatRelativeDate } from '$lib/utils/formatDate';
-	import { uiState } from '$lib/stores/uiState.svelte';
-	import { api } from '$lib/api';
-	import { openEditChannel } from '$lib/stores/modalState.svelte';
-	import { createChannelMap } from '$lib/utils/channelLookup';
 	import ChannelContentTabs from '$lib/components/channel/ChannelContentTabs.svelte';
+	import { formatRelativeDate } from '$lib/utils/formatDate';
+	import { openEditChannel } from '$lib/stores/modalState.svelte';
+	import { api } from '$lib/api';
 
 	interface Props {
 		data: PageData;
 	}
 
 	let { data }: Props = $props();
-
-	// Create map from the single channel we loaded
-	const channelMap = $derived(createChannelMap([data.channel]));
-
 	let isRefreshing = $state(false);
 	let refreshError = $state<string | null>(null);
 
@@ -37,35 +28,20 @@
 			await invalidateAll();
 		} catch (err) {
 			refreshError = err instanceof Error ? err.message : 'Failed to refresh channel';
-			console.error('Failed to refresh channel:', err);
+			console.error('Failed to refresh channel playlists:', err);
 		} finally {
 			isRefreshing = false;
 		}
 	}
-
-	/**
-	 * Sync the persisted pageSize preference into the URL on first visit.
-	 * Uses replaceState so it doesn't pollute history.
-	 */
-	onMount(() => {
-		const url = new URL(window.location.href);
-		if (!url.searchParams.has('pageSize')) {
-			url.searchParams.set('pageSize', String(uiState.current.pageSize));
-			if (!url.searchParams.has('page')) url.searchParams.set('page', '1');
-			goto(url.pathname + url.search, { replaceState: true });
-		}
-	});
 </script>
 
 <svelte:head>
-	<title>{data.channel.title} - ChooseYourTube</title>
+	<title>{data.channel.title} Playlists - ChooseYourTube</title>
 </svelte:head>
 
 <div class="container mx-auto max-w-7xl p-6">
-	<!-- Channel Header -->
 	<div class="mb-6">
 		<div class="mb-4 flex items-start gap-6">
-			<!-- Channel Thumbnail -->
 			{#if data.channel.thumbnail_url}
 				<img
 					src={data.channel.thumbnail_url}
@@ -91,24 +67,20 @@
 				</div>
 			{/if}
 
-			<!-- Channel Info -->
 			<div class="min-w-0 flex-1">
 				<h1 class="mb-1 text-3xl font-bold">{data.channel.title}</h1>
 				<p class="mb-2 text-base-content/60">@{data.channel.handle}</p>
-
 				<div class="flex items-center gap-4 text-sm text-base-content/60">
-					<span>{data.total} videos</span>
+					<span>{data.total} playlists</span>
 					{#if data.channel.last_updated}
 						<span>Updated {formatRelativeDate(data.channel.last_updated)}</span>
 					{/if}
 				</div>
-
 				{#if refreshError}
 					<div class="mt-2 text-sm text-error">{refreshError}</div>
 				{/if}
 			</div>
 
-			<!-- Action buttons: Edit + Refresh -->
 			<div class="flex items-center gap-2">
 				<button
 					class="btn btn-square btn-ghost btn-sm"
@@ -130,7 +102,6 @@
 						/>
 					</svg>
 				</button>
-
 				<button class="btn gap-2 btn-primary" onclick={handleRefresh} disabled={isRefreshing}>
 					{#if isRefreshing}
 						<span class="loading loading-sm loading-spinner"></span>
@@ -157,33 +128,76 @@
 		</div>
 	</div>
 
-	<ChannelContentTabs channelId={data.channel.id} active="videos" />
+	<ChannelContentTabs channelId={data.channel.id} active="playlists" />
 
-	<!-- Search bar -->
-	<div class="mb-4">
-		<SearchBar
-			basePath="/channels/{data.channel.id}"
-			initialValue={data.q}
-			placeholder="Search in {data.channel.title}..."
-		/>
-	</div>
+	{#if data.playlists.length > 0}
+		<div class="space-y-3">
+			{#each data.playlists as playlist (playlist.id)}
+				<a
+					href={`/channels/${data.channel.id}/playlists/${playlist.id}`}
+					class="card border border-base-300 bg-base-100 transition-colors hover:border-primary"
+				>
+					<div class="card-body p-4">
+						<div class="flex items-start gap-4">
+							<div class="h-24 w-40 shrink-0 overflow-hidden rounded-box bg-base-200">
+								{#if playlist.display_thumbnail_url}
+									<img
+										src={playlist.display_thumbnail_url}
+										alt={playlist.name}
+										class="h-full w-full object-cover"
+									/>
+								{:else}
+									<div class="flex h-full w-full items-center justify-center text-base-content/40">
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke-width="1.5"
+											stroke="currentColor"
+											class="h-8 w-8"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M9 9l10.5-3m0 0L21 16.5M19.5 6L9 9m0 0l-1.5 10.5M9 9L3 7.5m4.5 12L3 7.5m0 0L13.5 4.5"
+											/>
+										</svg>
+									</div>
+								{/if}
+							</div>
+							<div class="min-w-0">
+								<h2 class="truncate font-semibold">{playlist.name}</h2>
+								<p class="text-sm text-base-content/60">
+									{playlist.total_videos} videos
+								</p>
+								{#if playlist.description}
+									<p class="mt-1 line-clamp-2 text-sm text-base-content/70">
+										{playlist.description}
+									</p>
+								{/if}
+							</div>
+							<div class="ml-auto">
+								{#if !playlist.source_is_active}
+									<span class="badge badge-warning badge-sm">Inactive</span>
+								{/if}
+							</div>
+						</div>
+					</div>
+				</a>
+			{/each}
+		</div>
 
-	<!-- Videos List -->
-	{#if data.videos.length > 0}
-		<VideoList videos={data.videos} {channelMap} />
 		<PaginationControls
 			total={data.total}
 			currentPage={data.page}
 			pageSize={data.pageSize}
-			basePath={`/channels/${data.channel.id}`}
+			basePath={`/channels/${data.channel.id}/playlists`}
 		/>
 	{:else}
 		<EmptyState
-			icon={data.q ? 'search' : 'video'}
-			title="No videos found"
-			message={data.q
-				? `No results for "${data.q}". Try a different search term.`
-				: 'Try adjusting filters or refreshing the channel to fetch new videos'}
+			icon="folder"
+			title="No playlists found"
+			message="This channel has no synced playlists yet."
 		/>
 	{/if}
 </div>

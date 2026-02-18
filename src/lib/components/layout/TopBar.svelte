@@ -16,7 +16,7 @@
 
 	const path = $derived(page.url.pathname);
 	const isVideoListPage = $derived(
-		path === '/inbox' || path.startsWith('/channels/') || path.startsWith('/folders/')
+		path === '/inbox' || /^\/channels\/[^/]+$/.test(path) || path.startsWith('/folders/')
 	);
 	const isChannelDetailPage = $derived(path.startsWith('/channels/'));
 	const { uiFilters } = $derived(

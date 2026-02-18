@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseVideoFilterQuery } from './videoFilterQuery';
+import { parseVideoFilterQuery } from '../../../../src/lib/utils/videoFilterQuery';
 
 function parse(url: string, options?: Parameters<typeof parseVideoFilterQuery>[1]) {
 	return parseVideoFilterQuery(new URL(url), options);

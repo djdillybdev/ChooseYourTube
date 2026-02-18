@@ -1,6 +1,8 @@
 import type { APIClient } from './client';
 import type {
 	ChannelOut,
+	ChannelPlaylistFilters,
+	ChannelPlaylistOut,
 	ChannelCreate,
 	ChannelUpdate,
 	ChannelFilters,
@@ -74,6 +76,27 @@ export class ChannelsAPI {
 		this.client.invalidateCache('videos/');
 
 		return channel;
+	}
+
+	/**
+	 * List synced playlists for a channel.
+	 */
+	async listPlaylists(
+		channelId: string,
+		filters?: ChannelPlaylistFilters
+	): Promise<PaginatedResponse<ChannelPlaylistOut>> {
+		return this.client.get<PaginatedResponse<ChannelPlaylistOut>>(
+			`/channels/${channelId}/playlists`,
+			filters
+		);
+	}
+
+	/**
+	 * Refresh synced playlists for a channel.
+	 */
+	async refreshPlaylists(channelId: string): Promise<void> {
+		await this.client.post(`/channels/${channelId}/playlists/refresh`);
+		this.client.invalidateCache(`/channels/${channelId}/playlists`);
 	}
 
 	/**
