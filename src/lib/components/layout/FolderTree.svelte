@@ -3,6 +3,7 @@
 	import { folderExpansion } from '$lib/stores/folderExpansion.svelte';
 	import { page } from '$app/stores';
 	import ChannelTreeItem from './ChannelTreeItem.svelte';
+	import Self from './FolderTree.svelte';
 
 	interface Props {
 		folder: FolderOut;
@@ -81,11 +82,11 @@
 		</a>
 	</div>
 
-	{#if hasChildren && isExpanded}
-		<ul class="mt-1">
-			{#each folder.children ?? [] as childFolder (childFolder.id)}
-				<svelte:self folder={childFolder} {allChannels} depth={depth + 1} />
-			{/each}
+		{#if hasChildren && isExpanded}
+			<ul class="mt-1">
+				{#each folder.children ?? [] as childFolder (childFolder.id)}
+					<Self folder={childFolder} {allChannels} depth={depth + 1} />
+				{/each}
 			{#each channelsInFolder as channel (channel.id)}
 				<ChannelTreeItem {channel} depth={depth + 1} />
 			{/each}

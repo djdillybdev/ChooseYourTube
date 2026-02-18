@@ -64,4 +64,17 @@ describe('Sidebar', () => {
 		expect(noThumbLink?.querySelector('img')).not.toBeInTheDocument();
 		expect(noThumbLink?.querySelector('svg')).toBeInTheDocument();
 	});
+
+	it('renders edit channel action without requiring mouse hover', async () => {
+		render(Sidebar, {
+			folders: [],
+			unfolderedChannels: [makeChannel({ id: 'ch-edit', title: 'Editable Channel' })]
+		});
+
+		await waitFor(() => {
+			expect(listMock).toHaveBeenCalled();
+		});
+
+		expect(screen.getByRole('button', { name: /edit channel/i })).toBeInTheDocument();
+	});
 });

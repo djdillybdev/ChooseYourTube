@@ -42,4 +42,15 @@ describe('SearchBar', () => {
 			keepFocus: true
 		});
 	});
+
+	it('syncs displayed value when initialValue prop changes', async () => {
+		const { rerender } = render(SearchBar, { basePath: '/inbox', initialValue: 'first' });
+
+		const input = screen.getByPlaceholderText('Search videos...') as HTMLInputElement;
+		expect(input.value).toBe('first');
+
+		await rerender({ basePath: '/inbox', initialValue: 'second' });
+
+		expect(input.value).toBe('second');
+	});
 });

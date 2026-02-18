@@ -11,11 +11,20 @@
 
 	let { channel, folders, onClose }: Props = $props();
 
-	let isFavorited = $state(channel.is_favorited);
-	let selectedFolder = $state<string | null>(channel.folder_id);
+	let isFavorited = $state(false);
+	let selectedFolder = $state<string | null>(null);
+	let syncedChannelId = $state<string | null>(null);
 	let isSubmitting = $state(false);
 	let error = $state<string | null>(null);
 	let dialogElement: HTMLDialogElement;
+
+	$effect(() => {
+		if (channel.id !== syncedChannelId) {
+			isFavorited = channel.is_favorited;
+			selectedFolder = channel.folder_id;
+			syncedChannelId = channel.id;
+		}
+	});
 
 	$effect(() => {
 		dialogElement?.showModal();
@@ -171,5 +180,7 @@
 			</div>
 		</form>
 	</div>
-	<form method="dialog" class="modal-backdrop" onclick={onClose}><button>close</button></form>
+	<form method="dialog" class="modal-backdrop">
+		<button type="button" onclick={onClose} aria-label="Close modal">close</button>
+	</form>
 </dialog>

@@ -128,7 +128,7 @@
 			</div>
 		</form>
 	</div>
-	<form method="dialog" class="modal-backdrop" onclick={onClose}>
-		<button>close</button>
+	<form method="dialog" class="modal-backdrop">
+		<button type="button" onclick={onClose} aria-label="Close modal">close</button>
 	</form>
 </dialog>

@@ -18,14 +18,6 @@
 	// Load all channels for passing to FolderTree
 	let allChannels: ChannelOut[] = $state([]);
 
-	// Track hover state for each channel
-	let channelHoverStates = $state<Map<string, boolean>>(new Map());
-
-	function setChannelHover(id: string, hovering: boolean) {
-		channelHoverStates.set(id, hovering);
-		channelHoverStates = new Map(channelHoverStates); // trigger reactivity
-	}
-
 	async function loadAllChannels() {
 		try {
 			const channels: ChannelOut[] = [];
@@ -147,15 +139,11 @@
 						<li class="text-sm text-base-content/60">
 							<span>No channels yet</span>
 						</li>
-					{:else}
-						{#each unfolderedChannels as channel (channel.id)}
-							<li>
-								<div
-									class="channel-item flex items-center"
-									onmouseenter={() => setChannelHover(channel.id, true)}
-									onmouseleave={() => setChannelHover(channel.id, false)}
-								>
-									<a href="/channels/{channel.id}" class="flex flex-1 items-center gap-2">
+						{:else}
+							{#each unfolderedChannels as channel (channel.id)}
+								<li class="group">
+									<div class="channel-item flex items-center">
+										<a href="/channels/{channel.id}" class="flex flex-1 items-center gap-2">
 										{#if channel.thumbnail_url}
 											<img
 												src={channel.thumbnail_url}
@@ -186,9 +174,8 @@
 										<span>{channel.title}</span>
 									</a>
 
-									{#if channelHoverStates.get(channel.id)}
 										<button
-											class="btn btn-square btn-ghost btn-xs"
+											class="btn btn-square btn-ghost btn-xs opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto"
 											onclick={(e) => {
 												e.stopPropagation();
 												openEditChannel(channel);
@@ -206,10 +193,9 @@
 												/>
 											</svg>
 										</button>
-									{/if}
-								</div>
-							</li>
-						{/each}
+									</div>
+								</li>
+							{/each}
 					{/if}
 				</ul>
 			</nav>

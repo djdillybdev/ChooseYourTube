@@ -11,11 +11,20 @@
 
 	let { folder, folders, onClose }: Props = $props();
 
-	let name = $state(folder.name);
-	let selectedParentId = $state<string | null>(folder.parent_id);
+	let name = $state('');
+	let selectedParentId = $state<string | null>(null);
+	let syncedFolderId = $state<string | null>(null);
 	let isSubmitting = $state(false);
 	let error = $state<string | null>(null);
 	let dialogElement: HTMLDialogElement;
+
+	$effect(() => {
+		if (folder.id !== syncedFolderId) {
+			name = folder.name;
+			selectedParentId = folder.parent_id;
+			syncedFolderId = folder.id;
+		}
+	});
 
 	$effect(() => {
 		dialogElement?.showModal();
@@ -189,5 +198,7 @@
 			</div>
 		</form>
 	</div>
-	<form method="dialog" class="modal-backdrop" onclick={onClose}><button>close</button></form>
+	<form method="dialog" class="modal-backdrop">
+		<button type="button" onclick={onClose} aria-label="Close modal">close</button>
+	</form>
 </dialog>

@@ -9,8 +9,16 @@
 
 	let { placeholder = 'Search videos...', initialValue = '', basePath }: Props = $props();
 
-	let searchQuery = $state(initialValue);
+	let searchQuery = $state('');
+	let syncedInitialValue = $state<string | null>(null);
 	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+	$effect(() => {
+		if (initialValue !== syncedInitialValue) {
+			searchQuery = initialValue;
+			syncedInitialValue = initialValue;
+		}
+	});
 
 	/**
 	 * Debounced search input handler.
