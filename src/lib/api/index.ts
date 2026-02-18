@@ -4,6 +4,7 @@ import { ChannelsAPI } from './channels';
 import { FoldersAPI } from './folders';
 import { TagsAPI } from './tags';
 import { PlaylistsAPI } from './playlists';
+import { AuthAPI, authApi } from './auth';
 
 /**
  * Unified API interface providing access to all backend resources
@@ -14,6 +15,7 @@ interface API {
 	folders: FoldersAPI;
 	tags: TagsAPI;
 	playlists: PlaylistsAPI;
+	auth: AuthAPI;
 	invalidateAll: () => void;
 	invalidate: (pattern: string) => void;
 }
@@ -28,6 +30,7 @@ function createAPI(client: APIClient): API {
 		folders: new FoldersAPI(client),
 		tags: new TagsAPI(client),
 		playlists: new PlaylistsAPI(client),
+		auth: authApi,
 		invalidateAll: () => client.invalidateCache(),
 		invalidate: (pattern: string) => client.invalidateCache(pattern)
 	};
@@ -38,6 +41,13 @@ function createAPI(client: APIClient): API {
  * This is what you'll import in your components
  */
 export const api = createAPI(apiClient);
+
+/**
+ * Create API instance scoped to a SvelteKit load/event fetch.
+ */
+export function createScopedAPI(fetcher: typeof fetch): API {
+	return createAPI(new APIClient('/api/backend', fetcher));
+}
 
 /**
  * Export the factory function for testing or custom instances

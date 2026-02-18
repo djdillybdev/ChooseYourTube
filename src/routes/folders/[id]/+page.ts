@@ -1,9 +1,10 @@
-import { api, type VideoOut } from '$lib/api';
+import { APIError, createScopedAPI, type VideoOut } from '$lib/api';
 import { parseVideoFilterQuery } from '$lib/utils/videoFilterQuery';
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async ({ params, url }) => {
+export const load: PageLoad = async ({ params, url, fetch }) => {
+	const api = createScopedAPI(fetch);
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 	const pageSize = Number(url.searchParams.get('pageSize')) || 24;
 	const q = url.searchParams.get('q') || undefined;
@@ -67,6 +68,10 @@ export const load: PageLoad = async ({ params, url }) => {
 			q
 		};
 	} catch (err) {
+		if (err instanceof APIError && err.status === 401) {
+			await fetch('/api/auth/logout', { method: 'POST' });
+			throw redirect(307, `/login?next=${encodeURIComponent(url.pathname + url.search)}`);
+		}
 		console.error('Failed to load folder:', err);
 		throw error(404, 'Folder not found');
 	}

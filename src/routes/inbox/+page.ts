@@ -1,8 +1,10 @@
-import { api } from '$lib/api';
+import { api, APIError, createScopedAPI } from '$lib/api';
 import { parseVideoFilterQuery } from '$lib/utils/videoFilterQuery';
+import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async ({ url }) => {
+export const load: PageLoad = async ({ url, fetch }) => {
+	const scopedApi = createScopedAPI(fetch);
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 	const pageSize = Number(url.searchParams.get('pageSize')) || 24;
 	const q = url.searchParams.get('q') || undefined;
@@ -13,7 +15,7 @@ export const load: PageLoad = async ({ url }) => {
 		// Invalidate video list cache to ensure fresh paginated results
 		api.invalidate('videos/');
 
-		const response = await api.videos.list({
+		const response = await scopedApi.videos.list({
 			...apiFilters,
 			q,
 			limit: pageSize,
@@ -28,6 +30,10 @@ export const load: PageLoad = async ({ url }) => {
 			q
 		};
 	} catch (error) {
+		if (error instanceof APIError && error.status === 401) {
+			await fetch('/api/auth/logout', { method: 'POST' });
+			throw redirect(307, `/login?next=${encodeURIComponent(url.pathname + url.search)}`);
+		}
 		console.error('Failed to load inbox videos:', error);
 		return {
 			videos: [],

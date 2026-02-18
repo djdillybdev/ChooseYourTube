@@ -23,13 +23,14 @@ function delay(ms: number): Promise<void> {
  */
 export class APIClient {
 	private baseURL: string;
+	private fetcher: typeof fetch;
 	private cache = new Map<string, CacheEntry>();
 	private defaultRetries = 3;
 	private defaultCacheTTL = 5 * 60 * 1000; // 5 minutes
 
-	constructor(baseURL?: string) {
-		// Use environment variable or default to localhost
-		this.baseURL = baseURL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+	constructor(baseURL?: string, fetcher: typeof fetch = fetch) {
+		this.baseURL = baseURL || '/api/backend';
+		this.fetcher = fetcher;
 	}
 
 	/**
@@ -43,12 +44,15 @@ export class APIClient {
 			...fetchOptions
 		} = options;
 
-		const url = `${this.baseURL}${endpoint}`;
+		const normalizedEndpoint = endpoint.replace(/\/+(\?|$)/, '$1');
+		const url = `${this.baseURL}${normalizedEndpoint}`;
 		const method = fetchOptions.method || 'GET';
 		const finalCacheKey = cacheKey || `${method}:${url}`;
 
+		const shouldCache = method === 'GET' && cacheTTL > 0 && typeof window !== 'undefined';
+
 		// Check cache for GET requests
-		if (method === 'GET' && cacheTTL > 0) {
+		if (shouldCache) {
 			const cached = this.cache.get(finalCacheKey);
 			if (cached && Date.now() < cached.expires) {
 				return cached.data as T;
@@ -60,8 +64,9 @@ export class APIClient {
 
 		for (let attempt = 0; attempt < retries; attempt++) {
 			try {
-				const response = await fetch(url, {
+				const response = await this.fetcher(url, {
 					...fetchOptions,
+					credentials: 'include',
 					headers: {
 						'Content-Type': 'application/json',
 						...fetchOptions.headers
@@ -78,7 +83,7 @@ export class APIClient {
 				const data = response.status === 204 ? null : await response.json();
 
 				// Cache successful GET requests
-				if (method === 'GET' && cacheTTL > 0 && data !== null) {
+				if (shouldCache && data !== null) {
 					this.cache.set(finalCacheKey, {
 						data,
 						expires: Date.now() + cacheTTL

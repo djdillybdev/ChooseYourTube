@@ -2,15 +2,17 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { uiState, toggleSidebar } from '$lib/stores/uiState.svelte';
-	import type { ChannelOut, TagOut } from '$lib/types/api';
+	import { authState } from '$lib/stores/authState.svelte';
+	import type { ChannelOut, TagOut, UserRead } from '$lib/types/api';
 	import { parseVideoFilterQuery } from '$lib/utils/videoFilterQuery';
 
 	interface Props {
 		channels?: ChannelOut[];
 		tags?: TagOut[];
+		currentUser?: UserRead | null;
 	}
 
-	let { channels = [], tags = [] }: Props = $props();
+	let { channels = [], tags = [], currentUser = null }: Props = $props();
 
 	const path = $derived(page.url.pathname);
 	const isVideoListPage = $derived(
@@ -97,6 +99,11 @@
 				params.delete(key);
 			}
 		});
+	}
+
+	async function handleLogout() {
+		await authState.logout();
+		goto('/login', { replaceState: true });
 	}
 </script>
 
@@ -285,21 +292,11 @@
 	{/if}
 
 	<div class="flex items-center gap-2">
-		<button class="btn btn-square btn-ghost btn-sm" aria-label="Refresh">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke-width="1.5"
-				stroke="currentColor"
-				class="h-5 w-5"
-			>
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-				/>
-			</svg>
+		{#if currentUser}
+			<span class="text-sm text-base-content/70">{currentUser.email}</span>
+		{/if}
+		<button class="btn btn-ghost btn-sm" aria-label="Logout" onclick={handleLogout}>
+			Logout
 		</button>
 	</div>
 </header>

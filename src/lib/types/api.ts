@@ -58,6 +58,14 @@ export interface PlaylistDetailOut extends PlaylistOut {
 	video_ids: string[];
 }
 
+export interface UserRead {
+	id: string;
+	email: string;
+	is_active: boolean;
+	is_superuser: boolean;
+	is_verified: boolean;
+}
+
 // ===== Create/Update Schemas =====
 
 export interface ChannelCreate {
