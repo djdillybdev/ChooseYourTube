@@ -33,6 +33,23 @@ target_metadata = Base.metadata
 _EXCLUDE_INDEXES = {"ix_video_search_fts"}
 
 
+def _resolve_database_url() -> str:
+    configured = config.get_main_option("sqlalchemy.url")
+    url = (
+        os.getenv("ALEMBIC_DATABASE_URL")
+        or os.getenv("DATABASE_URL")
+        or configured
+    )
+
+    # Alembic runs in sync mode and needs a sync driver.
+    if url.startswith("postgresql+asyncpg://"):
+        return url.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
+    return url
+
+
+config.set_main_option("sqlalchemy.url", _resolve_database_url())
+
+
 def include_name(name, type_, parent_names):
     if type_ == "index" and name in _EXCLUDE_INDEXES:
         return False

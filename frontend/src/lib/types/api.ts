@@ -130,7 +130,6 @@ export interface TagUpdate {
 export interface PlaylistCreate {
 	name: string;
 	description?: string | null;
-	is_system?: boolean;
 }
 
 export interface PlaylistUpdate {

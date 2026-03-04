@@ -34,7 +34,11 @@
 	{@render children()}
 {:else}
 	<div class="app-shell flex h-screen overflow-hidden">
-		<Sidebar folders={data.folders} unfolderedChannels={data.unfolderedChannels} />
+		<Sidebar
+			folders={data.folders}
+			unfolderedChannels={data.unfolderedChannels}
+			channels={data.channels}
+		/>
 
 		<div class="flex flex-1 flex-col overflow-hidden">
 			<TopBar channels={data.channels} tags={data.tags} currentUser={data.currentUser} />

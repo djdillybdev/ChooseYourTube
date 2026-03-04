@@ -1,0 +1,60 @@
+# ChooseYourTube
+
+A self-hostable web app for following and watching YouTube channels. Functions much like an RSS Feed Reader but solely for YouTube Videos.
+Watch videos and follow your favorite channels without any other distractions like comments or video recommendations.
+
+## Why did I make this?
+
+YouTube is great, and I find lots of interesting and helpful videos there. But over the years I have become disatisfied with some aspects of it.
+The home page is filled with recommendations from channels I am not subscribed to, and these recommendations are constantly changing based on recent activity. While sometimes I find a new interesting video, often I know what I would like to watch. The subscriptions view is useful, but still has now way to filter and just shows all of the channels I am subscribed to.
+I wanted an easy way to organize and view the channels I watch. I am aware of extensions like PocketTube that accomplish something similar, but I wanted something that I could customize more and also eliminate other distractions. There are also other features I have in mind to add that this project will enable me to do, such as different ways of randomly picking a video to watch and trying to emulate the experience of channel surfing on old tv channels.
+
+## Tech Stack
+
+- Svelte and TypeScript for frontend
+- FastAPI, Postgres, Redis for the backend
+
+
+## Quick Start
+
+1. Copy environment template:
+
+```bash
+cp .env.example .env
+```
+
+2. Start the full stack:
+
+```bash
+make up
+```
+
+## Services
+
+- Frontend (SvelteKit): http://localhost:5173
+- Backend API (FastAPI): http://localhost:8000
+- Backend docs: http://localhost:8000/docs
+- Dev frontend (optional profile): http://localhost:5174
+- Dev backend (optional profile): http://localhost:8001
+
+## Notes
+
+- Default runtime mode (lightweight) runs: `frontend`, `backend`, `worker`, `postgres`, `redis`, and a one-shot `migrate` service.
+- Migrations are applied automatically before API/worker startup.
+- Runtime mode uses production-style images (no reload, no source bind mounts, no `uv` in runtime containers).
+- Optional development profile is available when needed:
+  - `make dev-up`
+  - `make dev-down`
+  - `make dev-logs`
+- Common commands:
+  - `make build`
+  - `make up`
+  - `make down`
+  - `make logs`
+  - `make ps`
+  - `make migrate`
+- Reset database/redis volumes with `docker compose --env-file .env down -v`.
+
+## AI Usage
+
+I made use of various coding agents to aid in the development of this project. This usage was mainly in the frontend as that is an area I am less experienced in and less interested in. I still involved myself in reviewing the code and made architecture and design choices myself.

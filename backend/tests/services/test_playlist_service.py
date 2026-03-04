@@ -232,7 +232,6 @@ class TestCreateNewPlaylist:
         payload = PlaylistCreate(
             name="New Playlist",
             description="New desc",
-            is_system=False,
         )
 
         playlist = await create_new_playlist(payload, db_session)
@@ -242,16 +241,15 @@ class TestCreateNewPlaylist:
         assert playlist.name == "New Playlist"
         assert playlist.description == "New desc"
 
-    async def test_sets_is_system_flag(self, db_session):
-        """Should respect is_system flag from payload."""
+    async def test_user_created_playlists_are_not_system(self, db_session):
+        """Should always create non-system playlists from public API payload."""
         payload = PlaylistCreate(
             name="System Queue",
-            is_system=True,
         )
 
         playlist = await create_new_playlist(payload, db_session)
 
-        assert playlist.is_system is True
+        assert playlist.is_system is False
 
 
 @pytest.mark.asyncio

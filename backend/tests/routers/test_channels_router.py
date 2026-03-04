@@ -196,14 +196,18 @@ class TestChannelsRouter:
     async def test_update_channel_favorite_status(self, test_client, db_session):
         """Test PATCH /channels/{id} updates channel favorite status."""
         from app.db.models.channel import Channel
+        from app.db.models.folder import Folder
 
+        folder = Folder(id="fav-folder", name="Favorites", parent_id=None)
         channel = Channel(
             id="UC_update_test",
             handle="updatetest",
             title="Update Test",
             uploads_playlist_id="UU_update_test",
             is_favorited=False,
+            folder_id=folder.id,
         )
+        db_session.add(folder)
         db_session.add(channel)
         await db_session.commit()
 
@@ -214,6 +218,7 @@ class TestChannelsRouter:
         assert response.status_code == 200
         data = response.json()
         assert data["is_favorited"] is True
+        assert data["folder_id"] == folder.id
 
     async def test_update_channel_move_to_folder(self, test_client, db_session):
         """Test PATCH /channels/{id} moves channel to folder."""
@@ -238,6 +243,40 @@ class TestChannelsRouter:
         assert response.status_code == 200
         data = response.json()
         assert data["folder_id"] == "f1"
+
+    async def test_list_channels_with_folder_id_zero_returns_unfoldered(
+        self, test_client, db_session
+    ):
+        """Test GET /channels/?folder_id=0 returns channels without a folder."""
+        from app.db.models.channel import Channel
+        from app.db.models.folder import Folder
+
+        folder = Folder(id="folder-x", name="Folder X", parent_id=None)
+        channel_in_folder = Channel(
+            id="UC_foldered",
+            handle="foldered",
+            title="Foldered",
+            uploads_playlist_id="UU_foldered",
+            folder_id=folder.id,
+        )
+        channel_unfoldered = Channel(
+            id="UC_unfoldered",
+            handle="unfoldered",
+            title="Unfoldered",
+            uploads_playlist_id="UU_unfoldered",
+            folder_id=None,
+        )
+        db_session.add(folder)
+        db_session.add(channel_in_folder)
+        db_session.add(channel_unfoldered)
+        await db_session.commit()
+
+        response = test_client.get("/channels/?folder_id=0")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["total"] == 1
+        assert payload["items"][0]["id"] == "UC_unfoldered"
+        assert payload["items"][0]["folder_id"] is None
 
     async def test_refresh_channel_endpoint(
         self, test_client, db_session, mock_youtube_api, mock_feedparser

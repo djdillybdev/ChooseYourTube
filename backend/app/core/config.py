@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     REDIS_URL: str
     # API_ORIGIN: str = "http://localhost:5173"
     API_ORIGIN: str
+    API_CORS_ORIGINS: str | None = None
     YOUTUBE_API_KEY: str
     AUTH_SECRET: str = "change-me-in-production-with-at-least-32-characters"
     SHORTS_MAX_SECONDS: int = 60
@@ -19,6 +20,12 @@ class Settings(BaseSettings):
 
     def get_redis_settings(self) -> RedisSettings:
         return RedisSettings.from_dsn(self.REDIS_URL)
+
+    @property
+    def cors_origins(self) -> list[str]:
+        if self.API_CORS_ORIGINS:
+            return [origin.strip() for origin in self.API_CORS_ORIGINS.split(",") if origin.strip()]
+        return [self.API_ORIGIN]
 
 
 settings = Settings()

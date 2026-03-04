@@ -155,10 +155,10 @@ class TestCreateChannel:
             call_kwargs = mock_to_thread.call_args[1]
             assert call_kwargs["handle"] == "testchannel"
 
-    async def test_create_channel_not_found_on_youtube_raises_500(
+    async def test_create_channel_not_found_on_youtube_raises_404(
         self, db_session, mock_youtube_api
     ):
-        """Test that 500 is raised when channel not found on YouTube (404 wrapped in 500)."""
+        """Test that 404 is raised when channel not found on YouTube."""
         # Mock empty response from YouTube
         with patch("asyncio.to_thread", new_callable=AsyncMock) as mock_to_thread:
             mock_to_thread.return_value = {"items": []}
@@ -168,9 +168,8 @@ class TestCreateChannel:
             with pytest.raises(HTTPException) as exc_info:
                 await create_channel(payload, db_session, mock_youtube_api)
 
-            # The code catches the 404 and re-raises as 500
-            assert exc_info.value.status_code == 500
-            assert "YouTube API" in exc_info.value.detail
+            assert exc_info.value.status_code == 404
+            assert "not found on YouTube" in exc_info.value.detail
 
     async def test_create_channel_already_exists_raises_409(
         self, db_session, mock_youtube_api, sample_channel

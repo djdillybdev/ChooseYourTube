@@ -85,7 +85,7 @@ async def get_all_channels(
         filters["is_favorited"] = is_favorited
     if folder_id is not None:
         # Support folder_id=0 to mean "no folder" (None in database)
-        filters["folder_id"] = None if folder_id == 0 else folder_id
+        filters["folder_id"] = None if folder_id == "0" else folder_id
 
     # Get ALL channels matching database filters first (no limit/offset yet)
     all_channels = await crud_channel.get_channels(
@@ -160,6 +160,8 @@ async def create_channel(
                 status_code=404,
                 detail=f"Channel with handle '{channel_data.handle}' not found on YouTube.",
             )
+    except HTTPException:
+        raise
     except Exception as e:
         # Handle potential googleapiclient errors
         raise HTTPException(
@@ -214,7 +216,9 @@ async def update_channel(
     # Update simple fields
     if payload.is_favorited is not None:
         channel.is_favorited = payload.is_favorited
-    if payload.folder_id is not None or payload.folder_id is None:
+
+    # Distinguish omitted field from explicit null.
+    if "folder_id" in payload.model_fields_set:
         channel.folder_id = payload.folder_id
 
     # Handle tag synchronization

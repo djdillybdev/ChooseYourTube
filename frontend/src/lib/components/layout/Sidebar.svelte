@@ -3,44 +3,19 @@
 	import type { FolderOut, ChannelOut } from '$lib/types/api';
 	import FolderTree from './FolderTree.svelte';
 	import { openAddChannel, openCreateFolder, openEditChannel } from '$lib/stores/modalState.svelte';
-	import { api } from '$lib/api';
 
 	interface Props {
 		folders?: FolderOut[];
 		unfolderedChannels?: ChannelOut[];
+		channels?: ChannelOut[];
 	}
 
-	let { folders = [], unfolderedChannels = [] }: Props = $props();
+	let { folders = [], unfolderedChannels = [], channels = [] }: Props = $props();
 
 	// Filter to only root folders (FolderTree handles children recursively)
 	const rootFolders = $derived(folders.filter((f) => f.parent_id === null));
 
-	// Load all channels for passing to FolderTree
-	let allChannels: ChannelOut[] = $state([]);
-
-	async function loadAllChannels() {
-		try {
-			const channels: ChannelOut[] = [];
-			let response = await api.channels.list();
-			do {
-				channels.push(...response.items);
-				if (!response.has_more) break;
-				response = await api.channels.list({
-					limit: response.limit,
-					offset: response.offset + response.limit
-				});
-			} while (response.has_more);
-			allChannels = channels;
-		} catch (err) {
-			console.error('Failed to load channels:', err);
-			allChannels = unfolderedChannels; // Fallback to unfoldered only
-		}
-	}
-
-	$effect(() => {
-		void unfolderedChannels; // Re-trigger when layout data changes
-		loadAllChannels();
-	});
+	const allChannels = $derived(channels);
 </script>
 
 <aside
