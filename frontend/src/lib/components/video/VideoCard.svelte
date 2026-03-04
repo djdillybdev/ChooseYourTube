@@ -12,7 +12,7 @@
 		video: VideoOut;
 		channelMap?: Map<string, ChannelOut>;
 		onUpdate?: (video: VideoOut) => void;
-		onPlay?: (video: VideoOut) => Promise<void>;
+		onPlay?: (video: VideoOut) => Promise<boolean>;
 		showQueueActions?: boolean;
 	}
 
@@ -56,11 +56,13 @@
 	}
 
 	async function handlePlay() {
+		let started: boolean;
 		if (onPlay) {
-			await onPlay(video);
+			started = await onPlay(video);
 		} else {
-			await playVideo(video);
+			started = await playVideo(video);
 		}
+		if (!started) return;
 		const returnUrl = window.location.pathname + window.location.search;
 		goto('/player?return=' + encodeURIComponent(returnUrl));
 	}

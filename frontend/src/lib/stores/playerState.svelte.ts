@@ -247,11 +247,12 @@ export async function initializeQueue(force = false): Promise<void> {
 /**
  * Play a video. If it is not already queued, insert it next.
  */
-export async function playVideo(video: VideoOut): Promise<void> {
+export async function playVideo(video: VideoOut): Promise<boolean> {
 	await initializeQueue(playerState.current.queueMode === 'playlist');
 	const playlistId = playerState.current.queuePlaylistId;
-	if (!playlistId) return;
+	if (!playlistId) return false;
 
+	let succeeded = false;
 	await runQueuedMutation(async () => {
 		playerState.update((state) => ({ ...state, isQueueSyncing: true, queueError: null }));
 
@@ -262,6 +263,7 @@ export async function playVideo(video: VideoOut): Promise<void> {
 			if (existingIndex >= 0) {
 				await setQueuePosition(playlistId, existingIndex);
 				await syncFromPlaylistDetail(playlistId, { setPlaying: true, clearError: true });
+				succeeded = true;
 				return;
 			}
 
@@ -273,18 +275,21 @@ export async function playVideo(video: VideoOut): Promise<void> {
 			await addVideoToQueue(playlistId, video.id, insertPosition);
 			await setQueuePosition(playlistId, insertPosition);
 			await syncFromPlaylistDetail(playlistId, { setPlaying: true, clearError: true });
+			succeeded = true;
 		} catch (error) {
 			setQueueError(error);
 			playerState.update((state) => ({ ...state, isQueueSyncing: false }));
 		}
 	});
+	return succeeded;
 }
 
 /**
  * Play from an existing playlist using the playlist order as queue.
  * Queue content/order are read-only in this mode.
  */
-export async function playFromPlaylist(playlistId: string, videoId: string): Promise<void> {
+export async function playFromPlaylist(playlistId: string, videoId: string): Promise<boolean> {
+	let succeeded = false;
 	await runQueuedMutation(async () => {
 		playerState.update((state) => ({ ...state, isQueueSyncing: true, queueError: null }));
 
@@ -303,11 +308,13 @@ export async function playFromPlaylist(playlistId: string, videoId: string): Pro
 				queueMutable: false,
 				activeSourcePlaylistId: playlistId
 			});
+			succeeded = true;
 		} catch (error) {
 			setQueueError(error);
 			playerState.update((state) => ({ ...state, isQueueSyncing: false }));
 		}
 	});
+	return succeeded;
 }
 
 /**

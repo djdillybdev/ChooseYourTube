@@ -21,8 +21,8 @@
 	let isRefreshing = $state(false);
 	let refreshError = $state<string | null>(null);
 
-	async function handlePlay(video: VideoOut) {
-		await playFromPlaylist(data.playlist.id, video.id);
+	async function handlePlay(video: VideoOut): Promise<boolean> {
+		return playFromPlaylist(data.playlist.id, video.id);
 	}
 
 	async function handleRefresh() {

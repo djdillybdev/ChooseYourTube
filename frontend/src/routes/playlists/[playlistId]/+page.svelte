@@ -35,7 +35,11 @@
 
 	async function handlePlay(videoId: string) {
 		actionError = null;
-		await playFromPlaylist(data.playlist.id, videoId);
+		const started = await playFromPlaylist(data.playlist.id, videoId);
+		if (!started) {
+			actionError = 'Unable to start playback. Please try again.';
+			return;
+		}
 		const returnUrl = window.location.pathname + window.location.search;
 		await goto('/player?return=' + encodeURIComponent(returnUrl));
 	}

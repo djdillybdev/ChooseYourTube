@@ -128,7 +128,7 @@ async def create_new_playlist(
         owner_id=owner_id,
         name=payload.name,
         description=payload.description,
-        is_system=False,
+        is_system=payload.is_system,
     )
     return await crud_playlist.create_playlist(db_session, new_playlist)
 

@@ -16,7 +16,7 @@ class PlaylistCreate(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=255, description="Playlist name")
     description: str | None = Field(None, description="Playlist description")
-    model_config = {"extra": "forbid"}
+    is_system: bool = Field(False, description="Whether this is a system-managed playlist")
 
 
 # --- Update Schema ---

@@ -6,7 +6,7 @@
 	interface Props {
 		videos: VideoOut[];
 		channelMap?: Map<string, ChannelOut>;
-		onPlay?: (video: VideoOut) => Promise<void>;
+		onPlay?: (video: VideoOut) => Promise<boolean>;
 		showQueueActions?: boolean;
 	}
 

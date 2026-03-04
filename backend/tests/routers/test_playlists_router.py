@@ -190,15 +190,17 @@ class TestCreatePlaylist:
         assert data["description"] == "New description"
         assert data["is_system"] is False
 
-    async def test_rejects_is_system_in_payload(self, test_client, db_session):
-        """Should reject attempts to set is_system from public create payload."""
+    async def test_accepts_is_system_in_payload(self, test_client, db_session):
+        """Should allow creating system playlists for frontend-managed queue usage."""
         payload = {
             "name": "User Playlist",
             "is_system": True,
         }
 
         response = test_client.post("/playlists/", json=payload)
-        assert response.status_code == 422
+        assert response.status_code == 201
+        data = response.json()
+        assert data["is_system"] is True
 
     async def test_validates_required_name_field(self, test_client, db_session):
         """Should return 422 when name is missing."""
