@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { playerState, closePlayer, initializeQueue } from '$lib/stores/playerState.svelte';
+	import { playerState, initializeQueue } from '$lib/stores/playerState.svelte';
 	import { openSaveVideo } from '$lib/stores/modalState.svelte';
 	import YouTubePlayer from '$lib/components/player/YouTubePlayer.svelte';
 	import QueueList from '$lib/components/player/QueueList.svelte';
@@ -47,9 +47,6 @@
 	function handleBack() {
 		goto(returnUrl);
 	}
-	function handleClose() {
-		void closePlayer();
-	}
 </script>
 
 <svelte:head>
@@ -86,7 +83,8 @@
 		<div class="flex items-center gap-2">
 			<button
 				class="btn btn-ghost btn-sm"
-				onclick={() => playerState.current.currentVideo && openSaveVideo(playerState.current.currentVideo)}
+				onclick={() =>
+					playerState.current.currentVideo && openSaveVideo(playerState.current.currentVideo)}
 				disabled={!playerState.current.currentVideo}
 			>
 				Save
@@ -98,22 +96,6 @@
 			>
 				Queue
 				<span class="badge badge-sm badge-primary">{playerState.current.queue.length}</span>
-			</button>
-			<button
-				class="btn btn-square btn-ghost btn-sm"
-				onclick={handleClose}
-				aria-label="Close player"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.5"
-					class="h-5 w-5"
-				>
-					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-				</svg>
 			</button>
 		</div>
 	</header>
