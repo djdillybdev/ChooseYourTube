@@ -77,4 +77,18 @@ describe('Sidebar', () => {
 
 		expect(screen.getByRole('button', { name: /edit channel/i })).toBeInTheDocument();
 	});
+
+	it('renders playlists navigation link below inbox', async () => {
+		render(Sidebar, {
+			folders: [],
+			unfolderedChannels: []
+		});
+
+		await waitFor(() => {
+			expect(listMock).toHaveBeenCalled();
+		});
+
+		expect(screen.getByRole('link', { name: /inbox/i })).toBeInTheDocument();
+		expect(screen.getByRole('link', { name: /playlists/i })).toHaveAttribute('href', '/playlists');
+	});
 });

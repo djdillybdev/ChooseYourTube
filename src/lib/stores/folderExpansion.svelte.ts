@@ -12,7 +12,7 @@ class FolderExpansionState {
 
 	constructor() {
 		// Load expansion state from localStorage on initialization
-		if (typeof window !== 'undefined') {
+		if (typeof window !== 'undefined' && typeof localStorage?.getItem === 'function') {
 			const stored = localStorage.getItem(STORAGE_KEY);
 			if (stored) {
 				try {
@@ -51,7 +51,7 @@ class FolderExpansionState {
 	 * Persist current expansion state to localStorage.
 	 */
 	private persist() {
-		if (typeof window !== 'undefined') {
+		if (typeof window !== 'undefined' && typeof localStorage?.setItem === 'function') {
 			try {
 				const ids = Array.from(this.expanded);
 				localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));

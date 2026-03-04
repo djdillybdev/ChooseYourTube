@@ -3,6 +3,7 @@
 	import { formatDuration } from '$lib/utils/formatDuration';
 	import { formatRelativeDate } from '$lib/utils/formatDate';
 	import { playVideo, addToQueue } from '$lib/stores/playerState.svelte';
+	import { openSaveVideo } from '$lib/stores/modalState.svelte';
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
 	import { getChannelTitle } from '$lib/utils/channelLookup';
@@ -241,6 +242,17 @@
 						</button>
 
 						{#if showQueueActions}
+							<button
+								class="btn btn-sm btn-ghost"
+								onclick={(e) => {
+									e.stopPropagation();
+									openSaveVideo(video);
+								}}
+								aria-label="Save to playlist"
+							>
+								Save
+							</button>
+
 							<button
 								class="btn btn-sm btn-ghost"
 								onclick={(e) => void handleAddToQueue(e, 'next')}

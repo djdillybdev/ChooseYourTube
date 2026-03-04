@@ -95,6 +95,27 @@
 						</a>
 					</li>
 
+					<!-- Playlists -->
+					<li>
+						<a href="/playlists" class="flex items-center gap-2">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="1.5"
+								stroke="currentColor"
+								class="h-5 w-5"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M9 9l10.5-3m0 0L21 16.5M19.5 6L9 9m0 0l-1.5 10.5M9 9L3 7.5m4.5 12L3 7.5m0 0L13.5 4.5"
+								/>
+							</svg>
+							<span>Playlists</span>
+						</a>
+					</li>
+
 					<!-- Folders Section -->
 					<li class="mt-4 menu-title">
 						<span>Folders</span>

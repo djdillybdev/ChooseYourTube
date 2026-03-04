@@ -9,6 +9,7 @@
 	import CreateFolderModal from '$lib/components/modals/CreateFolderModal.svelte';
 	import EditChannelModal from '$lib/components/modals/EditChannelModal.svelte';
 	import EditFolderModal from '$lib/components/modals/EditFolderModal.svelte';
+	import SaveVideoModal from '$lib/components/modals/SaveVideoModal.svelte';
 
 	interface Props {
 		children: any;
@@ -59,5 +60,8 @@
 	{/if}
 	{#if modalState.current.type === 'editFolder'}
 		<EditFolderModal folder={modalState.current.folder} folders={data.folders} onClose={closeModal} />
+	{/if}
+	{#if modalState.current.type === 'saveVideo'}
+		<SaveVideoModal video={modalState.current.video} onClose={closeModal} />
 	{/if}
 {/if}

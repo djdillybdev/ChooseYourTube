@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { playerState, closePlayer, initializeQueue } from '$lib/stores/playerState.svelte';
+	import { openSaveVideo } from '$lib/stores/modalState.svelte';
 	import YouTubePlayer from '$lib/components/player/YouTubePlayer.svelte';
 	import QueueList from '$lib/components/player/QueueList.svelte';
 	import { createChannelMap, getChannelTitle } from '$lib/utils/channelLookup';
@@ -83,6 +84,13 @@
 		</button>
 
 		<div class="flex items-center gap-2">
+			<button
+				class="btn btn-ghost btn-sm"
+				onclick={() => playerState.current.currentVideo && openSaveVideo(playerState.current.currentVideo)}
+				disabled={!playerState.current.currentVideo}
+			>
+				Save
+			</button>
 			<button
 				class="btn btn-ghost btn-sm"
 				class:btn-active={showQueue}

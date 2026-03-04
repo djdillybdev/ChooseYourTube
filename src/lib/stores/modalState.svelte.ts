@@ -1,4 +1,4 @@
-import type { ChannelOut, FolderOut } from '$lib/types/api';
+import type { ChannelOut, FolderOut, VideoOut } from '$lib/types/api';
 
 /**
  * Discriminated union — type: 'none' means no modal is open.
@@ -8,7 +8,8 @@ export type ModalState =
 	| { type: 'addChannel' }
 	| { type: 'createFolder' }
 	| { type: 'editChannel'; channel: ChannelOut }
-	| { type: 'editFolder'; folder: FolderOut };
+	| { type: 'editFolder'; folder: FolderOut }
+	| { type: 'saveVideo'; video: VideoOut };
 
 function createModalState() {
 	let state = $state<ModalState>({ type: 'none' });
@@ -37,6 +38,9 @@ export function openEditChannel(channel: ChannelOut) {
 }
 export function openEditFolder(folder: FolderOut) {
 	modalState.current = { type: 'editFolder', folder };
+}
+export function openSaveVideo(video: VideoOut) {
+	modalState.current = { type: 'saveVideo', video };
 }
 export function closeModal() {
 	modalState.current = { type: 'none' };
