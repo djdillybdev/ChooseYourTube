@@ -1,0 +1,91 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+from sqlalchemy.orm import Mapped, mapped_column, relationship, column_property
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Text,
+    String,
+    Boolean,
+    select,
+    func,
+    UniqueConstraint,
+    and_,
+)
+from datetime import datetime, timezone
+from ..base import Base
+from .association_tables import channel_tags
+from .video import Video
+
+if TYPE_CHECKING:
+    from .folder import Folder
+    from .tag import Tag
+
+
+class Channel(Base):
+    __tablename__ = "channels"
+    __table_args__ = (
+        UniqueConstraint("owner_id", "handle", name="uq_channel_owner_handle"),
+    )
+
+    owner_id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, nullable=False, index=True, default="test-user"
+    )
+    id: Mapped[str] = mapped_column(
+        String(32),
+        primary_key=True,
+        comment="YouTube's Channel ID (e.g., UC_x5XG1OV2P6uZZ5FSM9Ttw)",
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    handle: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    thumbnail_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+
+    uploads_playlist_id: Mapped[str] = mapped_column(
+        String(48),
+        nullable=False,
+        comment="The ID of the channel's 'uploads' playlist.",
+    )
+
+    is_favorited: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
+    )
+    last_updated: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    # Foreign Key to Folder
+    folder_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("folders.id"))
+
+    # Relationship to Folder (One-to-Many)
+    # A Channel belongs to one Folder.
+    folder: Mapped["Folder"] = relationship(back_populates="channels")
+
+    videos: Mapped[list["Video"]] = relationship(
+        back_populates="channel", cascade="all, delete-orphan", lazy="select"
+    )
+
+    # Many-to-many relationship with Tags
+    tags: Mapped[list["Tag"]] = relationship(
+        secondary=channel_tags,
+        primaryjoin="and_(Channel.owner_id == channel_tags.c.owner_id, Channel.id == channel_tags.c.channel_id)",
+        secondaryjoin="and_(Tag.owner_id == channel_tags.c.owner_id, Tag.id == channel_tags.c.tag_id)",
+        back_populates="channels",
+        lazy="selectin",
+    )
+
+    def __repr__(self) -> str:
+        return f"<Channel(id={self.id}, title='{self.title}')>"
+
+
+Channel.total_videos = column_property(
+    select(func.count(Video.id))
+    .where((Video.channel_id == Channel.id) & (Video.owner_id == Channel.owner_id))
+    .correlate_except(Video)
+    .scalar_subquery()
+)
