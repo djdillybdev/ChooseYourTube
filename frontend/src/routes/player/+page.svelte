@@ -6,6 +6,7 @@
 	import YouTubePlayer from '$lib/components/player/YouTubePlayer.svelte';
 	import QueueList from '$lib/components/player/QueueList.svelte';
 	import { createChannelMap, getChannelTitle } from '$lib/utils/channelLookup';
+	import { fit16x9 } from '$lib/utils/playerFrameFit';
 	import type { PageData } from './$types';
 
 	interface Props {
@@ -22,10 +23,68 @@
 	let showQueue = $state(false);
 	let showDescription = $state(false);
 	let returnUrl = $state('/inbox');
+	let playerStageEl = $state<HTMLDivElement | null>(null);
+	let frameWidth = $state(0);
+	let frameHeight = $state(0);
+	let stageResizeObserver: ResizeObserver | null = null;
+
+	const DESKTOP_BREAKPOINT = 1024;
+	const MOBILE_WIDTH_RATIO = 0.9;
+	const MOBILE_MAX_WIDTH = 1600;
+	const DESKTOP_MAX_WIDTH = 1400;
+	const DESKTOP_WIDTH_RATIO = 0.96;
+	const QUEUE_RESERVED_REM = 24;
+	const QUEUE_GAP_PX = 16;
+
+	function getRootFontSizePx(): number {
+		if (typeof window === 'undefined') return 16;
+		const value = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+		return Number.isFinite(value) ? value : 16;
+	}
+
+	function getMaxFrameWidth(viewportWidth: number): number {
+		if (viewportWidth < DESKTOP_BREAKPOINT) {
+			return Math.min(viewportWidth * MOBILE_WIDTH_RATIO, MOBILE_MAX_WIDTH);
+		}
+
+		const reservedWidth = QUEUE_RESERVED_REM * getRootFontSizePx() + QUEUE_GAP_PX;
+		return Math.max(0, Math.min(viewportWidth * DESKTOP_WIDTH_RATIO - reservedWidth, DESKTOP_MAX_WIDTH));
+	}
+
+	function updatePlayerFrameSize() {
+		if (typeof window === 'undefined' || !playerStageEl) return;
+
+		const bounds = playerStageEl.getBoundingClientRect();
+		const fitted = fit16x9(bounds.width, bounds.height, getMaxFrameWidth(window.innerWidth));
+		frameWidth = fitted.width;
+		frameHeight = fitted.height;
+	}
 
 	$effect(() => {
 		currentVideoId;
 		showDescription = false;
+	});
+
+	$effect(() => {
+		const stage = playerStageEl;
+		showQueue;
+		showDescription;
+		if (typeof window === 'undefined' || !stage) return;
+
+		const rafId = window.requestAnimationFrame(() => {
+			updatePlayerFrameSize();
+		});
+
+		return () => window.cancelAnimationFrame(rafId);
+	});
+
+	$effect(() => {
+		const stage = playerStageEl;
+		if (!stageResizeObserver || !stage) return;
+		stageResizeObserver.observe(stage);
+		return () => {
+			stageResizeObserver?.unobserve(stage);
+		};
 	});
 
 	onMount(() => {
@@ -40,8 +99,27 @@
 		const onKey = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') goto(returnUrl);
 		};
+
+		const onResize = () => {
+			updatePlayerFrameSize();
+		};
+
+		stageResizeObserver = new ResizeObserver(() => {
+			updatePlayerFrameSize();
+		});
+
 		window.addEventListener('keydown', onKey);
-		return () => window.removeEventListener('keydown', onKey);
+		window.addEventListener('resize', onResize);
+		void window.requestAnimationFrame(() => {
+			updatePlayerFrameSize();
+		});
+
+		return () => {
+			window.removeEventListener('keydown', onKey);
+			window.removeEventListener('resize', onResize);
+			stageResizeObserver?.disconnect();
+			stageResizeObserver = null;
+		};
 	});
 
 	function handleBack() {
@@ -110,9 +188,15 @@
 	{:else}
 		<!-- Video area with optional right queue panel -->
 		<div class="relative z-0 flex min-h-0 flex-1 overflow-hidden bg-base-200 p-6">
-			<div class="flex min-h-0 w-full flex-col gap-4 lg:flex-row lg:items-start lg:justify-center">
-				<div class="flex min-h-0 flex-1 items-center justify-center">
-					<div class="aspect-video w-full max-w-4xl">
+			<div
+				class="player-layout mx-auto flex min-h-0 w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-center"
+			>
+				<div bind:this={playerStageEl} class="player-stage flex min-h-0 h-full flex-1 items-center justify-center">
+					<div
+						class="player-frame aspect-video w-full"
+						style:width={frameWidth > 0 ? `${frameWidth}px` : undefined}
+						style:height={frameHeight > 0 ? `${frameHeight}px` : undefined}
+					>
 						{#key playerState.current.currentVideo?.id}
 							<YouTubePlayer />
 						{/key}
@@ -174,3 +258,15 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	.player-frame {
+		max-width: min(90vw, 1600px);
+	}
+
+	@media (min-width: 1024px) {
+		.player-frame {
+			max-width: min(calc(96vw - 24rem - 1rem), 1400px);
+		}
+	}
+</style>
