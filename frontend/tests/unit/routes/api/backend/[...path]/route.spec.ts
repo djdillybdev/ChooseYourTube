@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { backendFetchFromEventMock } = vi.hoisted(() => ({ backendFetchFromEventMock: vi.fn() }));
+const { backendFetchFromEventMock, refreshAuthSessionMock } = vi.hoisted(() => ({
+	backendFetchFromEventMock: vi.fn(),
+	refreshAuthSessionMock: vi.fn()
+}));
 
 vi.mock('$lib/server/auth', () => ({
-	backendFetchFromEvent: backendFetchFromEventMock
+	backendFetchFromEvent: backendFetchFromEventMock,
+	refreshAuthSession: refreshAuthSessionMock
 }));
 
 import { GET, POST } from '../../../../../../src/routes/api/backend/[...path]/+server';
@@ -24,6 +28,7 @@ function makeEvent(path: string, init?: { method?: string; body?: string; conten
 describe('backend proxy route', () => {
 	beforeEach(() => {
 		backendFetchFromEventMock.mockReset();
+		refreshAuthSessionMock.mockReset();
 	});
 
 	it('returns 404 for disallowed proxied paths', async () => {
@@ -79,5 +84,23 @@ describe('backend proxy route', () => {
 				headers: { 'Content-Type': 'application/json' }
 			})
 		);
+	});
+
+	it('retries once on 401 after successful refresh', async () => {
+		refreshAuthSessionMock.mockResolvedValue(true);
+		backendFetchFromEventMock
+			.mockResolvedValueOnce(new Response(null, { status: 401 }))
+			.mockResolvedValueOnce(
+				new Response(JSON.stringify({ ok: true }), {
+					status: 200,
+					headers: { 'content-type': 'application/json' }
+				})
+			);
+
+		const response = await GET(makeEvent('/api/backend/videos'));
+		expect(refreshAuthSessionMock).toHaveBeenCalledOnce();
+		expect(backendFetchFromEventMock).toHaveBeenCalledTimes(2);
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ ok: true });
 	});
 });

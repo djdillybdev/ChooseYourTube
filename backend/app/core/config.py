@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     API_CORS_ORIGINS: str | None = None
     YOUTUBE_API_KEY: str
     AUTH_SECRET: str = "change-me-in-production-with-at-least-32-characters"
+    ACCESS_TOKEN_TTL_SECONDS: int = 60 * 15
+    REFRESH_TOKEN_TTL_SECONDS: int = 60 * 60 * 24 * 30
+    REFRESH_TOKEN_BYTES: int = 48
     SHORTS_MAX_SECONDS: int = 60
     echo_sql: bool = False
     debug_logs: bool = True

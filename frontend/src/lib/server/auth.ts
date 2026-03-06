@@ -2,6 +2,9 @@ import type { Cookies, RequestEvent } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 
 export const AUTH_COOKIE_NAME = 'cyt_access_token';
+export const AUTH_REFRESH_COOKIE_NAME = 'cyt_refresh_token';
+const ACCESS_COOKIE_MAX_AGE_SECONDS = 60 * 20;
+const REFRESH_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 function getBackendBaseURL(): string {
 	const value = process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -14,7 +17,17 @@ export function setAuthCookie(cookies: Cookies, token: string): void {
 		httpOnly: true,
 		sameSite: 'lax',
 		secure: !dev,
-		maxAge: 60 * 60 * 24 * 7
+		maxAge: ACCESS_COOKIE_MAX_AGE_SECONDS
+	});
+}
+
+export function setRefreshAuthCookie(cookies: Cookies, token: string): void {
+	cookies.set(AUTH_REFRESH_COOKIE_NAME, token, {
+		path: '/',
+		httpOnly: true,
+		sameSite: 'lax',
+		secure: !dev,
+		maxAge: REFRESH_COOKIE_MAX_AGE_SECONDS
 	});
 }
 
@@ -24,8 +37,18 @@ export function clearAuthCookie(cookies: Cookies): void {
 	});
 }
 
+export function clearRefreshAuthCookie(cookies: Cookies): void {
+	cookies.delete(AUTH_REFRESH_COOKIE_NAME, {
+		path: '/'
+	});
+}
+
 export function getAuthToken(cookies: Cookies): string | undefined {
 	return cookies.get(AUTH_COOKIE_NAME);
+}
+
+export function getRefreshAuthToken(cookies: Cookies): string | undefined {
+	return cookies.get(AUTH_REFRESH_COOKIE_NAME);
 }
 
 export type BackendFetchOptions = {
@@ -72,4 +95,42 @@ export function mapAuthError(detail: unknown): string {
 		return detail.code;
 	}
 	return 'AUTH_UNKNOWN_ERROR';
+}
+
+export async function refreshAuthSession(event: RequestEvent): Promise<boolean> {
+	const refreshToken = getRefreshAuthToken(event.cookies);
+	if (!refreshToken) return false;
+
+	try {
+		const response = await backendFetch({
+			path: '/auth/session/refresh',
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ refresh_token: refreshToken })
+		});
+
+		if (!response.ok) {
+			clearAuthCookie(event.cookies);
+			clearRefreshAuthCookie(event.cookies);
+			event.locals.authToken = null;
+			return false;
+		}
+
+		const data = (await response.json()) as {
+			access_token: string;
+			refresh_token: string;
+		};
+
+		setAuthCookie(event.cookies, data.access_token);
+		setRefreshAuthCookie(event.cookies, data.refresh_token);
+		event.locals.authToken = data.access_token;
+		return true;
+	} catch {
+		clearAuthCookie(event.cookies);
+		clearRefreshAuthCookie(event.cookies);
+		event.locals.authToken = null;
+		return false;
+	}
 }

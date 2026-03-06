@@ -1,5 +1,5 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { backendFetchFromEvent } from '$lib/server/auth';
+import { backendFetchFromEvent, refreshAuthSession } from '$lib/server/auth';
 
 const ALLOWED_PREFIXES = ['videos', 'channels', 'folders', 'tags', 'playlists', 'users/me'];
 
@@ -19,11 +19,22 @@ async function proxy(event: RequestEvent, method: string) {
 	const body = method === 'GET' || method === 'DELETE' ? undefined : await event.request.text();
 	const contentType = event.request.headers.get('content-type');
 
-	const response = await backendFetchFromEvent(event, `/${rawPath}${query}`, {
+	let response = await backendFetchFromEvent(event, `/${rawPath}${query}`, {
 		method,
 		headers: contentType ? { 'Content-Type': contentType } : undefined,
 		body
 	});
+
+	if (response.status === 401) {
+		const refreshed = await refreshAuthSession(event);
+		if (refreshed) {
+			response = await backendFetchFromEvent(event, `/${rawPath}${query}`, {
+				method,
+				headers: contentType ? { 'Content-Type': contentType } : undefined,
+				body
+			});
+		}
+	}
 
 	const headers = new Headers(response.headers);
 	headers.delete('content-length');

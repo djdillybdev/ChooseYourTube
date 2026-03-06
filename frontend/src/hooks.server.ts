@@ -1,6 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
-import { AUTH_COOKIE_NAME } from '$lib/server/auth';
+import { AUTH_COOKIE_NAME, AUTH_REFRESH_COOKIE_NAME } from '$lib/server/auth';
 
 const PUBLIC_PATHS = ['/login', '/register'];
 
@@ -16,10 +16,11 @@ function isPublicPath(pathname: string): boolean {
 export const handle: Handle = async ({ event, resolve }) => {
 	const { pathname, search } = event.url;
 	const token = event.cookies.get(AUTH_COOKIE_NAME);
+	const refreshToken = event.cookies.get(AUTH_REFRESH_COOKIE_NAME);
 
 	event.locals.authToken = token ?? null;
 
-	if (!isPublicPath(pathname) && !token) {
+	if (!isPublicPath(pathname) && !token && !refreshToken) {
 		if (pathname.startsWith('/api/')) {
 			return new Response(JSON.stringify({ error: 'UNAUTHENTICATED' }), {
 				status: 401,

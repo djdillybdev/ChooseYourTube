@@ -1,21 +1,21 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import { backendFetch, mapAuthError, setAuthCookie } from '$lib/server/auth';
+import {
+	backendFetch,
+	mapAuthError,
+	setAuthCookie,
+	setRefreshAuthCookie
+} from '$lib/server/auth';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const { email, password } = await request.json();
 
-	const body = new URLSearchParams({
-		username: email,
-		password
-	});
-
 	const response = await backendFetch({
-		path: '/auth/jwt/login',
+		path: '/auth/session/login',
 		method: 'POST',
 		headers: {
-			'Content-Type': 'application/x-www-form-urlencoded'
+			'Content-Type': 'application/json'
 		},
-		body
+		body: JSON.stringify({ email, password })
 	});
 
 	if (!response.ok) {
@@ -23,8 +23,13 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		return json({ error: mapAuthError(payload.detail) }, { status: response.status });
 	}
 
-	const data = (await response.json()) as { access_token: string; token_type: string };
+	const data = (await response.json()) as {
+		access_token: string;
+		refresh_token: string;
+		token_type: string;
+	};
 	setAuthCookie(cookies, data.access_token);
+	setRefreshAuthCookie(cookies, data.refresh_token);
 
 	return json({ ok: true });
 };

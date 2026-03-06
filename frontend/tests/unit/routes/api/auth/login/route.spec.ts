@@ -1,14 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { backendFetchMock, setAuthCookieMock, mapAuthErrorMock } = vi.hoisted(() => ({
+const { backendFetchMock, setAuthCookieMock, setRefreshAuthCookieMock, mapAuthErrorMock } = vi.hoisted(
+	() => ({
 	backendFetchMock: vi.fn(),
 	setAuthCookieMock: vi.fn(),
+	setRefreshAuthCookieMock: vi.fn(),
 	mapAuthErrorMock: vi.fn((detail: unknown) => String(detail ?? 'AUTH_UNKNOWN_ERROR'))
-}));
+	})
+);
 
 vi.mock('$lib/server/auth', () => ({
 	backendFetch: backendFetchMock,
 	setAuthCookie: setAuthCookieMock,
+	setRefreshAuthCookie: setRefreshAuthCookieMock,
 	mapAuthError: mapAuthErrorMock
 }));
 
@@ -18,12 +22,13 @@ describe('POST /api/auth/login', () => {
 	beforeEach(() => {
 		backendFetchMock.mockReset();
 		setAuthCookieMock.mockReset();
+		setRefreshAuthCookieMock.mockReset();
 		mapAuthErrorMock.mockClear();
 	});
 
 	it('returns ok and sets auth cookie on successful login', async () => {
 		backendFetchMock.mockResolvedValue(
-			new Response(JSON.stringify({ access_token: 'token-1', token_type: 'bearer' }), {
+			new Response(JSON.stringify({ access_token: 'token-1', refresh_token: 'refresh-1' }), {
 				status: 200,
 				headers: { 'content-type': 'application/json' }
 			})
@@ -40,12 +45,13 @@ describe('POST /api/auth/login', () => {
 
 		expect(backendFetchMock).toHaveBeenCalledWith(
 			expect.objectContaining({
-				path: '/auth/jwt/login',
+				path: '/auth/session/login',
 				method: 'POST',
-				headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+				headers: { 'Content-Type': 'application/json' }
 			})
 		);
 		expect(setAuthCookieMock).toHaveBeenCalledWith(expect.anything(), 'token-1');
+		expect(setRefreshAuthCookieMock).toHaveBeenCalledWith(expect.anything(), 'refresh-1');
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ ok: true });
 	});

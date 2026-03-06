@@ -9,7 +9,7 @@ from app.auth.schemas import UserCreate, UserRead, UserUpdate
 from app.db.schema_guard import assert_required_playlist_schema
 from app.db.session import sessionmanager
 from .core.config import settings
-from .routers import channels, videos, folders, tags, playlists, health
+from .routers import auth_session, channels, videos, folders, tags, playlists, health
 
 logging.basicConfig(
     stream=sys.stdout, level=logging.DEBUG if settings.debug_logs else logging.INFO
@@ -57,6 +57,7 @@ app.include_router(
     prefix="/users",
     tags=["users"],
 )
+app.include_router(auth_session.router)
 
 
 async def check_database_schema_on_startup() -> None:
