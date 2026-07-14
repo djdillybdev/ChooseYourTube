@@ -1,6 +1,7 @@
 from pydantic import BaseModel, HttpUrl
 from datetime import datetime
 from .base import BaseSchema
+from .sync_run import LatestSyncSummary
 
 # --- Input Schemas ---
 
@@ -41,3 +42,4 @@ class ChannelOut(BaseSchema):
 
     # Calculated fields
     total_videos: int = 0
+    latest_sync: LatestSyncSummary | None = None

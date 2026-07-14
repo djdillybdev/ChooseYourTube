@@ -1,6 +1,7 @@
 import type { APIClient } from './client';
 import type {
 	ChannelOut,
+	SyncRunOut,
 	ChannelPlaylistFilters,
 	ChannelPlaylistOut,
 	ChannelCreate,
@@ -68,8 +69,8 @@ export class ChannelsAPI {
 	/**
 	 * Refresh a channel to fetch latest videos from YouTube
 	 */
-	async refresh(id: string): Promise<ChannelOut> {
-		const channel = await this.client.post<ChannelOut>(`/channels/${id}/refresh`);
+	async refresh(id: string): Promise<SyncRunOut> {
+		const channel = await this.client.post<SyncRunOut>(`/channels/${id}/refresh`);
 
 		// Invalidate caches (new videos fetched)
 		this.client.invalidateCache(`/channels/${id}`);
@@ -94,9 +95,10 @@ export class ChannelsAPI {
 	/**
 	 * Refresh synced playlists for a channel.
 	 */
-	async refreshPlaylists(channelId: string): Promise<void> {
-		await this.client.post(`/channels/${channelId}/playlists/refresh`);
+	async refreshPlaylists(channelId: string): Promise<SyncRunOut> {
+		const run = await this.client.post<SyncRunOut>(`/channels/${channelId}/playlists/refresh`);
 		this.client.invalidateCache(`/channels/${channelId}/playlists`);
+		return run;
 	}
 
 	/**

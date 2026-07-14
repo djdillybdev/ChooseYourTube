@@ -12,6 +12,7 @@
 	import SaveVideoModal from '$lib/components/modals/SaveVideoModal.svelte';
 	import type { Snippet } from 'svelte';
 	import type { FolderOut } from '$lib/types/api';
+	import type { RuntimeMetadata } from '$lib/types/runtime';
 
 	interface Props {
 		children: Snippet;
@@ -22,6 +23,7 @@
 			unfolderedChannels: ChannelOut[];
 			channels: ChannelOut[];
 			tags: TagOut[];
+			runtime: RuntimeMetadata;
 		};
 	}
 
@@ -40,6 +42,7 @@
 			folders={data.folders}
 			unfolderedChannels={data.unfolderedChannels}
 			channels={data.channels}
+			backgroundJobsEnabled={data.runtime.features.background_jobs}
 		/>
 
 		<div class="flex flex-1 flex-col overflow-hidden">

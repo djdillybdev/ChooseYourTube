@@ -19,6 +19,7 @@ from .video import Video
 
 if TYPE_CHECKING:
     from .folder import Folder
+    from .sync_run import SyncRun
     from .tag import Tag
 
 
@@ -57,6 +58,8 @@ class Channel(Base):
         onupdate=datetime.now(timezone.utc),
         nullable=False,
     )
+    rss_etag: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    rss_last_modified: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     # Foreign Key to Folder
     folder_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("folders.id"))
@@ -67,6 +70,10 @@ class Channel(Base):
 
     videos: Mapped[list["Video"]] = relationship(
         back_populates="channel", cascade="all, delete-orphan", lazy="select"
+    )
+
+    sync_runs: Mapped[list["SyncRun"]] = relationship(
+        back_populates="channel", cascade="all, delete-orphan", lazy="noload"
     )
 
     # Many-to-many relationship with Tags

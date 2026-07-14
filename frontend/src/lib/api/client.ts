@@ -114,9 +114,13 @@ export class APIClient {
 	/**
 	 * Convenience method for GET requests
 	 */
-	async get<T>(endpoint: string, params?: Record<string, unknown>): Promise<T> {
+	async get<T>(
+		endpoint: string,
+		params?: Record<string, unknown>,
+		options: Omit<FetchOptions, 'method'> = {}
+	): Promise<T> {
 		const query = params ? '?' + new URLSearchParams(this.buildQueryParams(params)).toString() : '';
-		return this.fetch<T>(`${endpoint}${query}`, { method: 'GET' });
+		return this.fetch<T>(`${endpoint}${query}`, { ...options, method: 'GET' });
 	}
 
 	/**

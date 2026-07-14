@@ -57,7 +57,18 @@ describe('player route layout', () => {
 		folders: [],
 		unfolderedChannels: [],
 		channels: [],
-		tags: []
+		tags: [],
+		runtime: {
+			name: 'ChooseYourTube',
+			version: '0.1.0',
+			mode: 'full' as const,
+			features: {
+				registration: true,
+				background_jobs: true,
+				youtube_oauth: false,
+				demo_login: false
+			}
+		}
 	};
 
 	beforeEach(() => {

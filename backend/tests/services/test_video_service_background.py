@@ -346,11 +346,8 @@ class TestRefreshLatestChannelVideos:
             sample_channel.id, db_session, mock_youtube_api
         )
 
-        # Verify feedparser was called with correct URL
-        expected_url = (
-            f"https://www.youtube.com/feeds/videos.xml?channel_id={sample_channel.id}"
-        )
-        mock_feedparser.assert_called_once_with(expected_url)
+        # Downloaded RSS bytes are parsed off the event loop.
+        mock_feedparser.assert_called_once_with(b"mock-feed")
 
     async def test_refresh_filters_shorts_from_rss(
         self, db_session, sample_channel, mock_youtube_api, mock_feedparser
@@ -545,9 +542,13 @@ class TestRefreshLatestChannelVideos:
         mock_feedparser.return_value = rss_feed
 
         # No channel exists
-        await refresh_latest_channel_videos(
-            "UC_nonexistent", db_session, mock_youtube_api
-        )
+        from app.core.errors import ApplicationError
+
+        with pytest.raises(ApplicationError) as exc_info:
+            await refresh_latest_channel_videos(
+                "UC_nonexistent", db_session, mock_youtube_api
+            )
+        assert exc_info.value.code == "NOT_FOUND"
 
         # Should not call API (channel not found in DB)
         mock_youtube_api.playlist_items_list_async.assert_not_called()

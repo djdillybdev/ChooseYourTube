@@ -161,6 +161,7 @@ class TestSyncChannelPlaylists:
                 },
             ]
         )
+        youtube_client.videos_list_async = AsyncMock(return_value={"items": []})
 
         await sync_channel_playlists(
             channel_id=sample_channel.id,

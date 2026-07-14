@@ -9,9 +9,15 @@
 		folders?: FolderOut[];
 		unfolderedChannels?: ChannelOut[];
 		channels?: ChannelOut[];
+		backgroundJobsEnabled?: boolean;
 	}
 
-	let { folders = [], unfolderedChannels = [], channels = [] }: Props = $props();
+	let {
+		folders = [],
+		unfolderedChannels = [],
+		channels = [],
+		backgroundJobsEnabled = true
+	}: Props = $props();
 
 	// Filter to only root folders (FolderTree handles children recursively)
 	const rootFolders = $derived(folders.filter((f) => f.parent_id === null));
@@ -89,6 +95,24 @@
 								/>
 							</svg>
 							<span>Playlists</span>
+						</a>
+					</li>
+
+					<!-- Folders Section -->
+					<li>
+						<a href={resolve('/settings')} class="flex items-center gap-2">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="1.5"
+									d="M4 6h16M4 12h16M4 18h10"
+								/>
+							</svg>
+							<span>Sync Activity</span>
+							{#if !backgroundJobsEnabled}
+								<span class="badge badge-ghost badge-xs">Demo</span>
+							{/if}
 						</a>
 					</li>
 

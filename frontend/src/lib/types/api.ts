@@ -11,6 +11,9 @@ export type PlaylistOut = Schemas['PlaylistOut'];
 export type PlaylistDetailOut = Schemas['PlaylistDetailOut'];
 export type ChannelPlaylistOut = Schemas['ChannelPlaylistOut'];
 export type UserRead = Schemas['UserRead'];
+export type SyncRunOut = Schemas['SyncRunOut'];
+export type LatestSyncSummary = Schemas['LatestSyncSummary'];
+export type YouTubeQuotaStatusOut = Schemas['YouTubeQuotaStatusOut'];
 
 export type ChannelCreate = Schemas['ChannelCreate'];
 export type ChannelUpdate = Schemas['ChannelUpdate'];
@@ -77,8 +80,30 @@ export interface ChannelPlaylistFilters extends Record<string, unknown> {
 	offset?: number;
 }
 
+export type SyncRunKind =
+	| 'initial_channel_sync'
+	| 'channel_refresh'
+	| 'playlist_sync'
+	| 'subscription_import'
+	| 'demo_maintenance';
+
+export type SyncRunStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed';
+
+export interface SyncRunFilters extends Record<string, unknown> {
+	status?: SyncRunStatus;
+	kind?: SyncRunKind;
+	channel_id?: string;
+	limit?: number;
+	offset?: number;
+}
+
 const KNOWN_MESSAGES: Record<string, string> = {
 	FEATURE_DISABLED: 'This feature is not available in the current application mode.',
+	FEATURE_DISABLED_IN_DEMO:
+		'Live refresh is disabled in the recruiter demo. Its sample data is maintained daily.',
+	YOUTUBE_QUOTA_EXHAUSTED:
+		'YouTube refresh is paused because the daily API quota has been reached.',
+	QUEUE_UNAVAILABLE: 'Synchronization is temporarily unavailable. Please try again shortly.',
 	UNAUTHENTICATED: 'Please log in to continue.',
 	FORBIDDEN: 'You do not have permission to perform this action.',
 	NOT_FOUND: 'The requested item could not be found.',

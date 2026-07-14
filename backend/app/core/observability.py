@@ -52,6 +52,11 @@ _ALLOWED_EXTRA_FIELDS = {
     "import_id",
     "attempt",
     "outcome",
+    "items_discovered",
+    "items_created",
+    "items_updated",
+    "items_skipped",
+    "items_failed",
 }
 
 

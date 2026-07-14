@@ -4,15 +4,23 @@
 	import { api } from '$lib/api';
 	import { formatRelativeDate } from '$lib/utils/formatDate';
 	import { openEditChannel } from '$lib/stores/modalState.svelte';
+	import SyncStatus from './SyncStatus.svelte';
+	import { pollSyncRun } from '$lib/utils/syncPolling';
+	import { onDestroy } from 'svelte';
+	import type { SyncRunOut } from '$lib/types/api';
 
 	interface Props {
 		channel: ChannelOut;
+		backgroundJobsEnabled?: boolean;
 	}
 
-	let { channel }: Props = $props();
+	let { channel, backgroundJobsEnabled = true }: Props = $props();
 
 	let isRefreshing = $state(false);
 	let refreshError = $state<string | null>(null);
+	let activeRun = $state<SyncRunOut | null>(null);
+	let cancelled = false;
+	onDestroy(() => (cancelled = true));
 
 	async function handleRefresh(e: Event) {
 		e.preventDefault();
@@ -22,8 +30,15 @@
 		refreshError = null;
 
 		try {
-			await api.channels.refresh(channel.id);
-			// Success - you might want to invalidate or show a toast here
+			const run = await api.channels.refresh(channel.id);
+			activeRun = run;
+			const completed = await pollSyncRun(
+				run.id,
+				(id) => api.syncRuns.get(id),
+				(updated) => (activeRun = updated),
+				() => cancelled
+			);
+			if (completed?.status === 'failed') refreshError = completed.error_message;
 		} catch (err) {
 			refreshError = err instanceof Error ? err.message : 'Failed to refresh channel';
 			console.error('Failed to refresh channel:', err);
@@ -82,6 +97,10 @@
 				{#if refreshError}
 					<div class="mt-2 text-xs text-error">{refreshError}</div>
 				{/if}
+				<SyncStatus sync={activeRun ?? channel.latest_sync} compact />
+				<div class="sr-only" aria-live="polite">
+					{activeRun ? `Refresh ${activeRun.status}` : ''}
+				</div>
 			</div>
 
 			<!-- Edit Button -->
@@ -120,9 +139,11 @@
 			<button
 				class="btn btn-square shrink-0 btn-ghost btn-sm"
 				onclick={handleRefresh}
-				disabled={isRefreshing}
+				disabled={isRefreshing || !backgroundJobsEnabled}
 				aria-label="Refresh channel"
-				title="Refresh channel"
+				title={backgroundJobsEnabled
+					? 'Refresh channel'
+					: 'Live refresh is disabled in the recruiter demo'}
 			>
 				{#if isRefreshing}
 					<span class="loading loading-sm loading-spinner"></span>

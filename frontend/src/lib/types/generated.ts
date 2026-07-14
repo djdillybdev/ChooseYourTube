@@ -585,6 +585,74 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/sync-runs': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** List Sync Runs */
+		get: operations['list_sync_runs_sync_runs_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/sync-runs/quota': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Quota Status */
+		get: operations['quota_status_sync_runs_quota_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/sync-runs/{sync_run_id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get Sync Run */
+		get: operations['get_sync_run_sync_runs__sync_run_id__get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/sync-runs/{sync_run_id}/retry': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Retry Sync Run */
+		post: operations['retry_sync_run_sync_runs__sync_run_id__retry_post'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/tags/': {
 		parameters: {
 			query?: never;
@@ -903,6 +971,7 @@ export interface components {
 			 * Format: date-time
 			 */
 			last_updated: string;
+			latest_sync?: components['schemas']['LatestSyncSummary'] | null;
 			/** Thumbnail Url */
 			thumbnail_url: string | null;
 			/** Title */
@@ -1017,6 +1086,34 @@ export interface components {
 			 */
 			position?: number | null;
 		};
+		/** LatestSyncSummary */
+		LatestSyncSummary: {
+			/** Error Code */
+			error_code: string | null;
+			/** Error Message */
+			error_message: string | null;
+			/** Finished At */
+			finished_at: string | null;
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id: string;
+			kind: components['schemas']['SyncRunKind'];
+			/** Last Successful At */
+			last_successful_at?: string | null;
+			/**
+			 * Queued At
+			 * Format: date-time
+			 */
+			queued_at: string;
+			/**
+			 * Retryable
+			 * @default false
+			 */
+			retryable: boolean;
+			status: components['schemas']['SyncRunStatus'];
+		};
 		/** PaginatedResponse[ChannelOut] */
 		PaginatedResponse_ChannelOut_: {
 			/** Has More */
@@ -1049,6 +1146,19 @@ export interface components {
 			has_more: boolean;
 			/** Items */
 			items: components['schemas']['PlaylistOut'][];
+			/** Limit */
+			limit: number;
+			/** Offset */
+			offset: number;
+			/** Total */
+			total: number;
+		};
+		/** PaginatedResponse[SyncRunOut] */
+		PaginatedResponse_SyncRunOut_: {
+			/** Has More */
+			has_more: boolean;
+			/** Items */
+			items: components['schemas']['SyncRunOut'][];
 			/** Limit */
 			limit: number;
 			/** Offset */
@@ -1274,6 +1384,81 @@ export interface components {
 			refresh_token: string;
 		};
 		/**
+		 * SyncRunKind
+		 * @enum {string}
+		 */
+		SyncRunKind:
+			| 'initial_channel_sync'
+			| 'channel_refresh'
+			| 'playlist_sync'
+			| 'subscription_import'
+			| 'demo_maintenance';
+		/** SyncRunOut */
+		SyncRunOut: {
+			/** Attempt Count */
+			attempt_count: number;
+			/** Channel Id */
+			channel_id: string | null;
+			/**
+			 * Created At
+			 * Format: date-time
+			 */
+			created_at: string;
+			/** Error Code */
+			error_code: string | null;
+			/** Error Message */
+			error_message: string | null;
+			/** Finished At */
+			finished_at: string | null;
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id: string;
+			/** Items Created */
+			items_created: number;
+			/** Items Discovered */
+			items_discovered: number;
+			/** Items Failed */
+			items_failed: number;
+			/** Items Skipped */
+			items_skipped: number;
+			/** Items Updated */
+			items_updated: number;
+			kind: components['schemas']['SyncRunKind'];
+			/** Max Attempts */
+			max_attempts: number;
+			/** Next Retry At */
+			next_retry_at: string | null;
+			/** Owner Id */
+			owner_id: string;
+			/**
+			 * Queued At
+			 * Format: date-time
+			 */
+			queued_at: string;
+			/**
+			 * Retryable
+			 * @default false
+			 */
+			retryable: boolean;
+			/** Started At */
+			started_at: string | null;
+			status: components['schemas']['SyncRunStatus'];
+			/** Subscription Import Id */
+			subscription_import_id: string | null;
+			/**
+			 * Updated At
+			 * Format: date-time
+			 */
+			updated_at: string;
+		};
+		/**
+		 * SyncRunStatus
+		 * @enum {string}
+		 */
+		SyncRunStatus: 'queued' | 'running' | 'succeeded' | 'partial' | 'failed';
+		/**
 		 * TagCreate
 		 * @description Schema for creating a new tag.
 		 */
@@ -1425,6 +1610,24 @@ export interface components {
 			is_watched?: boolean | null;
 			/** Tag Ids */
 			tag_ids?: string[] | null;
+		};
+		/** YouTubeQuotaStatusOut */
+		YouTubeQuotaStatusOut: {
+			/** Budget */
+			budget: number;
+			/** Call Count */
+			call_count: number;
+			/**
+			 * Date
+			 * Format: date
+			 */
+			date: string;
+			/** Estimated Units Remaining */
+			estimated_units_remaining: number;
+			/** Estimated Units Used */
+			estimated_units_used: number;
+			/** Exhausted */
+			exhausted: boolean;
 		};
 	};
 	responses: never;
@@ -3021,7 +3224,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': unknown;
+					'application/json': components['schemas']['SyncRunOut'];
 				};
 			};
 			/** @description Safe API error */
@@ -3101,12 +3304,12 @@ export interface operations {
 		requestBody?: never;
 		responses: {
 			/** @description Successful Response */
-			200: {
+			202: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['ChannelOut'];
+					'application/json': components['schemas']['SyncRunOut'];
 				};
 			};
 			/** @description Safe API error */
@@ -4834,6 +5037,348 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	list_sync_runs_sync_runs_get: {
+		parameters: {
+			query?: {
+				status?: components['schemas']['SyncRunStatus'] | null;
+				kind?: components['schemas']['SyncRunKind'] | null;
+				channel_id?: string | null;
+				limit?: number;
+				offset?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['PaginatedResponse_SyncRunOut_'];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	quota_status_sync_runs_quota_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['YouTubeQuotaStatusOut'];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	get_sync_run_sync_runs__sync_run_id__get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				sync_run_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['SyncRunOut'];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	retry_sync_run_sync_runs__sync_run_id__retry_post: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				sync_run_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['SyncRunOut'];
+				};
 			};
 			/** @description Safe API error */
 			400: {

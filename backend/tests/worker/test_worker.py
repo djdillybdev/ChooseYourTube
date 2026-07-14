@@ -1,191 +1,104 @@
-"""
-Tests for the arq worker module.
+"""Tests for durable synchronization worker configuration and scheduling."""
 
-Tests worker configuration, lifecycle functions (startup/shutdown),
-and the cron job that enqueues channel refresh tasks.
-"""
+from datetime import timezone
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from datetime import timedelta
-from unittest.mock import AsyncMock, patch, MagicMock
-from zoneinfo import ZoneInfo
 
+from app.schemas.sync_run import SyncRunKind
 from app.worker import (
     WorkerSettings,
-    startup,
-    shutdown,
+    RETRY_DELAYS_SECONDS,
+    _stagger_seconds,
     enqueue_channel_refreshes,
+    execute_sync_run,
+    shutdown,
+    startup,
 )
-from app.services import video_service, channel_playlist_service
 
 
 class TestWorkerSettings:
-    """Test WorkerSettings configuration."""
+    def test_only_common_durable_runner_is_registered(self):
+        assert WorkerSettings.functions == [execute_sync_run]
 
-    def test_worker_settings_functions_list(self):
-        """Verify WorkerSettings includes all task functions."""
-        assert len(WorkerSettings.functions) == 3
-        assert (
-            video_service.fetch_and_store_all_channel_videos_task
-            in WorkerSettings.functions
-        )
-        assert (
-            video_service.refresh_latest_channel_videos_task in WorkerSettings.functions
-        )
-        assert (
-            channel_playlist_service.sync_channel_playlists_task
-            in WorkerSettings.functions
-        )
-
-    def test_worker_settings_cron_jobs(self):
-        """Verify WorkerSettings includes cron job configuration."""
+    def test_scheduler_runs_hourly_in_utc(self):
         assert len(WorkerSettings.cron_jobs) == 1
-        # Verify the cron job runs hourly (minute=0)
-        cron_job = WorkerSettings.cron_jobs[0]
-        assert cron_job.minute == 0
+        assert WorkerSettings.cron_jobs[0].minute == 0
+        assert WorkerSettings.timezone == timezone.utc
 
-    def test_worker_settings_redis_settings(self):
-        """Verify WorkerSettings has Redis configuration."""
-        assert WorkerSettings.redis_settings is not None
-        assert hasattr(WorkerSettings, "redis_settings")
-
-    def test_worker_settings_timezone(self):
-        """Verify WorkerSettings has timezone configuration."""
-        assert WorkerSettings.timezone == ZoneInfo("Europe/Madrid")
-
-    def test_worker_settings_max_jobs(self):
-        """Verify WorkerSettings max_jobs is configured."""
+    def test_runtime_limits(self):
         assert WorkerSettings.max_jobs == 10
-
-    def test_worker_settings_keep_result(self):
-        """Verify WorkerSettings keep_result is configured."""
+        assert WorkerSettings.max_tries == 4
         assert WorkerSettings.keep_result == 0
-
-    def test_worker_settings_lifecycle_hooks(self):
-        """Verify WorkerSettings has startup and shutdown hooks."""
-        assert WorkerSettings.on_startup == startup
-        assert WorkerSettings.on_shutdown == shutdown
+        assert RETRY_DELAYS_SECONDS == (60, 300, 1800)
 
 
 @pytest.mark.asyncio
-class TestStartup:
-    """Test worker startup function."""
-
-    async def test_startup_creates_redis_pool(self, mock_arq_pool):
-        """Verify startup creates Redis pool and stores in context."""
-        ctx = {}
-
-        await startup(ctx)
-
-        assert "redis" in ctx
-        assert ctx["redis"] == mock_arq_pool
-        assert "heartbeat_task" in ctx
-        await shutdown(ctx)
+async def test_startup_and_shutdown_manage_pool_and_heartbeat(mock_arq_pool):
+    ctx = {}
+    await startup(ctx)
+    assert ctx["redis"] == mock_arq_pool
+    assert "heartbeat_task" in ctx
+    await shutdown(ctx)
 
 
-@pytest.mark.asyncio
-class TestShutdown:
-    """Test worker shutdown function."""
-
-    async def test_shutdown_does_not_error(self):
-        """Verify shutdown executes without errors."""
-        redis = MagicMock()
-        redis.close = AsyncMock()
-        ctx = {"redis": redis}
-
-        await shutdown(ctx)
-        redis.close.assert_awaited_once()
+def test_stagger_is_stable_and_bounded():
+    first = _stagger_seconds("owner", "channel")
+    assert first == _stagger_seconds("owner", "channel")
+    assert 0 <= first < 50 * 60
 
 
 @pytest.mark.asyncio
-class TestEnqueueChannelRefreshes:
-    """Test the cron job that enqueues channel refresh tasks."""
+async def test_scheduler_skips_when_lock_is_held():
+    redis = AsyncMock()
+    redis.set.return_value = False
+    await enqueue_channel_refreshes({"redis": redis})
+    redis.get.assert_not_called()
 
-    async def test_enqueue_channel_refreshes_empty_db(self, mock_sessionmanager):
-        """When no channels exist, no jobs should be enqueued."""
-        # Mock get_all_channels to return empty list
-        with patch("app.worker.channel_service.get_all_channels") as mock_get_channels:
-            mock_get_channels.return_value = []
 
-            mock_redis = AsyncMock()
-            ctx = {"redis": mock_redis}
+@pytest.mark.asyncio
+async def test_scheduler_pages_and_enqueues_every_channel(mock_sessionmanager):
+    redis = AsyncMock()
+    redis.set.return_value = True
+    redis.get.side_effect = lambda _key: redis.set.call_args.args[1]
+    channels = [MagicMock(id=f"channel-{i}", owner_id=f"owner-{i}") for i in range(200)]
+    final = MagicMock(id="channel-final", owner_id="owner-final")
 
-            await enqueue_channel_refreshes(ctx)
-
-            mock_get_channels.assert_called_once()
-            assert mock_get_channels.call_args.kwargs.get("owner_id") is None
-
-            # Verify no jobs were enqueued
-            mock_redis.enqueue_job.assert_not_called()
-
-    async def test_enqueue_channel_refreshes_single_channel(self, mock_sessionmanager):
-        """With one channel, one job should be enqueued with no delay."""
-        # Create a mock channel
-        mock_channel = MagicMock()
-        mock_channel.id = "UC_test_channel_1"
-        mock_channel.owner_id = "owner-1"
-
-        with patch("app.worker.channel_service.get_all_channels") as mock_get_channels:
-            mock_get_channels.return_value = [mock_channel]
-
-            mock_redis = AsyncMock()
-            ctx = {"redis": mock_redis}
-
-            await enqueue_channel_refreshes(ctx)
-
-            # Verify one job was enqueued with 0 delay (i * 3 where i=0)
-            mock_redis.enqueue_job.assert_called_once_with(
-                "refresh_latest_channel_videos_task",
-                owner_id="owner-1",
-                channel_id="UC_test_channel_1",
-                _defer_by=timedelta(seconds=0),
-            )
-
-    async def test_enqueue_channel_refreshes_multiple_channels(
-        self, mock_sessionmanager
+    with (
+        patch(
+            "app.worker.crud_channel.get_channels",
+            new=AsyncMock(side_effect=[channels, [final]]),
+        ) as get_channels,
+        patch(
+            "app.worker.sync_service.enqueue_run", new=AsyncMock()
+        ) as enqueue_run,
     ):
-        """With multiple channels, jobs should be staggered by 3 seconds."""
-        # Create mock channels
-        mock_channels = [
-            MagicMock(id="UC_channel_1", owner_id="owner-1"),
-            MagicMock(id="UC_channel_2", owner_id="owner-2"),
-            MagicMock(id="UC_channel_3", owner_id="owner-3"),
-        ]
+        await enqueue_channel_refreshes({"redis": redis})
 
-        with patch("app.worker.channel_service.get_all_channels") as mock_get_channels:
-            mock_get_channels.return_value = mock_channels
+    assert get_channels.await_count == 2
+    assert enqueue_run.await_count == 201
+    assert enqueue_run.call_args.kwargs["kind"] == SyncRunKind.CHANNEL_REFRESH
+    redis.delete.assert_awaited_once()
 
-            mock_redis = AsyncMock()
-            ctx = {"redis": mock_redis}
 
-            await enqueue_channel_refreshes(ctx)
-
-            # Verify all jobs were enqueued
-            assert mock_redis.enqueue_job.call_count == 3
-
-            # Verify delays are staggered by 3 seconds
-            calls = mock_redis.enqueue_job.call_args_list
-            assert calls[0][1]["_defer_by"] == timedelta(seconds=0)
-            assert calls[1][1]["_defer_by"] == timedelta(seconds=3)
-            assert calls[2][1]["_defer_by"] == timedelta(seconds=6)
-
-            # Verify correct channel IDs
-            assert calls[0][1]["channel_id"] == "UC_channel_1"
-            assert calls[1][1]["channel_id"] == "UC_channel_2"
-            assert calls[2][1]["channel_id"] == "UC_channel_3"
-            assert calls[0][1]["owner_id"] == "owner-1"
-            assert calls[1][1]["owner_id"] == "owner-2"
-            assert calls[2][1]["owner_id"] == "owner-3"
-
-    async def test_enqueue_channel_refreshes_uses_session(self, mock_sessionmanager):
-        """Verify sessionmanager.session() context manager is used."""
-        with patch("app.worker.channel_service.get_all_channels") as mock_get_channels:
-            mock_get_channels.return_value = []
-
-            mock_redis = AsyncMock()
-            ctx = {"redis": mock_redis}
-
-            await enqueue_channel_refreshes(ctx)
-
-            # Verify sessionmanager.session() was called
-            mock_sessionmanager.session.assert_called_once()
+@pytest.mark.asyncio
+async def test_scheduler_isolates_channel_enqueue_failure(mock_sessionmanager):
+    redis = AsyncMock()
+    redis.set.return_value = True
+    redis.get.side_effect = lambda _key: redis.set.call_args.args[1]
+    channels = [
+        MagicMock(id="broken", owner_id="owner-1"),
+        MagicMock(id="healthy", owner_id="owner-2"),
+    ]
+    with (
+        patch(
+            "app.worker.crud_channel.get_channels",
+            new=AsyncMock(return_value=channels),
+        ),
+        patch(
+            "app.worker.sync_service.enqueue_run",
+            new=AsyncMock(side_effect=[RuntimeError("queue"), MagicMock()]),
+        ) as enqueue_run,
+    ):
+        await enqueue_channel_refreshes({"redis": redis})
+    assert enqueue_run.await_count == 2

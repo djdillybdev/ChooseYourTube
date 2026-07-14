@@ -13,6 +13,7 @@ from app.db.models.playlist import Playlist
 from app.db.session import sessionmanager
 from app.schemas.base import PaginatedResponse
 from app.schemas.playlist import ChannelPlaylistOut
+from app.services.sync_service import SyncProgress
 
 CHANNEL_PLAYLISTS_SYNC_MAX_PLAYLISTS = getattr(
     settings, "CHANNEL_PLAYLISTS_SYNC_MAX_PLAYLISTS", 100
@@ -121,13 +122,14 @@ async def sync_channel_playlists(
     db_session: AsyncSession,
     youtube_client: YouTubeAPI,
     owner_id: str = "test-user",
-) -> None:
+) -> SyncProgress:
     channel = await crud_channel.get_channels(
         db_session, owner_id=owner_id, id=channel_id, first=True
     )
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
 
+    progress = SyncProgress()
     now = datetime.now(timezone.utc)
     active_playlist_source_ids: set[str] = set()
 
@@ -146,7 +148,9 @@ async def sync_channel_playlists(
             for video_id, owner_channel in ordered_items
             if owner_channel == channel_id
         ]
+        progress.discovered += len(channel_owned_ids)
         if not channel_owned_ids:
+            progress.skipped += len(ordered_items)
             continue
 
         existing_videos = await crud_video.get_videos(
@@ -156,6 +160,29 @@ async def sync_channel_playlists(
             video.id for video in existing_videos if video.channel_id == channel_id
         }
 
+        missing_ids = [
+            video_id
+            for video_id in channel_owned_ids
+            if video_id not in existing_same_channel_ids
+        ]
+        if missing_ids:
+            from app.services.video_service import create_and_update_videos
+
+            video_progress = await create_and_update_videos(
+                missing_ids,
+                channel_id,
+                db_session,
+                youtube_client,
+                owner_id=owner_id,
+            )
+            progress.add(video_progress)
+            refreshed_videos = await crud_video.get_videos(
+                db_session, owner_id=owner_id, id=missing_ids
+            )
+            existing_same_channel_ids.update(
+                video.id for video in refreshed_videos if video.channel_id == channel_id
+            )
+
         filtered_video_ids = [
             video_id
             for video_id in channel_owned_ids
@@ -164,6 +191,7 @@ async def sync_channel_playlists(
         filtered_video_ids = _dedupe_video_ids_keep_first(filtered_video_ids)
 
         if not filtered_video_ids:
+            progress.skipped += len(channel_owned_ids)
             continue
 
         playlist = await crud_playlist.get_playlists(
@@ -188,6 +216,7 @@ async def sync_channel_playlists(
                 source_last_synced_at=now,
             )
             playlist = await crud_playlist.create_playlist(db_session, playlist)
+            progress.created += 1
         else:
             playlist.name = snippet.get("title") or playlist.name
             playlist.description = snippet.get("description")
@@ -200,6 +229,7 @@ async def sync_channel_playlists(
             playlist.source_youtube_playlist_id = yt_playlist_id
             playlist.source_is_active = True
             playlist.source_last_synced_at = now
+            progress.updated += 1
 
         await crud_playlist.set_playlist_videos(
             db_session,
@@ -226,6 +256,7 @@ async def sync_channel_playlists(
 
     if needs_commit:
         await db_session.commit()
+    return progress
 
 
 async def get_channel_playlists(
@@ -298,7 +329,9 @@ async def get_channel_playlists(
 async def sync_channel_playlists_task(
     ctx, channel_id: str, owner_id: str = "test-user"
 ):
-    youtube_client = YouTubeAPI(api_key=settings.YOUTUBE_API_KEY)
+    youtube_client = YouTubeAPI(
+        api_key=settings.YOUTUBE_API_KEY, account_usage=True
+    )
     async with sessionmanager.session() as db_session:
         await sync_channel_playlists(
             channel_id=channel_id,

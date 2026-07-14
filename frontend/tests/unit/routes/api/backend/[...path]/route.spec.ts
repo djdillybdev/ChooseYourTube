@@ -63,6 +63,23 @@ describe('backend proxy route', () => {
 		expect(await response.json()).toEqual({ ok: true });
 	});
 
+	it('proxies synchronization status requests', async () => {
+		backendFetchFromEventMock.mockResolvedValue(
+			new Response(JSON.stringify({ status: 'running' }), {
+				status: 200,
+				headers: { 'content-type': 'application/json' }
+			})
+		);
+
+		const response = await GET(makeEvent('/api/backend/sync-runs/run-id'));
+		expect(response.status).toBe(200);
+		expect(backendFetchFromEventMock).toHaveBeenCalledWith(
+			expect.anything(),
+			'/sync-runs/run-id',
+			expect.objectContaining({ method: 'GET' })
+		);
+	});
+
 	it('forwards body and content-type for POST requests', async () => {
 		backendFetchFromEventMock.mockResolvedValue(new Response(null, { status: 204 }));
 

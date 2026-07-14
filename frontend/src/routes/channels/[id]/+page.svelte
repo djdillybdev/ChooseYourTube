@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
@@ -13,6 +13,9 @@
 	import { openEditChannel } from '$lib/stores/modalState.svelte';
 	import { createChannelMap } from '$lib/utils/channelLookup';
 	import ChannelContentTabs from '$lib/components/channel/ChannelContentTabs.svelte';
+	import SyncStatus from '$lib/components/channel/SyncStatus.svelte';
+	import { pollSyncRun } from '$lib/utils/syncPolling';
+	import type { SyncRunOut } from '$lib/types/api';
 
 	interface Props {
 		data: PageData;
@@ -25,17 +28,27 @@
 
 	let isRefreshing = $state(false);
 	let refreshError = $state<string | null>(null);
+	let activeRun = $state<SyncRunOut | null>(null);
+	let pollingCancelled = false;
+	onDestroy(() => (pollingCancelled = true));
 
 	async function handleRefresh() {
 		isRefreshing = true;
 		refreshError = null;
 
 		try {
-			await Promise.all([
-				api.channels.refresh(data.channel.id),
-				api.channels.refreshPlaylists(data.channel.id)
-			]);
-			await invalidateAll();
+			const run = await api.channels.refresh(data.channel.id);
+			activeRun = run;
+			const completed = await pollSyncRun(
+				run.id,
+				(id) => api.syncRuns.get(id),
+				(updated) => (activeRun = updated),
+				() => pollingCancelled
+			);
+			if (completed?.status === 'succeeded' || completed?.status === 'partial') {
+				await invalidateAll();
+			}
+			if (completed?.status === 'failed') refreshError = completed.error_message;
 		} catch (err) {
 			refreshError = err instanceof Error ? err.message : 'Failed to refresh channel';
 			console.error('Failed to refresh channel:', err);
@@ -110,6 +123,10 @@
 				{#if refreshError}
 					<div class="mt-2 text-sm text-error">{refreshError}</div>
 				{/if}
+				<div class="mt-2"><SyncStatus sync={activeRun ?? data.channel.latest_sync} /></div>
+				<div class="sr-only" aria-live="polite">
+					{activeRun ? `Refresh ${activeRun.status}` : ''}
+				</div>
 			</div>
 
 			<!-- Action buttons: Edit + Refresh -->
@@ -135,7 +152,14 @@
 					</svg>
 				</button>
 
-				<button class="btn gap-2 btn-primary" onclick={handleRefresh} disabled={isRefreshing}>
+				<button
+					class="btn gap-2 btn-primary"
+					onclick={handleRefresh}
+					disabled={isRefreshing || !data.runtime.features.background_jobs}
+					title={data.runtime.features.background_jobs
+						? 'Refresh channel videos'
+						: 'Live refresh is disabled in the recruiter demo; data is maintained daily.'}
+				>
 					{#if isRefreshing}
 						<span class="loading loading-sm loading-spinner"></span>
 						Refreshing...

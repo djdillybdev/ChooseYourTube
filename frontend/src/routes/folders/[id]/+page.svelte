@@ -84,7 +84,7 @@
 			<h2 class="mb-4 text-xl font-semibold">Channels</h2>
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each data.channels as channel (channel.id)}
-					<ChannelCard {channel} />
+					<ChannelCard {channel} backgroundJobsEnabled={data.runtime.features.background_jobs} />
 				{/each}
 			</div>
 		</div>

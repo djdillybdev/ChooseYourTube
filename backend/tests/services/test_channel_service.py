@@ -197,7 +197,7 @@ class TestCreateChannel:
             assert exc_info.value.status_code == 409
             assert "already been added" in exc_info.value.detail
 
-    async def test_create_channel_youtube_api_error_raises_500(
+    async def test_create_channel_youtube_api_error_raises_502(
         self, db_session, mock_youtube_api
     ):
         """Test that 500 is raised when YouTube API errors."""
@@ -210,8 +210,8 @@ class TestCreateChannel:
             with pytest.raises(HTTPException) as exc_info:
                 await create_channel(payload, db_session, mock_youtube_api)
 
-            assert exc_info.value.status_code == 500
-            assert "YouTube API" in exc_info.value.detail
+            assert exc_info.value.status_code == 502
+            assert exc_info.value.detail["code"] == "YOUTUBE_UPSTREAM_ERROR"
 
     async def test_create_channel_with_folder_assignment(
         self, db_session, mock_youtube_api, sample_youtube_channel_response

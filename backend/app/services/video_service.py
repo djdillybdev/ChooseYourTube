@@ -1,5 +1,7 @@
+import asyncio
 import re
 import feedparser  # type: ignore[import-untyped]
+import httpx
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,15 +12,19 @@ from datetime import datetime, timedelta
 from app.schemas.base import PaginatedResponse
 from ..core.config import settings
 from ..schemas.video import VideoCreate, VideoUpdate, VideoOut
-from ..db.session import sessionmanager
 from ..db.crud import crud_channel, crud_video
+from ..db.session import sessionmanager
 from ..db.models.video import Video
 from ..clients.youtube import YouTubeAPI
+from ..core.errors import ApplicationError
+from .sync_service import SyncProgress
 
 INITIAL_VIDEO_FETCH_LIMIT = 1000
 VIDEO_BATCH_SIZE = 500
 
 YT_RSS_BASE_URL = "https://www.youtube.com/feeds/videos.xml?channel_id="
+RSS_MAX_BYTES = 2 * 1024 * 1024
+RSS_TIMEOUT = httpx.Timeout(15.0, connect=5.0)
 
 # Configurable with safe fallbacks
 SHORTS_MAX_SECONDS = getattr(
@@ -90,92 +96,131 @@ def _classify_is_short(duration_seconds: int, snippet: dict) -> bool:
     return SHORTS_DEFAULT_TO_SHORT  # ambiguous case
 
 
-async def fetch_and_store_all_channel_videos_task(
-    ctx, channel_id: str, owner_id: str = "test-user"
-):
-    """
-    Background TASK to fetch all videos. Accepts a channel_id.
-    Manages its own DB session and YouTube client.
-    """
-    print(f"Starting background video fetch for channel ID: {channel_id}")
-
-    youtube_client = YouTubeAPI(api_key=settings.YOUTUBE_API_KEY)
-
-    async with sessionmanager.session() as db_session:
-        channel = await crud_channel.get_channels(
-            db_session, owner_id=owner_id, id=channel_id, first=True
+def _extract_playlist_video_ids(items: list[dict[str, Any]]) -> list[str]:
+    video_ids: list[str] = []
+    for video_item in items:
+        snippet = video_item.get("snippet", {})
+        content_details = video_item.get("contentDetails", {})
+        video_id = content_details.get("videoId") or snippet.get("resourceId", {}).get(
+            "videoId"
         )
-        if not channel:
-            print(f"Channel {channel_id} not found in DB. Exiting task.")
-            return
+        if isinstance(video_id, str) and video_id:
+            video_ids.append(video_id)
+    return list(dict.fromkeys(video_ids))
 
-        uploaded_videos: list[dict[str, Any]] = []
-        next_page_token = None
-        print("get playlists items")
-        while len(uploaded_videos) < INITIAL_VIDEO_FETCH_LIMIT:
-            response = await youtube_client.playlist_items_list_async(
-                part="snippet,contentDetails",
-                playlistId=channel.uploads_playlist_id,
-                maxResults=50,
-                pageToken=next_page_token,
-            )
-            items = response.get("items", [])
 
-            if not items:
-                break
+async def fetch_initial_channel_videos(
+    channel_id: str,
+    db_session: AsyncSession,
+    youtube_client: YouTubeAPI,
+    owner_id: str = "test-user",
+) -> SyncProgress:
+    channel = await crud_channel.get_channels(
+        db_session, owner_id=owner_id, id=channel_id, first=True
+    )
+    if channel is None:
+        raise ApplicationError("NOT_FOUND", "Channel not found.", 404)
 
-            uploaded_videos.extend(items)
-
-            next_page_token = response.get("nextPageToken")
-
-            if not next_page_token:
-                break
-
-        video_ids: list[str] = []
-
-        for video_item in uploaded_videos:
-            snippet = video_item.get("snippet", {})
-            content_details = video_item.get("contentDetails", {})
-            video_id = content_details.get("videoId")
-            if not video_id:
-                # Sometimes "contentDetails" may not have a videoId (rare, but could happen)
-                resource_id = snippet.get("resourceId", {})
-                video_id = resource_id.get("videoId")
-
-            if video_id:
-                video_ids.append(video_id)
-
-        # De-duplicate while preserving order
-        video_ids = list(dict.fromkeys(video_ids))
-
-        if not video_ids:
-            print("No video IDs found. Continuing to playlist sync.")
-        else:
-            await create_and_update_videos(
-                video_ids, channel_id, db_session, youtube_client, owner_id=owner_id
-            )
-
-        await ctx["redis"].enqueue_job(
-            "sync_channel_playlists_task",
-            owner_id=owner_id,
-            channel_id=channel_id,
+    uploaded_videos: list[dict[str, Any]] = []
+    next_page_token: str | None = None
+    while len(uploaded_videos) < INITIAL_VIDEO_FETCH_LIMIT:
+        response = await youtube_client.playlist_items_list_async(
+            part="snippet,contentDetails",
+            playlistId=channel.uploads_playlist_id,
+            maxResults=50,
+            pageToken=next_page_token,
         )
+        items = response.get("items", [])
+        if not isinstance(items, list) or not items:
+            break
+        uploaded_videos.extend(items)
+        next_page_token = response.get("nextPageToken")
+        if not next_page_token:
+            break
+
+    video_ids = _extract_playlist_video_ids(uploaded_videos)
+    return await create_and_update_videos(
+        video_ids, channel_id, db_session, youtube_client, owner_id=owner_id
+    )
 
 
-async def refresh_latest_channel_videos_task(
-    ctx, channel_id: str, owner_id: str = "test-user"
-):
-    """
-    Background TASK to fetch and add the latest videos for a channel
-    """
-    print(f"Starting background refresh new videos fetch for channel ID: {channel_id}")
+async def _fetch_rss_bytes(channel) -> bytes | None:
+    headers: dict[str, str] = {}
+    if channel.rss_etag:
+        headers["If-None-Match"] = channel.rss_etag
+    if channel.rss_last_modified:
+        headers["If-Modified-Since"] = channel.rss_last_modified
 
-    youtube_client = YouTubeAPI(api_key=settings.YOUTUBE_API_KEY)
+    try:
+        async with httpx.AsyncClient(timeout=RSS_TIMEOUT, follow_redirects=True) as client:
+            async with client.stream(
+                "GET", YT_RSS_BASE_URL + channel.id, headers=headers
+            ) as response:
+                if response.status_code == 304:
+                    return None
+                response.raise_for_status()
+                content = bytearray()
+                async for chunk in response.aiter_bytes():
+                    content.extend(chunk)
+                    if len(content) > RSS_MAX_BYTES:
+                        raise ApplicationError(
+                            "RSS_RESPONSE_TOO_LARGE",
+                            "The channel feed was larger than the supported limit.",
+                            502,
+                        )
+                channel.rss_etag = response.headers.get("etag")
+                channel.rss_last_modified = response.headers.get("last-modified")
+                return bytes(content)
+    except ApplicationError:
+        raise
+    except (httpx.TimeoutException, httpx.NetworkError) as exc:
+        raise ApplicationError(
+            "RSS_FETCH_FAILED",
+            "The channel feed is temporarily unavailable.",
+            503,
+            retryable=True,
+        ) from exc
+    except httpx.HTTPStatusError as exc:
+        retryable = exc.response.status_code >= 500 or exc.response.status_code == 429
+        raise ApplicationError(
+            "RSS_FETCH_FAILED" if retryable else "RSS_REQUEST_REJECTED",
+            "The channel feed could not be loaded.",
+            503 if retryable else 502,
+            retryable=retryable,
+        ) from exc
 
-    async with sessionmanager.session() as db_session:
-        await refresh_latest_channel_videos(
-            channel_id, db_session, youtube_client, owner_id=owner_id
+
+async def _rss_video_ids(channel) -> tuple[list[str], int]:
+    content = await _fetch_rss_bytes(channel)
+    if content is None:
+        return [], 0
+    parsed = await asyncio.to_thread(feedparser.parse, content)
+    entries = parsed.get("entries") if hasattr(parsed, "get") else None
+    if not isinstance(entries, list):
+        entries = getattr(parsed, "entries", None)
+    if not isinstance(entries, list):
+        raise ApplicationError(
+            "RSS_MALFORMED", "The channel feed returned malformed data.", 502
         )
+    ids: list[str] = []
+    malformed = 0
+    for entry in entries:
+        video_id = entry.get("yt_videoid") if hasattr(entry, "get") else None
+        link = entry.get("link") if hasattr(entry, "get") else None
+        if not isinstance(video_id, str):
+            video_id = getattr(entry, "yt_videoid", None)
+        if not isinstance(link, str):
+            link = getattr(entry, "link", None)
+        if not isinstance(video_id, str) or not isinstance(link, str):
+            malformed += 1
+            continue
+        if "/shorts/" not in link:
+            ids.append(video_id)
+    if entries and not ids and malformed == len(entries):
+        raise ApplicationError(
+            "RSS_MALFORMED", "The channel feed returned malformed entries.", 502
+        )
+    return list(dict.fromkeys(ids)), malformed
 
 
 async def refresh_latest_channel_videos(
@@ -183,70 +228,50 @@ async def refresh_latest_channel_videos(
     db_session: AsyncSession,
     youtube_client: YouTubeAPI,
     owner_id: str = "test-user",
-):
+) -> SyncProgress:
     """
     Fetch and add the latest videos for a channel
     """
 
-    # first, check the RSS feed for a channel to see if there have been updates
-    channel_rss = YT_RSS_BASE_URL + channel_id
-    parsed_feed_data = feedparser.parse(channel_rss)
+    channel = await crud_channel.get_channels(
+        db_session, owner_id=owner_id, id=channel_id, first=True
+    )
+    if channel is None:
+        raise ApplicationError("NOT_FOUND", "Channel not found.", 404)
+    parsed_video_ids, malformed = await _rss_video_ids(channel)
+    await db_session.commit()
+    if not parsed_video_ids:
+        return SyncProgress(skipped=malformed)
 
-    parsed_video_ids = []
-    # can maybe parse out shorts here to ignore new shorts being added, but again it is tough to in any other method
-
-    video_entries = parsed_feed_data.entries
-    for entry in video_entries:
-        video_id = entry.yt_videoid
-        if "shorts" not in entry.link:
-            parsed_video_ids.append(video_id)
-
-    total_parsed_videos = len(parsed_video_ids)
-
-    seen_video_ids = []
     latest_videos = await crud_video.get_videos(
         db_session, owner_id=owner_id, channel_id=channel_id
     )
-    for video in latest_videos:
-        if video.id in parsed_video_ids:
-            seen_video_ids.append(video.id)
-
-    video_ids_to_update = []
-
-    if len(seen_video_ids) == total_parsed_videos:
-        return
-    if len(seen_video_ids) == 0:
-        channel = await crud_channel.get_channels(
-            db_session, owner_id=owner_id, id=channel_id, first=True
+    existing_ids = {video.id for video in latest_videos}
+    seen_video_ids = existing_ids.intersection(parsed_video_ids)
+    if len(seen_video_ids) == len(parsed_video_ids):
+        return SyncProgress(
+            discovered=len(parsed_video_ids), skipped=len(parsed_video_ids) + malformed
         )
-        if not channel:
-            print(f"Channel {channel_id} not found in DB. Exiting task.")
-            return
-
+    if not seen_video_ids:
         response = await youtube_client.playlist_items_list_async(
             part="snippet,contentDetails",
             playlistId=channel.uploads_playlist_id,
             maxResults=50,
         )
-        items = response.get("items", [])
-
-        for video_item in items:
-            snippet = video_item.get("snippet", {})
-            content_details = video_item.get("contentDetails", {})
-            video_id = content_details.get("videoId")
-            if not video_id:
-                # Sometimes "contentDetails" may not have a videoId (rare, but could happen)
-                resource_id = snippet.get("resourceId", {})
-                video_id = resource_id.get("videoId")
-
-            video_ids_to_update.append(video_id)
-
+        raw_items = response.get("items", [])
+        video_ids_to_update = _extract_playlist_video_ids(
+            raw_items if isinstance(raw_items, list) else []
+        )
     else:
-        video_ids_to_update = parsed_video_ids
+        video_ids_to_update = [
+            video_id for video_id in parsed_video_ids if video_id not in existing_ids
+        ]
 
-    await create_and_update_videos(
+    progress = await create_and_update_videos(
         video_ids_to_update, channel_id, db_session, youtube_client, owner_id=owner_id
     )
+    progress.skipped += malformed
+    return progress
 
 
 async def create_and_update_videos(
@@ -255,9 +280,15 @@ async def create_and_update_videos(
     db_session: AsyncSession,
     youtube_client: YouTubeAPI,
     owner_id: str = "test-user",
-):
+) -> SyncProgress:
+    video_ids = [video_id for video_id in dict.fromkeys(video_ids) if video_id]
+    if not video_ids:
+        return SyncProgress()
+    existing = await crud_video.get_videos(
+        db_session, owner_id=owner_id, id=video_ids
+    )
+    existing_ids = {video.id for video in existing}
     full_video_items = []
-    print("get video items")
     for i in range(0, len(video_ids), 50):
         chunk = video_ids[i : i + 50]
         response = await youtube_client.videos_list_async(
@@ -296,9 +327,47 @@ async def create_and_update_videos(
         videos_to_create.append(new_video)
 
     if videos_to_create:
-        print("add videos to db")
         await crud_video.create_videos_bulk(db_session, videos_to_create)
-        print("job success")
+    returned_ids = {video.id for video in videos_to_create}
+    return SyncProgress(
+        discovered=len(video_ids),
+        created=len(returned_ids - existing_ids),
+        skipped=len(existing_ids),
+        failed=len(set(video_ids) - returned_ids),
+    )
+
+
+# Compatibility entrypoints for older queued jobs during a rolling deployment.
+async def fetch_and_store_all_channel_videos_task(
+    ctx: dict, channel_id: str, owner_id: str = "test-user"
+) -> None:
+    youtube_client = YouTubeAPI(
+        api_key=settings.YOUTUBE_API_KEY, account_usage=True
+    )
+    async with sessionmanager.session() as db_session:
+        try:
+            await fetch_initial_channel_videos(
+                channel_id, db_session, youtube_client, owner_id=owner_id
+            )
+        except ApplicationError as exc:
+            if exc.code == "NOT_FOUND":
+                return
+            raise
+    await ctx["redis"].enqueue_job(
+        "sync_channel_playlists_task", owner_id=owner_id, channel_id=channel_id
+    )
+
+
+async def refresh_latest_channel_videos_task(
+    ctx: dict, channel_id: str, owner_id: str = "test-user"
+) -> None:
+    youtube_client = YouTubeAPI(
+        api_key=settings.YOUTUBE_API_KEY, account_usage=True
+    )
+    async with sessionmanager.session() as db_session:
+        await refresh_latest_channel_videos(
+            channel_id, db_session, youtube_client, owner_id=owner_id
+        )
 
 
 async def get_video_by_id(

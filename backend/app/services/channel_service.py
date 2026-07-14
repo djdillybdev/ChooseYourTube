@@ -1,6 +1,5 @@
 import asyncio
 import re
-from typing import cast
 from urllib.parse import urlparse
 
 from fastapi import HTTPException
@@ -9,10 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.base import PaginatedResponse
 
 from ..clients.youtube import YouTubeAPI
-from ..db.crud import crud_channel
+from ..db.crud import crud_channel, crud_sync_run
 from ..db.models.channel import Channel
 from ..schemas.channel import ChannelCreate, ChannelUpdate, ChannelOut
+from . import sync_service
 from .video_service import refresh_latest_channel_videos
+from ..core.errors import ApplicationError
 
 
 def _get_best_thumbnail_url(thumbnails: dict) -> str | None:
@@ -102,13 +103,43 @@ async def get_all_channels(
     paginated_channels = all_channels[offset : offset + limit]
 
     # Build pagination response
+    latest, successes = await crud_sync_run.latest_channel_runs(
+        db_session,
+        owner_id=owner_id,
+        channel_ids=[channel.id for channel in paginated_channels],
+    )
+    items = []
+    for channel in paginated_channels:
+        output = ChannelOut.model_validate(channel)
+        run = latest.get(channel.id)
+        if run is not None:
+            output.latest_sync = sync_service.to_latest_summary(
+                run, successes.get(channel.id)
+            )
+        items.append(output)
+
     return PaginatedResponse[ChannelOut](
         total=total,
-        items=cast(list[ChannelOut], paginated_channels),
+        items=items,
         limit=limit,
         offset=offset,
         has_more=offset + len(paginated_channels) < total,
     )
+
+
+async def get_channel_out(
+    channel: Channel, db_session: AsyncSession, owner_id: str
+) -> ChannelOut:
+    latest, successes = await crud_sync_run.latest_channel_runs(
+        db_session, owner_id=owner_id, channel_ids=[channel.id]
+    )
+    output = ChannelOut.model_validate(channel)
+    run = latest.get(channel.id)
+    if run is not None:
+        output.latest_sync = sync_service.to_latest_summary(
+            run, successes.get(channel.id)
+        )
+    return output
 
 
 async def refresh_channel_by_id(
@@ -117,19 +148,11 @@ async def refresh_channel_by_id(
     youtube_client: YouTubeAPI,
     owner_id: str = "test-user",
 ) -> Channel:
-    """
-    Refresh the given channel to get its latest videos
-    """
-    channel = await crud_channel.get_channels(
-        db_session, owner_id=owner_id, id=channel_id, first=True
-    )
-    if not channel:
-        raise HTTPException(status_code=404, detail="Channel not found")
-
+    """Compatibility service for callers predating durable queued refreshes."""
+    channel = await get_channel_by_id(channel_id, db_session, owner_id)
     await refresh_latest_channel_videos(
         channel_id, db_session, youtube_client, owner_id=owner_id
     )
-
     return channel
 
 
@@ -145,12 +168,17 @@ async def create_channel(
     2. Checks if channel already exists.
     3. Creates the channel in the database.
     """
-    # 1. Fetch data from YouTube API using an async thread
+    # 1. Fetch data from YouTube API.
     channel_data.handle = _normalize_channel_handle(channel_data.handle)
     try:
-        response = await asyncio.to_thread(
-            youtube_client.get_channel_info, handle=channel_data.handle
-        )
+        if isinstance(youtube_client, YouTubeAPI):
+            response = await youtube_client.channels_list_async(
+                part="snippet,contentDetails,statistics", forHandle=channel_data.handle
+            )
+        else:
+            response = await asyncio.to_thread(
+                youtube_client.get_channel_info, handle=channel_data.handle
+            )
         items = response.get("items", [])
         if not items:
             raise HTTPException(
@@ -159,11 +187,17 @@ async def create_channel(
             )
     except HTTPException:
         raise
-    except Exception as e:
-        # Handle potential googleapiclient errors
+    except ApplicationError:
+        raise
+    except Exception as exc:
         raise HTTPException(
-            status_code=500, detail=f"An error occurred with the YouTube API: {e}"
-        )
+            status_code=502,
+            detail={
+                "code": "YOUTUBE_UPSTREAM_ERROR",
+                "message": "YouTube channel details are temporarily unavailable.",
+                "retryable": True,
+            },
+        ) from exc
 
     # 2. Extract data and check if channel already exists in our DB
     yt_channel_data = items[0]

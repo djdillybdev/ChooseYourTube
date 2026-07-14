@@ -221,7 +221,13 @@ def mock_feedparser():
     """
     from unittest.mock import patch
 
-    with patch("feedparser.parse") as mock_parse:
+    with (
+        patch("feedparser.parse") as mock_parse,
+        patch(
+            "app.services.video_service._fetch_rss_bytes",
+            new=AsyncMock(return_value=b"mock-feed"),
+        ),
+    ):
         yield mock_parse
 
 

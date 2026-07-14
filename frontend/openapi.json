@@ -223,6 +223,16 @@
 						"title": "Last Updated",
 						"type": "string"
 					},
+					"latest_sync": {
+						"anyOf": [
+							{
+								"$ref": "#/components/schemas/LatestSyncSummary"
+							},
+							{
+								"type": "null"
+							}
+						]
+					},
 					"thumbnail_url": {
 						"anyOf": [
 							{
@@ -579,6 +589,88 @@
 				"title": "FolderUpdate",
 				"type": "object"
 			},
+			"LatestSyncSummary": {
+				"properties": {
+					"error_code": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Error Code"
+					},
+					"error_message": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Error Message"
+					},
+					"finished_at": {
+						"anyOf": [
+							{
+								"format": "date-time",
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Finished At"
+					},
+					"id": {
+						"format": "uuid",
+						"title": "Id",
+						"type": "string"
+					},
+					"kind": {
+						"$ref": "#/components/schemas/SyncRunKind"
+					},
+					"last_successful_at": {
+						"anyOf": [
+							{
+								"format": "date-time",
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Last Successful At"
+					},
+					"queued_at": {
+						"format": "date-time",
+						"title": "Queued At",
+						"type": "string"
+					},
+					"retryable": {
+						"default": false,
+						"title": "Retryable",
+						"type": "boolean"
+					},
+					"status": {
+						"$ref": "#/components/schemas/SyncRunStatus"
+					}
+				},
+				"required": [
+					"id",
+					"kind",
+					"status",
+					"error_code",
+					"error_message",
+					"queued_at",
+					"finished_at"
+				],
+				"title": "LatestSyncSummary",
+				"type": "object"
+			},
 			"PaginatedResponse_ChannelOut_": {
 				"properties": {
 					"has_more": {
@@ -667,6 +759,36 @@
 				},
 				"required": ["total", "items", "limit", "offset", "has_more"],
 				"title": "PaginatedResponse[PlaylistOut]",
+				"type": "object"
+			},
+			"PaginatedResponse_SyncRunOut_": {
+				"properties": {
+					"has_more": {
+						"title": "Has More",
+						"type": "boolean"
+					},
+					"items": {
+						"items": {
+							"$ref": "#/components/schemas/SyncRunOut"
+						},
+						"title": "Items",
+						"type": "array"
+					},
+					"limit": {
+						"title": "Limit",
+						"type": "integer"
+					},
+					"offset": {
+						"title": "Offset",
+						"type": "integer"
+					},
+					"total": {
+						"title": "Total",
+						"type": "integer"
+					}
+				},
+				"required": ["total", "items", "limit", "offset", "has_more"],
+				"title": "PaginatedResponse[SyncRunOut]",
 				"type": "object"
 			},
 			"PaginatedResponse_TagOut_": {
@@ -1152,6 +1274,195 @@
 				"title": "SessionRefreshRequest",
 				"type": "object"
 			},
+			"SyncRunKind": {
+				"enum": [
+					"initial_channel_sync",
+					"channel_refresh",
+					"playlist_sync",
+					"subscription_import",
+					"demo_maintenance"
+				],
+				"title": "SyncRunKind",
+				"type": "string"
+			},
+			"SyncRunOut": {
+				"properties": {
+					"attempt_count": {
+						"title": "Attempt Count",
+						"type": "integer"
+					},
+					"channel_id": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Channel Id"
+					},
+					"created_at": {
+						"format": "date-time",
+						"title": "Created At",
+						"type": "string"
+					},
+					"error_code": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Error Code"
+					},
+					"error_message": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Error Message"
+					},
+					"finished_at": {
+						"anyOf": [
+							{
+								"format": "date-time",
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Finished At"
+					},
+					"id": {
+						"format": "uuid",
+						"title": "Id",
+						"type": "string"
+					},
+					"items_created": {
+						"title": "Items Created",
+						"type": "integer"
+					},
+					"items_discovered": {
+						"title": "Items Discovered",
+						"type": "integer"
+					},
+					"items_failed": {
+						"title": "Items Failed",
+						"type": "integer"
+					},
+					"items_skipped": {
+						"title": "Items Skipped",
+						"type": "integer"
+					},
+					"items_updated": {
+						"title": "Items Updated",
+						"type": "integer"
+					},
+					"kind": {
+						"$ref": "#/components/schemas/SyncRunKind"
+					},
+					"max_attempts": {
+						"title": "Max Attempts",
+						"type": "integer"
+					},
+					"next_retry_at": {
+						"anyOf": [
+							{
+								"format": "date-time",
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Next Retry At"
+					},
+					"owner_id": {
+						"title": "Owner Id",
+						"type": "string"
+					},
+					"queued_at": {
+						"format": "date-time",
+						"title": "Queued At",
+						"type": "string"
+					},
+					"retryable": {
+						"default": false,
+						"title": "Retryable",
+						"type": "boolean"
+					},
+					"started_at": {
+						"anyOf": [
+							{
+								"format": "date-time",
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Started At"
+					},
+					"status": {
+						"$ref": "#/components/schemas/SyncRunStatus"
+					},
+					"subscription_import_id": {
+						"anyOf": [
+							{
+								"format": "uuid",
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Subscription Import Id"
+					},
+					"updated_at": {
+						"format": "date-time",
+						"title": "Updated At",
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"owner_id",
+					"kind",
+					"status",
+					"channel_id",
+					"subscription_import_id",
+					"attempt_count",
+					"max_attempts",
+					"items_discovered",
+					"items_created",
+					"items_updated",
+					"items_skipped",
+					"items_failed",
+					"error_code",
+					"error_message",
+					"queued_at",
+					"started_at",
+					"finished_at",
+					"next_retry_at",
+					"created_at",
+					"updated_at"
+				],
+				"title": "SyncRunOut",
+				"type": "object"
+			},
+			"SyncRunStatus": {
+				"enum": ["queued", "running", "succeeded", "partial", "failed"],
+				"title": "SyncRunStatus",
+				"type": "string"
+			},
 			"TagCreate": {
 				"description": "Schema for creating a new tag.",
 				"properties": {
@@ -1505,6 +1816,45 @@
 					}
 				},
 				"title": "VideoUpdate",
+				"type": "object"
+			},
+			"YouTubeQuotaStatusOut": {
+				"properties": {
+					"budget": {
+						"title": "Budget",
+						"type": "integer"
+					},
+					"call_count": {
+						"title": "Call Count",
+						"type": "integer"
+					},
+					"date": {
+						"format": "date",
+						"title": "Date",
+						"type": "string"
+					},
+					"estimated_units_remaining": {
+						"title": "Estimated Units Remaining",
+						"type": "integer"
+					},
+					"estimated_units_used": {
+						"title": "Estimated Units Used",
+						"type": "integer"
+					},
+					"exhausted": {
+						"title": "Exhausted",
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"date",
+					"budget",
+					"estimated_units_used",
+					"estimated_units_remaining",
+					"call_count",
+					"exhausted"
+				],
+				"title": "YouTubeQuotaStatusOut",
 				"type": "object"
 			}
 		},
@@ -3510,7 +3860,9 @@
 					"202": {
 						"content": {
 							"application/json": {
-								"schema": {}
+								"schema": {
+									"$ref": "#/components/schemas/SyncRunOut"
+								}
 							}
 						},
 						"description": "Successful Response"
@@ -3611,11 +3963,11 @@
 					}
 				],
 				"responses": {
-					"200": {
+					"202": {
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/ChannelOut"
+									"$ref": "#/components/schemas/SyncRunOut"
 								}
 							}
 						},
@@ -5848,6 +6200,479 @@
 				],
 				"summary": "Remove Video From Playlist",
 				"tags": ["Playlists"]
+			}
+		},
+		"/sync-runs": {
+			"get": {
+				"operationId": "list_sync_runs_sync_runs_get",
+				"parameters": [
+					{
+						"in": "query",
+						"name": "status",
+						"required": false,
+						"schema": {
+							"anyOf": [
+								{
+									"$ref": "#/components/schemas/SyncRunStatus"
+								},
+								{
+									"type": "null"
+								}
+							],
+							"title": "Status"
+						}
+					},
+					{
+						"in": "query",
+						"name": "kind",
+						"required": false,
+						"schema": {
+							"anyOf": [
+								{
+									"$ref": "#/components/schemas/SyncRunKind"
+								},
+								{
+									"type": "null"
+								}
+							],
+							"title": "Kind"
+						}
+					},
+					{
+						"in": "query",
+						"name": "channel_id",
+						"required": false,
+						"schema": {
+							"anyOf": [
+								{
+									"type": "string"
+								},
+								{
+									"type": "null"
+								}
+							],
+							"title": "Channel Id"
+						}
+					},
+					{
+						"in": "query",
+						"name": "limit",
+						"required": false,
+						"schema": {
+							"default": 20,
+							"maximum": 100,
+							"minimum": 1,
+							"title": "Limit",
+							"type": "integer"
+						}
+					},
+					{
+						"in": "query",
+						"name": "offset",
+						"required": false,
+						"schema": {
+							"default": 0,
+							"minimum": 0,
+							"title": "Offset",
+							"type": "integer"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PaginatedResponse_SyncRunOut_"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "List Sync Runs",
+				"tags": ["Synchronization"]
+			}
+		},
+		"/sync-runs/quota": {
+			"get": {
+				"operationId": "quota_status_sync_runs_quota_get",
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/YouTubeQuotaStatusOut"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Quota Status",
+				"tags": ["Synchronization"]
+			}
+		},
+		"/sync-runs/{sync_run_id}": {
+			"get": {
+				"operationId": "get_sync_run_sync_runs__sync_run_id__get",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "sync_run_id",
+						"required": true,
+						"schema": {
+							"format": "uuid",
+							"title": "Sync Run Id",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SyncRunOut"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Get Sync Run",
+				"tags": ["Synchronization"]
+			}
+		},
+		"/sync-runs/{sync_run_id}/retry": {
+			"post": {
+				"operationId": "retry_sync_run_sync_runs__sync_run_id__retry_post",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "sync_run_id",
+						"required": true,
+						"schema": {
+							"format": "uuid",
+							"title": "Sync Run Id",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"202": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SyncRunOut"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Retry Sync Run",
+				"tags": ["Synchronization"]
 			}
 		},
 		"/tags/": {

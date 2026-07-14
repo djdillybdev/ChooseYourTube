@@ -3,7 +3,10 @@ from ..dependencies import DBSessionDep, YouTubeAPIDep, ArqDep, CurrentUserDep
 from ..schemas.channel import ChannelCreate, ChannelOut, ChannelUpdate
 from ..schemas.playlist import ChannelPlaylistOut
 from ..schemas.base import PaginatedResponse
-from ..services import channel_service, channel_playlist_service
+from ..services import channel_service, channel_playlist_service, sync_service
+from ..schemas.sync_run import SyncRunKind, SyncRunOut
+from ..core.config import settings
+from ..core.errors import ApplicationError
 
 router = APIRouter(prefix="/channels", tags=["Channels"])
 
@@ -50,9 +53,10 @@ async def get_channel_by_id(
     """
     Retrieves a single channel by its YouTube Channel ID.
     """
-    return await channel_service.get_channel_by_id(
+    channel = await channel_service.get_channel_by_id(
         channel_id, db_session, owner_id=str(user.id)
     )
+    return await channel_service.get_channel_out(channel, db_session, str(user.id))
 
 
 @router.post("/", response_model=ChannelOut, status_code=status.HTTP_201_CREATED)
@@ -75,13 +79,14 @@ async def create_channel(
         owner_id=str(user.id),
     )
 
-    await redis.enqueue_job(
-        "fetch_and_store_all_channel_videos_task",
+    await sync_service.enqueue_run(
+        db_session,
+        redis,
         owner_id=str(user.id),
+        kind=SyncRunKind.INITIAL_CHANNEL_SYNC,
         channel_id=new_channel.id,
     )
-
-    return new_channel
+    return await channel_service.get_channel_out(new_channel, db_session, str(user.id))
 
 
 @router.patch("/{channel_id}", response_model=ChannelOut)
@@ -91,24 +96,43 @@ async def update_channel(
     db_session: DBSessionDep,
     user: CurrentUserDep,
 ):
-    return await channel_service.update_channel(
+    channel = await channel_service.update_channel(
         channel_id, payload, db_session, owner_id=str(user.id)
     )
+    return await channel_service.get_channel_out(channel, db_session, str(user.id))
 
 
-@router.post("/{channel_id}/refresh", response_model=ChannelOut)
+@router.post(
+    "/{channel_id}/refresh",
+    response_model=SyncRunOut,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 async def refresh_channel(
     channel_id: str,
     db_session: DBSessionDep,
-    youtube_client: YouTubeAPIDep,
+    redis: ArqDep,
     user: CurrentUserDep,
 ):
     """
     Refresh the given YouTube channel to add and update the first 50 videos in its uploads playlist
     """
-    return await channel_service.refresh_channel_by_id(
-        channel_id, db_session, youtube_client, owner_id=str(user.id)
+    if not settings.BACKGROUND_JOBS_ENABLED:
+        raise ApplicationError(
+            "FEATURE_DISABLED_IN_DEMO",
+            "External refresh is disabled in the recruiter demo; data is maintained daily.",
+            403,
+        )
+    await channel_service.get_channel_by_id(
+        channel_id, db_session, owner_id=str(user.id)
     )
+    run = await sync_service.enqueue_run(
+        db_session,
+        redis,
+        owner_id=str(user.id),
+        kind=SyncRunKind.CHANNEL_REFRESH,
+        channel_id=channel_id,
+    )
+    return sync_service.to_sync_run_out(run)
 
 
 @router.get(
@@ -134,7 +158,11 @@ async def list_channel_playlists(
     )
 
 
-@router.post("/{channel_id}/playlists/refresh", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/{channel_id}/playlists/refresh",
+    response_model=SyncRunOut,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 async def refresh_channel_playlists(
     channel_id: str,
     db_session: DBSessionDep,
@@ -144,12 +172,20 @@ async def refresh_channel_playlists(
     await channel_service.get_channel_by_id(
         channel_id, db_session, owner_id=str(user.id)
     )
-    await redis.enqueue_job(
-        "sync_channel_playlists_task",
+    if not settings.BACKGROUND_JOBS_ENABLED:
+        raise ApplicationError(
+            "FEATURE_DISABLED_IN_DEMO",
+            "External refresh is disabled in the recruiter demo; data is maintained daily.",
+            403,
+        )
+    run = await sync_service.enqueue_run(
+        db_session,
+        redis,
         owner_id=str(user.id),
+        kind=SyncRunKind.PLAYLIST_SYNC,
         channel_id=channel_id,
     )
-    return {"status": "queued", "channel_id": channel_id}
+    return sync_service.to_sync_run_out(run)
 
 
 @router.delete("/{channel_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -348,7 +348,9 @@ class TestYouTubeAPIManager:
             manager.init_client()
 
             # Verify YouTubeAPI was created with API key
-            mock_youtube_api_cls.assert_called_once_with(api_key="test_key")
+            mock_youtube_api_cls.assert_called_once_with(
+                api_key="test_key", account_usage=True
+            )
             assert manager._client == mock_client
 
     def test_init_client_without_api_key_raises(self):

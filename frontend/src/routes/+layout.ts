@@ -2,6 +2,14 @@ import { createScopedAPI, APIError } from '$lib/api';
 import type { FolderOut, ChannelOut, TagOut, UserRead } from '$lib/types/api';
 import { isRedirect, redirect } from '@sveltejs/kit';
 import type { LayoutLoad } from './$types';
+import type { RuntimeMetadata } from '$lib/types/runtime';
+
+const fallbackRuntime: RuntimeMetadata = {
+	name: 'ChooseYourTube',
+	version: '0.1.0',
+	mode: 'full',
+	features: { registration: true, background_jobs: true, youtube_oauth: false, demo_login: false }
+};
 
 function isPublicAuthRoute(pathname: string): boolean {
 	return pathname === '/login' || pathname === '/register';
@@ -15,7 +23,8 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 			folders: [] as FolderOut[],
 			unfolderedChannels: [] as ChannelOut[],
 			channels: [] as ChannelOut[],
-			tags: [] as TagOut[]
+			tags: [] as TagOut[],
+			runtime: fallbackRuntime
 		};
 	}
 
@@ -37,10 +46,14 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 		}
 		const currentUser = (await meResponse.json()) as UserRead;
 
-		const [folders, tagsResponse] = await Promise.all([
+		const [folders, tagsResponse, metadataResponse] = await Promise.all([
 			api.folders.getTree(),
-			api.tags.list({ limit: 200 })
+			api.tags.list({ limit: 200 }),
+			fetch('/api/meta')
 		]);
+		const runtime = metadataResponse.ok
+			? ((await metadataResponse.json()) as RuntimeMetadata)
+			: fallbackRuntime;
 		const channels = [];
 
 		let channelsResponse = await api.channels.list();
@@ -62,7 +75,8 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 			folders,
 			unfolderedChannels,
 			channels,
-			tags: tagsResponse.items
+			tags: tagsResponse.items,
+			runtime
 		};
 	} catch (error) {
 		if (isRedirect(error)) {
@@ -80,7 +94,8 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 			folders: [] as FolderOut[],
 			unfolderedChannels: [] as ChannelOut[],
 			channels: [] as ChannelOut[],
-			tags: [] as TagOut[]
+			tags: [] as TagOut[],
+			runtime: fallbackRuntime
 		};
 	}
 };

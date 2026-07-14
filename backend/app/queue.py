@@ -13,8 +13,8 @@ async def get_arq_redis():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
-                "code": "FEATURE_DISABLED",
-                "message": "Background jobs are disabled for this runtime.",
+                "code": "FEATURE_DISABLED_IN_DEMO",
+                "message": "External refresh is disabled in the recruiter demo; data is maintained daily.",
                 "retryable": False,
             },
         )

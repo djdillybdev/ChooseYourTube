@@ -1,7 +1,15 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { backendFetchFromEvent, refreshAuthSession } from '$lib/server/auth';
 
-const ALLOWED_PREFIXES = ['videos', 'channels', 'folders', 'tags', 'playlists', 'users/me'];
+const ALLOWED_PREFIXES = [
+	'videos',
+	'channels',
+	'folders',
+	'tags',
+	'playlists',
+	'sync-runs',
+	'users/me'
+];
 
 function isAllowed(path: string): boolean {
 	return ALLOWED_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
