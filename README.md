@@ -14,6 +14,15 @@ I wanted an easy way to organize and view the channels I watch. I am aware of ex
 - Svelte and TypeScript for frontend
 - FastAPI, Postgres, Redis for the backend
 
+ChooseYourTube is GPL-3.0-only licensed and currently targets Python 3.12, Node.js 22+, and pnpm 10.33.0.
+
+## Runtime Modes
+
+- `APP_MODE=full` enables registration, Redis/arq jobs, and live YouTube synchronization for self-hosting.
+- `APP_MODE=demo` disables registration and background jobs by default and can start from seeded data without Redis or a YouTube API key.
+
+`APP_ENV=production` enables strict validation for secrets, CORS origins, and OAuth transport. See `.env.example` for the complete typed configuration surface.
+
 
 ## Quick Start
 
@@ -34,6 +43,8 @@ make up
 - Frontend (SvelteKit): http://localhost:5173
 - Backend API (FastAPI): http://localhost:8000
 - Backend docs: http://localhost:8000/docs
+- API liveness: http://localhost:8000/health/live
+- API readiness: http://localhost:8000/health/ready
 - Dev frontend (optional profile): http://localhost:5174
 - Dev backend (optional profile): http://localhost:8001
 

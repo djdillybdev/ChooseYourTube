@@ -5,7 +5,7 @@ Provides utilities for tag synchronization and management across entities.
 """
 
 import uuid
-from typing import Protocol
+from typing import Protocol, cast
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
@@ -80,7 +80,7 @@ async def sync_entity_tags(
 async def get_all_tags(
     db_session: AsyncSession,
     owner_id: str = "test-user",
-    limit: int | None = None,
+    limit: int = 50,
     offset: int = 0,
 ) -> PaginatedResponse[TagOut]:
     """
@@ -108,7 +108,7 @@ async def get_all_tags(
 
     return PaginatedResponse[TagOut](
         total=total,
-        items=tags,
+        items=cast(list[TagOut], tags),
         limit=limit,
         offset=offset,
         has_more=(offset + limit) < total if limit else False,

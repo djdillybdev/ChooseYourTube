@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { authApi } from '$lib/api/auth';
 	import { authState } from '$lib/stores/authState.svelte';
+	import type { PageData } from './$types';
+
+	let { data }: { data: PageData } = $props();
 
 	let email = $state('');
 	let password = $state('');
@@ -25,7 +29,7 @@
 			}
 
 			await authState.initialize();
-			goto(nextPath, { replaceState: true });
+			goto(resolve(nextPath as '/inbox'), { replaceState: true });
 		} finally {
 			isSubmitting = false;
 		}
@@ -39,13 +43,13 @@
 			<p class="text-sm text-base-content/70">Access your ChooseYourTube account.</p>
 
 			{#if registered}
-				<div class="alert alert-success mt-2">
+				<div class="mt-2 alert alert-success">
 					<span>Account created. You can log in now.</span>
 				</div>
 			{/if}
 
 			{#if errorMessage}
-				<div class="alert alert-error mt-2">
+				<div class="mt-2 alert alert-error">
 					<span>{errorMessage}</span>
 				</div>
 			{/if}
@@ -55,7 +59,7 @@
 					<span class="label-text">Email</span>
 					<input
 						type="email"
-						class="input input-bordered w-full"
+						class="input-bordered input w-full"
 						bind:value={email}
 						required
 						autocomplete="email"
@@ -66,22 +70,24 @@
 					<span class="label-text">Password</span>
 					<input
 						type="password"
-						class="input input-bordered w-full"
+						class="input-bordered input w-full"
 						bind:value={password}
 						required
 						autocomplete="current-password"
 					/>
 				</label>
 
-				<button class="btn btn-primary w-full" type="submit" disabled={isSubmitting}>
+				<button class="btn w-full btn-primary" type="submit" disabled={isSubmitting}>
 					{isSubmitting ? 'Logging in...' : 'Log in'}
 				</button>
 			</form>
 
-			<p class="mt-3 text-sm text-base-content/70">
-				Need an account?
-				<a class="link link-primary" href="/register">Create one</a>
-			</p>
+			{#if data.metadata?.features.registration !== false}
+				<p class="mt-3 text-sm text-base-content/70">
+					Need an account?
+					<a class="link link-primary" href={resolve('/register')}>Create one</a>
+				</p>
+			{/if}
 		</div>
 	</div>
 </div>

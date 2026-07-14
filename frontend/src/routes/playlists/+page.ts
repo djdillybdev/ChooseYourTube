@@ -9,7 +9,9 @@ type PlaylistCard = PlaylistOut & {
 	display_thumbnail_url: string | null;
 };
 
-async function listAllNonSystemPlaylists(api: ReturnType<typeof createScopedAPI>): Promise<PlaylistOut[]> {
+async function listAllNonSystemPlaylists(
+	api: ReturnType<typeof createScopedAPI>
+): Promise<PlaylistOut[]> {
 	const playlists: PlaylistOut[] = [];
 	let response = await api.playlists.list({ is_system: false, limit: 200, offset: 0 });
 

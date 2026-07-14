@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal, overload
 from sqlalchemy import delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.tag import Tag
@@ -7,6 +7,36 @@ from .crud_base import (
     _validate_pagination,
     _validate_order_by_field,
 )
+
+
+@overload
+async def get_tags(
+    db: AsyncSession,
+    *,
+    owner_id: str | None = None,
+    id: str | list[str] | None = None,
+    name: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+    order_by: str = "name",
+    order_direction: Literal["asc", "desc"] = "asc",
+    first: Literal[True],
+) -> Tag | None: ...
+
+
+@overload
+async def get_tags(
+    db: AsyncSession,
+    *,
+    owner_id: str | None = None,
+    id: str | list[str] | None = None,
+    name: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+    order_by: str = "name",
+    order_direction: Literal["asc", "desc"] = "asc",
+    first: Literal[False] = False,
+) -> list[Tag]: ...
 
 
 async def get_tags(
@@ -48,7 +78,7 @@ async def get_tags(
 
     _validate_order_by_field(Tag, order_by)
 
-    filters = {}
+    filters: dict[str, Any] = {}
     if owner_id is not None:
         filters["owner_id"] = owner_id
     if id is not None:
@@ -87,7 +117,7 @@ async def count_tags(
     Returns:
         Total count of tags matching the filters
     """
-    filters = {}
+    filters: dict[str, Any] = {}
     if owner_id is not None:
         filters["owner_id"] = owner_id
     if id is not None:

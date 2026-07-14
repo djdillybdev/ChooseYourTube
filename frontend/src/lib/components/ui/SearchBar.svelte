@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	interface Props {
 		placeholder?: string;
@@ -56,7 +57,7 @@
 		url.searchParams.set('page', '1');
 
 		// Use keepFocus to prevent input blur during navigation
-		goto(url.pathname + url.search, { keepFocus: true });
+		goto(resolve(`${basePath}${url.search}` as '/inbox'), { keepFocus: true });
 	}
 
 	/**

@@ -205,7 +205,9 @@ describe('channels/[id]/playlists load', () => {
 		const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
 		const url = new URL('http://localhost/channels/ch-1/playlists?page=1');
 
-		await expect(load({ params: { id: 'ch-1' }, url, fetch: fetchMock } as any)).rejects.toMatchObject({
+		await expect(
+			load({ params: { id: 'ch-1' }, url, fetch: fetchMock } as any)
+		).rejects.toMatchObject({
 			status: 307,
 			location: '/login?next=%2Fchannels%2Fch-1%2Fplaylists%3Fpage%3D1'
 		});

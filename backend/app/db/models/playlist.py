@@ -10,7 +10,6 @@ from sqlalchemy import (
     Integer,
     ForeignKeyConstraint,
     UniqueConstraint,
-    and_,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..base import Base

@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Any, Literal, overload
 from sqlalchemy import select, func, delete, insert, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.playlist import Playlist
@@ -20,6 +20,46 @@ def _dedupe_video_ids_keep_first(video_ids: list[str]) -> list[str]:
         seen.add(vid)
         unique_ids.append(vid)
     return unique_ids
+
+
+@overload
+async def get_playlists(
+    db: AsyncSession,
+    *,
+    owner_id: str | None = None,
+    id: str | list[str] | None = None,
+    name: str | None = None,
+    is_system: bool | None = None,
+    source_type: str | None = None,
+    source_channel_id: str | None = None,
+    source_youtube_playlist_id: str | None = None,
+    source_is_active: bool | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+    order_by: str = "name",
+    order_direction: Literal["asc", "desc"] = "asc",
+    first: Literal[True],
+) -> Playlist | None: ...
+
+
+@overload
+async def get_playlists(
+    db: AsyncSession,
+    *,
+    owner_id: str | None = None,
+    id: str | list[str] | None = None,
+    name: str | None = None,
+    is_system: bool | None = None,
+    source_type: str | None = None,
+    source_channel_id: str | None = None,
+    source_youtube_playlist_id: str | None = None,
+    source_is_active: bool | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+    order_by: str = "name",
+    order_direction: Literal["asc", "desc"] = "asc",
+    first: Literal[False] = False,
+) -> list[Playlist]: ...
 
 
 async def get_playlists(
@@ -44,7 +84,7 @@ async def get_playlists(
         raise ValueError("order_direction must be 'asc' or 'desc'")
     _validate_order_by_field(Playlist, order_by)
 
-    filters = {}
+    filters: dict[str, Any] = {}
     if owner_id is not None:
         filters["owner_id"] = owner_id
     if id is not None:
@@ -86,7 +126,7 @@ async def count_playlists(
     source_youtube_playlist_id: str | None = None,
     source_is_active: bool | None = None,
 ) -> int:
-    filters = {}
+    filters: dict[str, Any] = {}
     if owner_id is not None:
         filters["owner_id"] = owner_id
     if id is not None:
@@ -154,7 +194,7 @@ async def get_max_position(
         playlist_videos.c.playlist_id == playlist_id,
     )
     result = await db.execute(query)
-    return result.scalar()
+    return int(result.scalar_one())
 
 
 async def set_playlist_videos(

@@ -11,7 +11,6 @@ from sqlalchemy import (
     select,
     func,
     UniqueConstraint,
-    and_,
 )
 from datetime import datetime, timezone
 from ..base import Base

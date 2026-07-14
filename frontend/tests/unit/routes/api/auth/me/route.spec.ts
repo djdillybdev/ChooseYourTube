@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { backendFetchFromEventMock, clearAuthCookieMock, clearRefreshAuthCookieMock, refreshAuthSessionMock } =
-	vi.hoisted(() => ({
+const {
+	backendFetchFromEventMock,
+	clearAuthCookieMock,
+	clearRefreshAuthCookieMock,
+	refreshAuthSessionMock
+} = vi.hoisted(() => ({
 	backendFetchFromEventMock: vi.fn(),
 	clearAuthCookieMock: vi.fn(),
 	clearRefreshAuthCookieMock: vi.fn(),
 	refreshAuthSessionMock: vi.fn()
-	}));
+}));
 
 vi.mock('$lib/server/auth', () => ({
 	backendFetchFromEvent: backendFetchFromEventMock,

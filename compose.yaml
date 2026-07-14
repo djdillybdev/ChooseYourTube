@@ -35,6 +35,8 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_MODE: ${APP_MODE:-full}
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/chooseyourtube
       REDIS_URL: redis://redis:6379/0
       API_ORIGIN: ${API_ORIGIN:-http://localhost:5173}
@@ -57,6 +59,15 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_MODE: ${APP_MODE:-full}
+      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-true}
+      BACKGROUND_JOBS_ENABLED: ${BACKGROUND_JOBS_ENABLED:-true}
+      YOUTUBE_OAUTH_ENABLED: ${YOUTUBE_OAUTH_ENABLED:-false}
+      DEMO_LOGIN_ENABLED: ${DEMO_LOGIN_ENABLED:-false}
+      YOUTUBE_DAILY_QUOTA_BUDGET: ${YOUTUBE_DAILY_QUOTA_BUDGET:-8000}
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-}
+      DEMO_MAINTENANCE_SECRET: ${DEMO_MAINTENANCE_SECRET:-}
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/chooseyourtube
       REDIS_URL: redis://redis:6379/0
       API_ORIGIN: ${API_ORIGIN:-http://localhost:5173}
@@ -81,6 +92,7 @@ services:
         "${WEB_CONCURRENCY:-2}",
         "--timeout",
         "${GUNICORN_TIMEOUT:-60}",
+        "--no-control-socket",
       ]
     healthcheck:
       test:
@@ -88,7 +100,7 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/').read()",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live').read()",
         ]
       interval: 10s
       timeout: 5s
@@ -107,6 +119,9 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_MODE: ${APP_MODE:-full}
+      BACKGROUND_JOBS_ENABLED: ${BACKGROUND_JOBS_ENABLED:-true}
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/chooseyourtube
       REDIS_URL: redis://redis:6379/0
       API_ORIGIN: ${API_ORIGIN:-http://localhost:5173}
@@ -147,6 +162,8 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_MODE: ${APP_MODE:-full}
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/chooseyourtube
       REDIS_URL: redis://redis:6379/0
       API_ORIGIN: ${API_ORIGIN:-http://localhost:5173}
@@ -165,7 +182,7 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/').read()",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live').read()",
         ]
       interval: 10s
       timeout: 5s
@@ -185,6 +202,8 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_MODE: ${APP_MODE:-full}
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/chooseyourtube
       REDIS_URL: redis://redis:6379/0
       API_ORIGIN: ${API_ORIGIN:-http://localhost:5173}

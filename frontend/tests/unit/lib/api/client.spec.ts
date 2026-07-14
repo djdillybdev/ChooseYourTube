@@ -50,6 +50,33 @@ describe('APIClient', () => {
 		expect(attempts).toBe(1);
 	});
 
+	it('extracts the stable API error contract', async () => {
+		server.use(
+			http.get('http://api.test/channels', () =>
+				HttpResponse.json(
+					{
+						code: 'FEATURE_DISABLED',
+						message: 'Safe backend message',
+						request_id: 'request-123',
+						retryable: false
+					},
+					{ status: 403 }
+				)
+			)
+		);
+
+		const client = new APIClient('http://api.test');
+		const error = await client.get('/channels').catch((caught) => caught);
+
+		expect(error).toBeInstanceOf(APIError);
+		expect(error).toMatchObject({
+			code: 'FEATURE_DISABLED',
+			requestId: 'request-123',
+			retryable: false
+		});
+		expect((error as APIError).message).toContain('Request ID: request-123');
+	});
+
 	it('builds filtered query params for get requests', async () => {
 		server.use(
 			http.get('http://api.test/videos', ({ request }) => {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 	import VideoList from '$lib/components/video/VideoList.svelte';
 	import PaginationControls from '$lib/components/ui/PaginationControls.svelte';
@@ -16,7 +17,7 @@
 	let { data }: Props = $props();
 
 	// Access parent layout data (SvelteKit merges layout + page data)
-	const channels = $derived((data as any).channels ?? []);
+	const channels = $derived(data.channels ?? []);
 	const channelMap = $derived(channels.length > 0 ? createChannelMap(channels) : undefined);
 
 	/**
@@ -28,7 +29,7 @@
 		if (!url.searchParams.has('pageSize')) {
 			url.searchParams.set('pageSize', String(uiState.current.pageSize));
 			if (!url.searchParams.has('page')) url.searchParams.set('page', '1');
-			goto(url.pathname + url.search, { replaceState: true });
+			goto(resolve(`/inbox${url.search}` as '/inbox'), { replaceState: true });
 		} else {
 			// Update stored preference when URL has pageSize
 			setPageSize(data.pageSize);

@@ -24,7 +24,11 @@ describe('Sidebar', () => {
 		render(Sidebar, {
 			folders: [],
 			unfolderedChannels: [
-				makeChannel({ id: 'ch-thumb', title: 'Thumb Channel', thumbnail_url: 'https://img.example/thumb.jpg' }),
+				makeChannel({
+					id: 'ch-thumb',
+					title: 'Thumb Channel',
+					thumbnail_url: 'https://img.example/thumb.jpg'
+				}),
 				makeChannel({ id: 'ch-no-thumb', title: 'No Thumb Channel', thumbnail_url: null })
 			],
 			channels: []

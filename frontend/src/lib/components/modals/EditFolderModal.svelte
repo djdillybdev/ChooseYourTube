@@ -2,6 +2,7 @@
 	import { api } from '$lib/api';
 	import type { FolderOut } from '$lib/types/api';
 	import { invalidate } from '$app/navigation';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	interface Props {
 		folder: FolderOut;
@@ -35,7 +36,7 @@
 	 * Used to filter the parent-folder <select> and prevent cycles.
 	 */
 	function getDescendantIds(targetId: string, list: FolderOut[]): Set<string> {
-		const ids = new Set<string>();
+		const ids = new SvelteSet<string>();
 		function collectChildren(items: FolderOut[]) {
 			for (const f of items) {
 				ids.add(f.id);
@@ -151,7 +152,7 @@
 					class="select-bordered select w-full"
 				>
 					<option value={null}>Top level (no parent)</option>
-					{#each parentOptions() as f}
+					{#each parentOptions() as f (f.id)}
 						<option value={f.id}>{f.name}</option>
 					{/each}
 				</select>

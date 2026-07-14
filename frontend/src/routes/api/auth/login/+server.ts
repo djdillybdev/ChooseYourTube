@@ -1,10 +1,5 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
-import {
-	backendFetch,
-	mapAuthError,
-	setAuthCookie,
-	setRefreshAuthCookie
-} from '$lib/server/auth';
+import { backendFetch, mapAuthError, setAuthCookie, setRefreshAuthCookie } from '$lib/server/auth';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const { email, password } = await request.json();
@@ -20,7 +15,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 	if (!response.ok) {
 		const payload = await response.json().catch(() => ({ detail: 'LOGIN_FAILED' }));
-		return json({ error: mapAuthError(payload.detail) }, { status: response.status });
+		return json({ error: mapAuthError(payload) }, { status: response.status });
 	}
 
 	const data = (await response.json()) as {

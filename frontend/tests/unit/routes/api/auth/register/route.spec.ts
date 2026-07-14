@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { backendFetchMock, mapAuthErrorMock } = vi.hoisted(() => ({
 	backendFetchMock: vi.fn(),
-	mapAuthErrorMock: vi.fn((detail: unknown) => String(detail ?? 'AUTH_UNKNOWN_ERROR'))
+	mapAuthErrorMock: vi.fn((payload: { detail?: string }) => payload.detail ?? 'AUTH_UNKNOWN_ERROR')
 }));
 
 vi.mock('$lib/server/auth', () => ({
@@ -57,7 +57,7 @@ describe('POST /api/auth/register', () => {
 			})
 		} as any);
 
-		expect(mapAuthErrorMock).toHaveBeenCalledWith('EMAIL_ALREADY_EXISTS');
+		expect(mapAuthErrorMock).toHaveBeenCalledWith({ detail: 'EMAIL_ALREADY_EXISTS' });
 		expect(response.status).toBe(400);
 		expect(await response.json()).toEqual({ error: 'EMAIL_ALREADY_EXISTS' });
 	});

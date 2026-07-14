@@ -1,11 +1,10 @@
-import os
 import asyncio
 from typing import Dict, Any, Iterator, List, Optional
 from contextlib import contextmanager
 
-import google_auth_oauthlib.flow
-import googleapiclient.discovery
-import googleapiclient.errors
+import google_auth_oauthlib.flow  # type: ignore[import-untyped]
+import googleapiclient.discovery  # type: ignore[import-untyped]
+import googleapiclient.errors  # type: ignore[import-untyped]
 
 from ..core.config import settings
 
@@ -41,10 +40,6 @@ class YouTubeAPI:
         if client_secrets_file is not None:
             if not scopes:
                 scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
-            # For local development only (disables HTTPS verification).
-            # Do NOT use this in production.
-            os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
-
             # Run the OAuth flow
             flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
                 client_secrets_file,
@@ -100,9 +95,9 @@ class YouTubeAPI:
 
     def get_channel_info(
         self,
-        channel_id: str = None,
-        handle: str = None,
-        username: str = None,
+        channel_id: str | None = None,
+        handle: str | None = None,
+        username: str | None = None,
         parts: str = "snippet,contentDetails,statistics",
     ) -> Dict[str, Any]:
         """
@@ -151,6 +146,7 @@ class YouTubeAPIManager:
         if self._client is None:
             self.init_client()
 
+        assert self._client is not None
         yield self._client
 
 
@@ -164,4 +160,5 @@ def get_youtube_api() -> YouTubeAPI:
     # Ensure the manager has been initialized
     if youtube_api_manager._client is None:
         youtube_api_manager.init_client()
+    assert youtube_api_manager._client is not None
     return youtube_api_manager._client

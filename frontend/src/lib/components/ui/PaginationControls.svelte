@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	interface Props {
 		total: number;
@@ -17,7 +18,7 @@
 		url.searchParams.set('page', String(page));
 		url.searchParams.set('pageSize', String(size));
 		// Preserves search param (and any other params)
-		goto(url.pathname + url.search);
+		goto(resolve(`${basePath}${url.search}` as '/inbox'));
 	}
 
 	/** Sliding window of up to 5 page numbers centred on currentPage */
@@ -65,7 +66,7 @@
 				{/if}
 
 				<!-- Visible range -->
-				{#each visiblePages as p}
+				{#each visiblePages as p (p)}
 					<button
 						class="btn btn-square btn-ghost btn-sm"
 						class:btn-primary={p === currentPage}
@@ -115,7 +116,7 @@
 				value={pageSize}
 				onchange={(e) => navigateTo(1, Number((e.target as HTMLSelectElement).value))}
 			>
-				{#each [12, 24, 48, 100] as size}
+				{#each [12, 24, 48, 100] as size (size)}
 					<option value={size}>{size}</option>
 				{/each}
 			</select>

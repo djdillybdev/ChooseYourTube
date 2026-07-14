@@ -1,167 +1,33 @@
-// TypeScript types generated from OpenAPI specification
+import type { components } from './generated';
 
-// ===== Core Entity Types =====
+type Schemas = components['schemas'];
 
-export interface ChannelOut {
-	id: string;
-	title: string;
-	handle: string | null;
-	description: string | null;
-	thumbnail_url: string | null;
-	is_favorited: boolean;
-	folder_id: string | null;
-	created_at: string;
-	last_updated: string;
-	total_videos: number;
-}
+export type APIErrorBody = Schemas['APIErrorBody'];
+export type ChannelOut = Schemas['ChannelOut'];
+export type VideoOut = Schemas['VideoOut'];
+export type FolderOut = Schemas['FolderOut'];
+export type TagOut = Schemas['TagOut'];
+export type PlaylistOut = Schemas['PlaylistOut'];
+export type PlaylistDetailOut = Schemas['PlaylistDetailOut'];
+export type ChannelPlaylistOut = Schemas['ChannelPlaylistOut'];
+export type UserRead = Schemas['UserRead'];
 
-export interface VideoOut {
-	id: string;
-	channel_id: string;
-	title: string;
-	description: string | null;
-	thumbnail_url: string | null;
-	published_at: string;
-	duration_seconds: number | null;
-	yt_tags: string[];
-	is_short: boolean;
-	is_favorited: boolean;
-	is_watched: boolean;
-	created_at: string;
-}
-
-export interface FolderOut {
-	id: string;
-	name: string;
-	parent_id: string | null;
-	position: number;
-	children: FolderOut[];
-}
-
-export interface TagOut {
-	id: string;
-	name: string;
-	created_at: string;
-}
-
-export interface PlaylistOut {
-	id: string;
-	name: string;
-	description: string | null;
-	thumbnail_url?: string | null;
-	is_system: boolean;
-	source_type: string;
-	source_channel_id?: string | null;
-	source_youtube_playlist_id?: string | null;
-	source_is_active: boolean;
-	source_last_synced_at?: string | null;
-	created_at: string;
-}
-
-export interface PlaylistDetailOut extends PlaylistOut {
-	current_position: number | null;
-	total_videos: number;
-	video_ids: string[];
-}
-
-export interface ChannelPlaylistOut {
-	id: string;
-	name: string;
-	description: string | null;
-	thumbnail_url: string | null;
-	is_system: boolean;
-	source_type: string;
-	source_channel_id: string | null;
-	source_youtube_playlist_id: string | null;
-	source_is_active: boolean;
-	source_last_synced_at: string | null;
-	total_videos: number;
-	created_at: string;
-}
-
-export interface UserRead {
-	id: string;
-	email: string;
-	is_active: boolean;
-	is_superuser: boolean;
-	is_verified: boolean;
-}
-
-// ===== Create/Update Schemas =====
-
-export interface ChannelCreate {
-	handle: string;
-	folder_id?: string;
-}
-
-export interface ChannelUpdate {
-	is_favorited?: boolean;
-	folder_id?: string | null;
-	tag_ids?: string[];
-}
-
-export interface VideoUpdate {
-	is_favorited?: boolean;
-	is_watched?: boolean;
-	is_short?: boolean;
-	tag_ids?: string[];
-}
-
-export interface FolderCreate {
-	name: string;
-	parent_id?: string | null;
-	position?: number | null;
-}
-
-export interface FolderUpdate {
-	name?: string;
-	parent_id?: string | null;
-	position?: number | null;
-}
-
-export interface TagCreate {
-	name: string;
-}
-
-export interface TagUpdate {
-	name: string;
-}
-
-export interface PlaylistCreate {
-	name: string;
-	description?: string | null;
+export type ChannelCreate = Schemas['ChannelCreate'];
+export type ChannelUpdate = Schemas['ChannelUpdate'];
+export type VideoUpdate = Schemas['VideoUpdate'];
+export type FolderCreate = Schemas['FolderCreate'];
+export type FolderUpdate = Schemas['FolderUpdate'];
+export type TagCreate = Schemas['TagCreate'];
+export type TagUpdate = Schemas['TagUpdate'];
+export type PlaylistCreate = Omit<Schemas['PlaylistCreate'], 'is_system'> & {
 	is_system?: boolean;
-}
-
-export interface PlaylistUpdate {
-	name?: string | null;
-	description?: string | null;
-}
-
-export interface PlaylistSetVideos {
-	video_ids: string[];
-}
-
-export interface PlaylistAddVideo {
-	video_id: string;
-	position?: number | null;
-}
-
-export interface PlaylistAddVideos {
-	video_ids: string[];
-	position?: number | null;
-}
-
-export interface PlaylistMoveVideo {
-	video_id: string;
-	new_position: number;
-}
-
-export interface PlaylistSetPosition {
-	current_position?: number | null;
-}
-
-// ===== Pagination =====
+};
+export type PlaylistUpdate = Schemas['PlaylistUpdate'];
+export type PlaylistSetVideos = Schemas['PlaylistSetVideos'];
+export type PlaylistAddVideo = Schemas['PlaylistAddVideo'];
+export type PlaylistAddVideos = Schemas['PlaylistAddVideos'];
+export type PlaylistMoveVideo = Schemas['PlaylistMoveVideo'];
+export type PlaylistSetPosition = Schemas['PlaylistSetPosition'];
 
 export interface PaginatedResponse<T> {
 	total: number;
@@ -170,8 +36,6 @@ export interface PaginatedResponse<T> {
 	offset: number;
 	has_more: boolean;
 }
-
-// ===== Filter Types =====
 
 export interface VideoFilters extends Record<string, unknown> {
 	is_favorited?: boolean;
@@ -213,26 +77,33 @@ export interface ChannelPlaylistFilters extends Record<string, unknown> {
 	offset?: number;
 }
 
-// ===== Error Handling =====
+const KNOWN_MESSAGES: Record<string, string> = {
+	FEATURE_DISABLED: 'This feature is not available in the current application mode.',
+	UNAUTHENTICATED: 'Please log in to continue.',
+	FORBIDDEN: 'You do not have permission to perform this action.',
+	NOT_FOUND: 'The requested item could not be found.',
+	VALIDATION_ERROR: 'Please check the submitted information and try again.'
+};
 
 export class APIError extends Error {
+	readonly code: string;
+	readonly requestId: string | null;
+	readonly retryable: boolean;
+
 	constructor(
-		public status: number,
-		public detail: unknown
+		public readonly status: number,
+		body: Partial<APIErrorBody> | unknown
 	) {
-		super(`API Error ${status}`);
+		const error = body && typeof body === 'object' ? (body as Partial<APIErrorBody>) : {};
+		const code = typeof error.code === 'string' ? error.code : 'REQUEST_FAILED';
+		const requestId = typeof error.request_id === 'string' ? error.request_id : null;
+		const safeMessage =
+			KNOWN_MESSAGES[code] ??
+			(typeof error.message === 'string' ? error.message : 'The request could not be completed.');
+		super(requestId ? `${safeMessage} Request ID: ${requestId}` : safeMessage);
 		this.name = 'APIError';
+		this.code = code;
+		this.requestId = requestId;
+		this.retryable = error.retryable === true;
 	}
-}
-
-// ===== HTTP Validation Error (from OpenAPI spec) =====
-
-export interface ValidationError {
-	loc: (string | number)[];
-	msg: string;
-	type: string;
-}
-
-export interface HTTPValidationError {
-	detail?: ValidationError[];
 }

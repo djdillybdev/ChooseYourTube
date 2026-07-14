@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
@@ -31,7 +32,7 @@
 			});
 			name = '';
 			description = '';
-			await goto(`/playlists/${playlist.id}`);
+			await goto(resolve('/playlists/[playlistId]', { playlistId: playlist.id }));
 		} catch (err) {
 			submitError = err instanceof Error ? err.message : 'Failed to create playlist';
 		} finally {
@@ -52,14 +53,20 @@
 	<div class="mb-6 flex items-start justify-between gap-4">
 		<div>
 			<h1 class="text-2xl font-bold">Playlists</h1>
-			<p class="text-sm text-base-content/60">{data.total} {data.total === 1 ? 'playlist' : 'playlists'}</p>
+			<p class="text-sm text-base-content/60">
+				{data.total}
+				{data.total === 1 ? 'playlist' : 'playlists'}
+			</p>
 		</div>
-		<button class="btn btn-sm btn-ghost" onclick={refreshPlaylists}>Refresh</button>
+		<button class="btn btn-ghost btn-sm" onclick={refreshPlaylists}>Refresh</button>
 	</div>
 
 	<div class="mb-6 rounded-box border border-base-300 bg-base-100 p-4">
 		<h2 class="mb-3 text-lg font-semibold">Create Playlist</h2>
-		<form onsubmit={handleCreatePlaylist} class="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+		<form
+			onsubmit={handleCreatePlaylist}
+			class="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end"
+		>
 			<div>
 				<label class="label" for="playlist-name">
 					<span class="label-text">Name</span>
@@ -109,7 +116,7 @@
 		<div class="space-y-3">
 			{#each data.playlists as playlist (playlist.id)}
 				<a
-					href={`/playlists/${playlist.id}`}
+					href={resolve('/playlists/[playlistId]', { playlistId: playlist.id })}
 					class="card border border-base-300 bg-base-100 transition-colors hover:border-primary"
 				>
 					<div class="card-body p-4">
@@ -122,9 +129,7 @@
 										class="h-full w-full object-cover"
 									/>
 								{:else}
-									<div
-										class="flex h-full w-full items-center justify-center text-base-content/40"
-									>
+									<div class="flex h-full w-full items-center justify-center text-base-content/40">
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											fill="none"
@@ -146,7 +151,9 @@
 								<h2 class="truncate font-semibold">{playlist.name}</h2>
 								<p class="text-sm text-base-content/60">{playlist.total_videos} videos</p>
 								{#if playlist.description}
-									<p class="mt-1 line-clamp-2 text-sm text-base-content/70">{playlist.description}</p>
+									<p class="mt-1 line-clamp-2 text-sm text-base-content/70">
+										{playlist.description}
+									</p>
 								{/if}
 							</div>
 						</div>

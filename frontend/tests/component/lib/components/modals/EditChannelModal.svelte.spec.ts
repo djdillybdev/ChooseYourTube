@@ -38,7 +38,10 @@ function makeFolder(overrides: Partial<FolderOut>): FolderOut {
 
 describe('EditChannelModal', () => {
 	it('resets local form state when channel prop changes', async () => {
-		const folders = [makeFolder({ id: 'folder-a' }), makeFolder({ id: 'folder-b', name: 'Folder B' })];
+		const folders = [
+			makeFolder({ id: 'folder-a' }),
+			makeFolder({ id: 'folder-b', name: 'Folder B' })
+		];
 		const first = makeChannel({ id: 'ch-1', is_favorited: false, folder_id: 'folder-a' });
 		const second = makeChannel({ id: 'ch-2', is_favorited: false, folder_id: 'folder-a' });
 

@@ -1,4 +1,5 @@
-from typing import Literal
+from typing import Any, Literal, overload
+from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.folder import Folder
@@ -10,6 +11,38 @@ from .crud_base import (
 )
 
 _UNSET = object()
+
+
+@overload
+async def get_folders(
+    db: AsyncSession,
+    *,
+    owner_id: str | None = None,
+    id: str | list[str] | None = None,
+    name: str | None = None,
+    parent_id: str | list[str] | None | object = _UNSET,
+    limit: int | None = 100,
+    offset: int = 0,
+    order_by: str = "name",
+    order_direction: Literal["asc", "desc"] = "asc",
+    first: Literal[True],
+) -> Folder | None: ...
+
+
+@overload
+async def get_folders(
+    db: AsyncSession,
+    *,
+    owner_id: str | None = None,
+    id: str | list[str] | None = None,
+    name: str | None = None,
+    parent_id: str | list[str] | None | object = _UNSET,
+    limit: int | None = 100,
+    offset: int = 0,
+    order_by: str = "name",
+    order_direction: Literal["asc", "desc"] = "asc",
+    first: Literal[False] = False,
+) -> list[Folder]: ...
 
 
 async def get_folders(
@@ -53,7 +86,7 @@ async def get_folders(
 
     _validate_order_by_field(Folder, order_by)
 
-    filters = {}
+    filters: dict[str, Any] = {}
     if owner_id is not None:
         filters["owner_id"] = owner_id
     if id is not None:
@@ -103,7 +136,7 @@ async def get_max_position(
     else:
         query = query.where(Folder.parent_id == parent_id)
     result = await db.execute(query)
-    return result.scalar()
+    return int(result.scalar_one())
 
 
 async def shift_positions_for_insert(
@@ -114,7 +147,7 @@ async def shift_positions_for_insert(
 ) -> None:
     """Shift sibling positions down to make room for an insertion."""
     if parent_id is None:
-        parent_filter = Folder.parent_id.is_(None)
+        parent_filter: ColumnElement[bool] = Folder.parent_id.is_(None)
     else:
         parent_filter = Folder.parent_id == parent_id
 
@@ -137,7 +170,7 @@ async def shift_positions_after_removal(
 ) -> None:
     """Compact sibling positions after a removal."""
     if parent_id is None:
-        parent_filter = Folder.parent_id.is_(None)
+        parent_filter: ColumnElement[bool] = Folder.parent_id.is_(None)
     else:
         parent_filter = Folder.parent_id == parent_id
 
@@ -164,7 +197,7 @@ async def shift_positions_for_move(
         return
 
     if parent_id is None:
-        parent_filter = Folder.parent_id.is_(None)
+        parent_filter: ColumnElement[bool] = Folder.parent_id.is_(None)
     else:
         parent_filter = Folder.parent_id == parent_id
 

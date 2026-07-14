@@ -21,6 +21,7 @@ from fastapi.testclient import TestClient
 os.environ.setdefault(
     "DATABASE_URL", "postgresql+asyncpg://test:test@localhost:5432/test_db"
 )
+os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("API_ORIGIN", "http://localhost:3000")
 os.environ.setdefault("YOUTUBE_API_KEY", "test_api_key_for_testing")

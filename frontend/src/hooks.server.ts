@@ -7,6 +7,7 @@ const PUBLIC_PATHS = ['/login', '/register'];
 function isPublicPath(pathname: string): boolean {
 	if (PUBLIC_PATHS.includes(pathname)) return true;
 	if (pathname.startsWith('/api/auth/')) return true;
+	if (pathname === '/api/meta') return true;
 	if (pathname.startsWith('/_app/')) return true;
 	if (pathname.startsWith('/favicon')) return true;
 	if (pathname === '/robots.txt') return true;

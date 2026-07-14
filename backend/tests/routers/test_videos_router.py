@@ -333,9 +333,6 @@ class TestVideosRouter:
         """Test that total and has_more are accurate when using search + filters."""
         from app.db.models.channel import Channel
         from app.db.models.video import Video
-        from app.db.models.tag import Tag
-        from app.db.models.association_tables import video_tags
-
         channel = Channel(
             id="UC_pagination_acc",
             handle="paginationacc",

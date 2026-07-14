@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { authApi } from '$lib/api/auth';
 
 	let email = $state('');
@@ -24,7 +25,7 @@
 				errorMessage = result.error ?? 'REGISTER_FAILED';
 				return;
 			}
-			goto('/login?registered=1', { replaceState: true });
+			goto(resolve('/login?registered=1' as '/login'), { replaceState: true });
 		} finally {
 			isSubmitting = false;
 		}
@@ -38,7 +39,7 @@
 			<p class="text-sm text-base-content/70">Register a new ChooseYourTube user.</p>
 
 			{#if errorMessage}
-				<div class="alert alert-error mt-2">
+				<div class="mt-2 alert alert-error">
 					<span>{errorMessage}</span>
 				</div>
 			{/if}
@@ -48,7 +49,7 @@
 					<span class="label-text">Email</span>
 					<input
 						type="email"
-						class="input input-bordered w-full"
+						class="input-bordered input w-full"
 						bind:value={email}
 						required
 						autocomplete="email"
@@ -59,7 +60,7 @@
 					<span class="label-text">Password</span>
 					<input
 						type="password"
-						class="input input-bordered w-full"
+						class="input-bordered input w-full"
 						bind:value={password}
 						required
 						autocomplete="new-password"
@@ -70,21 +71,21 @@
 					<span class="label-text">Confirm password</span>
 					<input
 						type="password"
-						class="input input-bordered w-full"
+						class="input-bordered input w-full"
 						bind:value={confirmPassword}
 						required
 						autocomplete="new-password"
 					/>
 				</label>
 
-				<button class="btn btn-primary w-full" type="submit" disabled={isSubmitting}>
+				<button class="btn w-full btn-primary" type="submit" disabled={isSubmitting}>
 					{isSubmitting ? 'Creating account...' : 'Create account'}
 				</button>
 			</form>
 
 			<p class="mt-3 text-sm text-base-content/70">
 				Already have an account?
-				<a class="link link-primary" href="/login">Log in</a>
+				<a class="link link-primary" href={resolve('/login')}>Log in</a>
 			</p>
 		</div>
 	</div>

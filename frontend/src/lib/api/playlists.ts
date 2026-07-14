@@ -59,7 +59,10 @@ export class PlaylistsAPI {
 	}
 
 	async bulkAddVideos(id: string, data: PlaylistAddVideos): Promise<PlaylistDetailOut> {
-		const playlist = await this.client.post<PlaylistDetailOut>(`/playlists/${id}/videos/bulk`, data);
+		const playlist = await this.client.post<PlaylistDetailOut>(
+			`/playlists/${id}/videos/bulk`,
+			data
+		);
 		this.client.invalidateCache(`/playlists/${id}`);
 		return playlist;
 	}
@@ -74,7 +77,10 @@ export class PlaylistsAPI {
 	}
 
 	async moveVideo(id: string, data: PlaylistMoveVideo): Promise<PlaylistDetailOut> {
-		const playlist = await this.client.patch<PlaylistDetailOut>(`/playlists/${id}/videos/move`, data);
+		const playlist = await this.client.patch<PlaylistDetailOut>(
+			`/playlists/${id}/videos/move`,
+			data
+		);
 		this.client.invalidateCache(`/playlists/${id}`);
 		return playlist;
 	}

@@ -68,7 +68,10 @@ describe('channels/[id] load', () => {
 			channels: { get: channelGetMock },
 			videos: { list: videosListMock }
 		});
-		parseVideoFilterQueryMock.mockReturnValue({ apiFilters: { channel_id: 'ch-1' }, uiFilters: {} });
+		parseVideoFilterQueryMock.mockReturnValue({
+			apiFilters: { channel_id: 'ch-1' },
+			uiFilters: {}
+		});
 	});
 
 	it('loads channel and videos with forced channel filters', async () => {
@@ -103,7 +106,9 @@ describe('channels/[id] load', () => {
 		const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
 		const url = new URL('http://localhost/channels/ch-1?q=x');
 
-		await expect(load({ params: { id: 'ch-1' }, url, fetch: fetchMock } as any)).rejects.toMatchObject({
+		await expect(
+			load({ params: { id: 'ch-1' }, url, fetch: fetchMock } as any)
+		).rejects.toMatchObject({
 			status: 307,
 			location: '/login?next=%2Fchannels%2Fch-1%3Fq%3Dx'
 		});
@@ -117,7 +122,9 @@ describe('channels/[id] load', () => {
 		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		const url = new URL('http://localhost/channels/ch-missing');
 
-		await expect(load({ params: { id: 'ch-missing' }, url, fetch: fetchMock } as any)).rejects.toMatchObject({
+		await expect(
+			load({ params: { id: 'ch-missing' }, url, fetch: fetchMock } as any)
+		).rejects.toMatchObject({
 			status: 404,
 			message: 'Channel not found'
 		});

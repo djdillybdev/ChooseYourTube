@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..db.crud import crud_folder
 from ..db.models.folder import Folder
-from ..schemas.folder import FolderCreate, FolderUpdate, FolderOut, _UNSET
+from ..schemas.folder import FolderCreate, FolderUpdate, FolderOut
 
 
 def _build_tree(folders: list[Folder]) -> list[FolderOut]:
@@ -115,7 +115,8 @@ async def update_folder(
     if payload.parent_id == folder_id:
         raise HTTPException(status_code=400, detail="Folder cannot be its own parent")
 
-    if payload.parent_id is not None and payload.parent_id is not _UNSET:
+    parent_was_set = "parent_id" in payload.model_fields_set
+    if parent_was_set and payload.parent_id is not None:
         parent = await crud_folder.get_folders(
             db, owner_id=owner_id, id=payload.parent_id, first=True
         )
@@ -125,11 +126,9 @@ async def update_folder(
         by_id = {f.id: f for f in all_folders}
         _assert_not_cycle(by_id, folder_id, payload.parent_id)
 
-    target_parent_id = (
-        folder.parent_id if payload.parent_id is _UNSET else payload.parent_id
-    )
+    target_parent_id = payload.parent_id if parent_was_set else folder.parent_id
 
-    if payload.parent_id is not _UNSET and target_parent_id != folder.parent_id:
+    if parent_was_set and target_parent_id != folder.parent_id:
         await crud_folder.shift_positions_after_removal(
             db, folder.parent_id, folder.position, owner_id=owner_id
         )

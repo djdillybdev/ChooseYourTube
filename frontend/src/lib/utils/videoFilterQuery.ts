@@ -62,8 +62,7 @@ export function parseVideoFilterQuery(
 	const q = url.searchParams.get('q') || undefined;
 
 	const watchedFromQuery = parseBooleanParam(url.searchParams.get('is_watched'));
-	const is_watched =
-		watchedFromQuery !== undefined ? watchedFromQuery : options.defaultWatched;
+	const is_watched = watchedFromQuery !== undefined ? watchedFromQuery : options.defaultWatched;
 
 	const is_favorited = parseBooleanParam(url.searchParams.get('is_favorited'));
 	const is_short = parseBooleanParam(url.searchParams.get('is_short'));

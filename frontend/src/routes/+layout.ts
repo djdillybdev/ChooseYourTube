@@ -37,7 +37,10 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 		}
 		const currentUser = (await meResponse.json()) as UserRead;
 
-		const [folders, tagsResponse] = await Promise.all([api.folders.getTree(), api.tags.list({ limit: 200 })]);
+		const [folders, tagsResponse] = await Promise.all([
+			api.folders.getTree(),
+			api.tags.list({ limit: 200 })
+		]);
 		const channels = [];
 
 		let channelsResponse = await api.channels.list();
@@ -50,7 +53,9 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 				offset: channelsResponse.offset + channelsResponse.limit
 			});
 		} while (channelsResponse.has_more);
-		const unfolderedChannels: ChannelOut[] = channels.filter((channel) => channel.folder_id === null);
+		const unfolderedChannels: ChannelOut[] = channels.filter(
+			(channel) => channel.folder_id === null
+		);
 		return {
 			isPublicAuthRoute: false,
 			currentUser,

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { ChannelOut, FolderOut } from '$lib/types/api';
 	import { folderExpansion } from '$lib/stores/folderExpansion.svelte';
 	import { page } from '$app/stores';
@@ -30,10 +31,7 @@
 </script>
 
 <li>
-	<div
-		class="folder-item flex items-center"
-		style="padding-left: {depth * 1}rem"
-	>
+	<div class="folder-item flex items-center" style="padding-left: {depth * 1}rem">
 		<!-- Chevron button (only if folder has children) -->
 		{#if hasChildren}
 			<button
@@ -60,7 +58,7 @@
 
 		<!-- Folder link -->
 		<a
-			href="/folders/{folder.id}"
+			href={resolve('/folders/[id]', { id: folder.id })}
 			class="flex flex-1 items-center gap-2 rounded px-2 py-1.5 transition-colors"
 			class:bg-base-200={isActive}
 		>
@@ -82,11 +80,11 @@
 		</a>
 	</div>
 
-		{#if hasChildren && isExpanded}
-			<ul class="mt-1">
-				{#each folder.children ?? [] as childFolder (childFolder.id)}
-					<Self folder={childFolder} {allChannels} depth={depth + 1} />
-				{/each}
+	{#if hasChildren && isExpanded}
+		<ul class="mt-1">
+			{#each folder.children ?? [] as childFolder (childFolder.id)}
+				<Self folder={childFolder} {allChannels} depth={depth + 1} />
+			{/each}
 			{#each channelsInFolder as channel (channel.id)}
 				<ChannelTreeItem {channel} depth={depth + 1} />
 			{/each}

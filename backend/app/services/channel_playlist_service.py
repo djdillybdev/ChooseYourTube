@@ -73,7 +73,7 @@ async def _fetch_channel_playlists(
 async def _fetch_playlist_video_ids(
     youtube_client: YouTubeAPI, playlist_id: str
 ) -> list[tuple[str, str | None]]:
-    playlist_video_ids: list[str] = []
+    playlist_video_ids: list[tuple[str, str | None]] = []
     page_token: str | None = None
 
     while len(playlist_video_ids) < CHANNEL_PLAYLISTS_SYNC_MAX_ITEMS_PER_PLAYLIST:

@@ -10,14 +10,16 @@
 	import EditChannelModal from '$lib/components/modals/EditChannelModal.svelte';
 	import EditFolderModal from '$lib/components/modals/EditFolderModal.svelte';
 	import SaveVideoModal from '$lib/components/modals/SaveVideoModal.svelte';
+	import type { Snippet } from 'svelte';
+	import type { FolderOut } from '$lib/types/api';
 
 	interface Props {
-		children: any;
+		children: Snippet;
 		data: {
 			isPublicAuthRoute?: boolean;
 			currentUser: UserRead | null;
-			folders: any[];
-			unfolderedChannels: any[];
+			folders: FolderOut[];
+			unfolderedChannels: ChannelOut[];
 			channels: ChannelOut[];
 			tags: TagOut[];
 		};
@@ -63,7 +65,11 @@
 		/>
 	{/if}
 	{#if modalState.current.type === 'editFolder'}
-		<EditFolderModal folder={modalState.current.folder} folders={data.folders} onClose={closeModal} />
+		<EditFolderModal
+			folder={modalState.current.folder}
+			folders={data.folders}
+			onClose={closeModal}
+		/>
 	{/if}
 	{#if modalState.current.type === 'saveVideo'}
 		<SaveVideoModal video={modalState.current.video} onClose={closeModal} />

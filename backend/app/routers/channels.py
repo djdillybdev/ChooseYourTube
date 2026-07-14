@@ -59,8 +59,8 @@ async def get_channel_by_id(
 async def create_channel(
     channel_data: ChannelCreate,
     db_session: DBSessionDep,
-    youtube_client: YouTubeAPIDep,
     redis: ArqDep,
+    youtube_client: YouTubeAPIDep,
     user: CurrentUserDep,
 ):
     """

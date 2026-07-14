@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 	import { api } from '$lib/api';
 	import { playFromPlaylist } from '$lib/stores/playerState.svelte';
@@ -12,7 +13,7 @@
 
 	let { data }: Props = $props();
 
-	const channels = $derived((data as any).channels ?? []);
+	const channels = $derived(data.channels ?? []);
 	const channelMap = $derived(channels.length > 0 ? createChannelMap(channels) : undefined);
 
 	let videos = $state<typeof data.videos>([]);
@@ -41,7 +42,7 @@
 			return;
 		}
 		const returnUrl = window.location.pathname + window.location.search;
-		await goto('/player?return=' + encodeURIComponent(returnUrl));
+		await goto(resolve(`/player?return=${encodeURIComponent(returnUrl)}` as '/player'));
 	}
 
 	async function handleSaveMeta(e: Event) {
@@ -68,7 +69,7 @@
 		actionError = null;
 		try {
 			await api.playlists.delete(data.playlist.id);
-			await goto('/playlists');
+			await goto(resolve('/playlists'));
 		} catch (err) {
 			actionError = err instanceof Error ? err.message : 'Failed to delete playlist';
 			isDeleting = false;
@@ -128,11 +129,18 @@
 	<div class="mb-6 flex items-start justify-between gap-4">
 		<div>
 			<h1 class="text-2xl font-bold">{data.playlist.name}</h1>
-			<p class="text-sm text-base-content/60">{videos.length} {videos.length === 1 ? 'video' : 'videos'}</p>
+			<p class="text-sm text-base-content/60">
+				{videos.length}
+				{videos.length === 1 ? 'video' : 'videos'}
+			</p>
 		</div>
 		<div class="flex items-center gap-2">
-			<a href="/playlists" class="btn btn-sm btn-ghost">Back</a>
-			<button class="btn btn-sm text-error btn-ghost" onclick={handleDeletePlaylist} disabled={isDeleting}>
+			<a href={resolve('/playlists')} class="btn btn-ghost btn-sm">Back</a>
+			<button
+				class="btn text-error btn-ghost btn-sm"
+				onclick={handleDeletePlaylist}
+				disabled={isDeleting}
+			>
 				Delete Playlist
 			</button>
 		</div>
@@ -163,7 +171,9 @@
 	</form>
 
 	{#if videos.length === 0}
-		<div class="rounded-box border border-base-300 bg-base-100 p-6 text-center text-base-content/70">
+		<div
+			class="rounded-box border border-base-300 bg-base-100 p-6 text-center text-base-content/70"
+		>
 			Playlist is empty. Use Save on any video to add items.
 		</div>
 	{:else}
@@ -180,9 +190,17 @@
 				>
 					<div class="w-6 text-center text-sm text-base-content/60">{index + 1}</div>
 					{#if video.thumbnail_url}
-						<img src={video.thumbnail_url} alt={video.title} class="h-14 w-24 rounded object-cover" />
+						<img
+							src={video.thumbnail_url}
+							alt={video.title}
+							class="h-14 w-24 rounded object-cover"
+						/>
 					{:else}
-						<div class="flex h-14 w-24 items-center justify-center rounded bg-base-200 text-xs text-base-content/50">No image</div>
+						<div
+							class="flex h-14 w-24 items-center justify-center rounded bg-base-200 text-xs text-base-content/50"
+						>
+							No image
+						</div>
 					{/if}
 					<div class="min-w-0 flex-1">
 						<p class="line-clamp-2 text-sm font-medium">{video.title}</p>
@@ -195,11 +213,15 @@
 						</p>
 					</div>
 					{#if video.duration_seconds}
-						<span class="text-xs text-base-content/60">{formatDuration(video.duration_seconds)}</span>
+						<span class="text-xs text-base-content/60"
+							>{formatDuration(video.duration_seconds)}</span
+						>
 					{/if}
-					<button class="btn btn-sm btn-ghost" onclick={() => void handlePlay(video.id)}>Play</button>
+					<button class="btn btn-ghost btn-sm" onclick={() => void handlePlay(video.id)}
+						>Play</button
+					>
 					<button
-						class="btn btn-sm text-error btn-ghost"
+						class="btn text-error btn-ghost btn-sm"
 						onclick={() => void handleRemoveVideo(video.id)}
 					>
 						Remove

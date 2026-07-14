@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import PaginationControls from '$lib/components/ui/PaginationControls.svelte';
@@ -134,7 +135,10 @@
 		<div class="space-y-3">
 			{#each data.playlists as playlist (playlist.id)}
 				<a
-					href={`/channels/${data.channel.id}/playlists/${playlist.id}`}
+					href={resolve('/channels/[id]/playlists/[playlistId]', {
+						id: data.channel.id,
+						playlistId: playlist.id
+					})}
 					class="card border border-base-300 bg-base-100 transition-colors hover:border-primary"
 				>
 					<div class="card-body p-4">
@@ -178,7 +182,7 @@
 							</div>
 							<div class="ml-auto">
 								{#if !playlist.source_is_active}
-									<span class="badge badge-warning badge-sm">Inactive</span>
+									<span class="badge badge-sm badge-warning">Inactive</span>
 								{/if}
 							</div>
 						</div>

@@ -4,9 +4,6 @@ from .base import BaseSchema
 
 # --- Input Schemas ---
 
-_UNSET = object()
-
-
 class FolderCreate(BaseModel):
     """Schema for creating a new folder."""
 
@@ -23,7 +20,7 @@ class FolderUpdate(BaseModel):
 
     name: str | None = None
     icon_key: str | None = None
-    parent_id: str | None | object = _UNSET
+    parent_id: str | None = None
     position: int | None = Field(None, ge=0, description="New sort position")
 
 

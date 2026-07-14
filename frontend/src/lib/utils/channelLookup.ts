@@ -10,9 +10,6 @@ export function createChannelMap(channels: ChannelOut[]): Map<string, ChannelOut
 /**
  * Get channel title by ID with graceful fallback
  */
-export function getChannelTitle(
-	channelId: string,
-	channelMap: Map<string, ChannelOut>
-): string {
+export function getChannelTitle(channelId: string, channelMap: Map<string, ChannelOut>): string {
 	return channelMap.get(channelId)?.title ?? `Channel ${channelId.slice(0, 8)}...`;
 }

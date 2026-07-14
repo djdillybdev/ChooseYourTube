@@ -162,6 +162,10 @@
 			basePath={`/channels/${data.channel.id}/playlists/${data.playlist.id}`}
 		/>
 	{:else}
-		<EmptyState icon="video" title="No videos found" message="This playlist has no available videos." />
+		<EmptyState
+			icon="video"
+			title="No videos found"
+			message="This playlist has no available videos."
+		/>
 	{/if}
 </div>

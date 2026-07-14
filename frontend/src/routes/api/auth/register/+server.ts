@@ -15,7 +15,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	if (!response.ok) {
 		const payload = await response.json().catch(() => ({ detail: 'REGISTER_FAILED' }));
-		return json({ error: mapAuthError(payload.detail) }, { status: response.status });
+		return json({ error: mapAuthError(payload) }, { status: response.status });
 	}
 
 	return json({ ok: true }, { status: 201 });

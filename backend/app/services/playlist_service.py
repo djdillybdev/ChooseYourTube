@@ -4,6 +4,7 @@ Playlist management service.
 
 import random
 import uuid
+from typing import cast
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -70,7 +71,7 @@ async def get_all_playlists(
 
     return PaginatedResponse[PlaylistOut](
         total=total,
-        items=playlists,
+        items=cast(list[PlaylistOut], playlists),
         limit=limit,
         offset=offset,
         has_more=(offset + limit) < total,

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { ChannelOut } from '$lib/types/api';
 	import { api } from '$lib/api';
 	import { formatRelativeDate } from '$lib/utils/formatDate';
@@ -33,7 +34,7 @@
 </script>
 
 <a
-	href="/channels/{channel.id}"
+	href={resolve('/channels/[id]', { id: channel.id })}
 	class="card-compact card border border-base-300 bg-base-100 shadow-sm transition-all hover:border-primary hover:shadow-md"
 >
 	<div class="card-body">

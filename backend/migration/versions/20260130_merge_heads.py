@@ -9,7 +9,6 @@ can upgrade to a single linear head. It intentionally performs no schema
 changes.
 """
 
-from alembic import op
 from typing import Sequence, Union
 
 

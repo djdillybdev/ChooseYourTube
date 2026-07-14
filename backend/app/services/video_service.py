@@ -1,9 +1,9 @@
 import re
-import feedparser
+import feedparser  # type: ignore[import-untyped]
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Literal
+from typing import Any, Literal, cast
 
 from datetime import datetime, timedelta
 
@@ -109,7 +109,7 @@ async def fetch_and_store_all_channel_videos_task(
             print(f"Channel {channel_id} not found in DB. Exiting task.")
             return
 
-        uploaded_videos = []
+        uploaded_videos: list[dict[str, Any]] = []
         next_page_token = None
         print("get playlists items")
         while len(uploaded_videos) < INITIAL_VIDEO_FETCH_LIMIT:
@@ -131,7 +131,7 @@ async def fetch_and_store_all_channel_videos_task(
             if not next_page_token:
                 break
 
-        video_ids = []
+        video_ids: list[str] = []
 
         for video_item in uploaded_videos:
             snippet = video_item.get("snippet", {})
@@ -142,11 +142,11 @@ async def fetch_and_store_all_channel_videos_task(
                 resource_id = snippet.get("resourceId", {})
                 video_id = resource_id.get("videoId")
 
-            video_ids.append(video_id)
+            if video_id:
+                video_ids.append(video_id)
 
         # De-duplicate while preserving order
-        seen = set()
-        video_ids = [v for v in video_ids if not (v in seen or seen.add(v))]
+        video_ids = list(dict.fromkeys(video_ids))
 
         if not video_ids:
             print("No video IDs found. Continuing to playlist sync.")
@@ -341,27 +341,17 @@ async def get_all_videos(
     if q and order_by == "published_at":
         order_by = "relevance"
 
-    # Build shared filter kwargs for both count and get
-    filters: dict = {}
-    if channel_id is not None:
-        filters["channel_id"] = channel_id
-    if is_favorited is not None:
-        filters["is_favorited"] = is_favorited
-    if is_watched is not None:
-        filters["is_watched"] = is_watched
-    if is_short is not None:
-        filters["is_short"] = is_short
-
-    # Extended filters passed directly to CRUD layer
-    extended = {
-        "tag_id": tag_id,
-        "published_after": published_after,
-        "published_before": published_before,
-        "q": q,
-    }
-
     total = await crud_video.count_videos(
-        db_session, owner_id=owner_id, **filters, **extended
+        db_session,
+        owner_id=owner_id,
+        channel_id=channel_id,
+        is_favorited=is_favorited,
+        is_watched=is_watched,
+        is_short=is_short,
+        tag_id=tag_id,
+        published_after=published_after,
+        published_before=published_before,
+        q=q,
     )
 
     videos = await crud_video.get_videos(
@@ -371,13 +361,19 @@ async def get_all_videos(
         offset=offset,
         order_by=order_by,
         order_direction=order_direction,
-        **filters,
-        **extended,
+        channel_id=channel_id,
+        is_favorited=is_favorited,
+        is_watched=is_watched,
+        is_short=is_short,
+        tag_id=tag_id,
+        published_after=published_after,
+        published_before=published_before,
+        q=q,
     )
 
     return PaginatedResponse[VideoOut](
         total=total,
-        items=videos,
+        items=cast(list[VideoOut], videos),
         limit=limit,
         offset=offset,
         has_more=(offset + limit) < total,

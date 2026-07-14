@@ -39,7 +39,9 @@ describe('parseVideoFilterQuery', () => {
 	});
 
 	it('enforces forcedChannelId over channel_id query', () => {
-		const result = parse('http://localhost/channels/abc?channel_id=xyz', { forcedChannelId: 'abc' });
+		const result = parse('http://localhost/channels/abc?channel_id=xyz', {
+			forcedChannelId: 'abc'
+		});
 		expect(result.apiFilters.channel_id).toBe('abc');
 	});
 });

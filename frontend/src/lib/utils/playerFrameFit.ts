@@ -6,7 +6,11 @@ interface FrameSize {
 /**
  * Fit a 16:9 frame inside a container while respecting a max width.
  */
-export function fit16x9(containerWidth: number, containerHeight: number, maxWidth: number): FrameSize {
+export function fit16x9(
+	containerWidth: number,
+	containerHeight: number,
+	maxWidth: number
+): FrameSize {
 	if (containerWidth <= 0 || containerHeight <= 0 || maxWidth <= 0) {
 		return { width: 0, height: 0 };
 	}

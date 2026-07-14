@@ -85,7 +85,7 @@ async def list_videos(
         )
 
     # Parse channel_id: support both single ID and comma-separated list
-    parsed_channel_id = None
+    parsed_channel_id: str | list[str] | None = None
     if channel_id is not None:
         if "," in channel_id:
             parsed_channel_id = [

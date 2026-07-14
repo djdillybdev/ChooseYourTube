@@ -7,7 +7,8 @@ const ACCESS_COOKIE_MAX_AGE_SECONDS = 60 * 20;
 const REFRESH_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 function getBackendBaseURL(): string {
-	const value = process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || 'http://localhost:8000';
+	const value =
+		process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || 'http://localhost:8000';
 	return value.endsWith('/') ? value.slice(0, -1) : value;
 }
 
@@ -89,10 +90,11 @@ export async function backendFetchFromEvent(
 	});
 }
 
-export function mapAuthError(detail: unknown): string {
-	if (typeof detail === 'string') return detail;
-	if (detail && typeof detail === 'object' && 'code' in detail && typeof detail.code === 'string') {
-		return detail.code;
+export function mapAuthError(payload: unknown): string {
+	if (typeof payload === 'string') return payload;
+	if (payload && typeof payload === 'object') {
+		if ('code' in payload && typeof payload.code === 'string') return payload.code;
+		if ('detail' in payload) return mapAuthError(payload.detail);
 	}
 	return 'AUTH_UNKNOWN_ERROR';
 }

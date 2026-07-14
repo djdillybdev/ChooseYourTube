@@ -75,7 +75,7 @@ export class APIClient {
 
 				// Handle non-2xx responses
 				if (!response.ok) {
-					const errorBody = await response.json().catch(() => ({ detail: 'Unknown error' }));
+					const errorBody = await response.json().catch(() => ({}));
 					throw new APIError(response.status, errorBody);
 				}
 

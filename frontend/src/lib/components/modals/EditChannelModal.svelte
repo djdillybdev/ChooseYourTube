@@ -133,7 +133,7 @@
 					class="select-bordered select w-full"
 				>
 					<option value={null}>No folder</option>
-					{#each flatFolders as f}
+					{#each flatFolders as f (f.id)}
 						<option value={f.id}>{f.name}</option>
 					{/each}
 				</select>

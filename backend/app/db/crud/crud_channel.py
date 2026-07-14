@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal, overload
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.channel import Channel
@@ -10,6 +10,44 @@ from .crud_base import (
 )
 
 _UNSET = object()
+
+
+@overload
+async def get_channels(
+    db: AsyncSession,
+    *,
+    owner_id: str | None = None,
+    id: str | list[str] | None = None,
+    title: str | None = None,
+    handle: str | None = None,
+    description: str | None = None,
+    is_favorited: bool | None = None,
+    folder_id: str | list[str] | None | object = _UNSET,
+    limit: int | None = None,
+    offset: int = 0,
+    order_by: str = "title",
+    order_direction: Literal["asc", "desc"] = "asc",
+    first: Literal[True],
+) -> Channel | None: ...
+
+
+@overload
+async def get_channels(
+    db: AsyncSession,
+    *,
+    owner_id: str | None = None,
+    id: str | list[str] | None = None,
+    title: str | None = None,
+    handle: str | None = None,
+    description: str | None = None,
+    is_favorited: bool | None = None,
+    folder_id: str | list[str] | None | object = _UNSET,
+    limit: int | None = None,
+    offset: int = 0,
+    order_by: str = "title",
+    order_direction: Literal["asc", "desc"] = "asc",
+    first: Literal[False] = False,
+) -> list[Channel]: ...
 
 
 async def get_channels(
@@ -58,7 +96,7 @@ async def get_channels(
 
     _validate_order_by_field(Channel, order_by)
 
-    filters = {}
+    filters: dict[str, Any] = {}
     if owner_id is not None:
         filters["owner_id"] = owner_id
     if id is not None:

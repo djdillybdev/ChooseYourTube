@@ -5,6 +5,7 @@
 	import { playVideo, addToQueue } from '$lib/stores/playerState.svelte';
 	import { openSaveVideo } from '$lib/stores/modalState.svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { getChannelTitle } from '$lib/utils/channelLookup';
 
@@ -64,7 +65,7 @@
 		}
 		if (!started) return;
 		const returnUrl = window.location.pathname + window.location.search;
-		goto('/player?return=' + encodeURIComponent(returnUrl));
+		goto(resolve(`/player?return=${encodeURIComponent(returnUrl)}` as '/player'));
 	}
 
 	async function handleAddToQueue(e: MouseEvent, position: 'next' | 'end') {
@@ -245,7 +246,7 @@
 
 						{#if showQueueActions}
 							<button
-								class="btn btn-sm btn-ghost"
+								class="btn btn-ghost btn-sm"
 								onclick={(e) => {
 									e.stopPropagation();
 									openSaveVideo(video);
@@ -256,7 +257,7 @@
 							</button>
 
 							<button
-								class="btn btn-sm btn-ghost"
+								class="btn btn-ghost btn-sm"
 								onclick={(e) => void handleAddToQueue(e, 'next')}
 								aria-label="Add next"
 							>
@@ -264,7 +265,7 @@
 							</button>
 
 							<button
-								class="btn btn-sm btn-ghost"
+								class="btn btn-ghost btn-sm"
 								onclick={(e) => void handleAddToQueue(e, 'end')}
 								aria-label="Add to queue"
 							>

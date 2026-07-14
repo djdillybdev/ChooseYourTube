@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 	import VideoList from '$lib/components/video/VideoList.svelte';
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
@@ -52,7 +53,10 @@
 		if (!url.searchParams.has('pageSize')) {
 			url.searchParams.set('pageSize', String(uiState.current.pageSize));
 			if (!url.searchParams.has('page')) url.searchParams.set('page', '1');
-			goto(url.pathname + url.search, { replaceState: true });
+			const channelPath = resolve('/channels/[id]', { id: data.channel.id });
+			goto(resolve(`${channelPath}${url.search}` as '/inbox'), {
+				replaceState: true
+			});
 		}
 	});
 </script>

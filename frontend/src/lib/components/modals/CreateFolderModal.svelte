@@ -86,7 +86,7 @@
 					class="select-bordered select w-full"
 				>
 					<option value={undefined}>No parent (top level)</option>
-					{#each folders as folder}
+					{#each folders as folder (folder.id)}
 						<option value={folder.id}>{folder.name}</option>
 					{/each}
 				</select>

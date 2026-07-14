@@ -79,6 +79,8 @@ class TestStartup:
 
         assert "redis" in ctx
         assert ctx["redis"] == mock_arq_pool
+        assert "heartbeat_task" in ctx
+        await shutdown(ctx)
 
 
 @pytest.mark.asyncio
@@ -87,10 +89,12 @@ class TestShutdown:
 
     async def test_shutdown_does_not_error(self):
         """Verify shutdown executes without errors."""
-        ctx = {"redis": MagicMock()}
+        redis = MagicMock()
+        redis.close = AsyncMock()
+        ctx = {"redis": redis}
 
-        # Should not raise any exceptions
         await shutdown(ctx)
+        redis.close.assert_awaited_once()
 
 
 @pytest.mark.asyncio

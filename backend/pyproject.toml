@@ -1,9 +1,10 @@
 [project]
-name = "backend"
+name = "chooseyourtube-backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "FastAPI backend for the ChooseYourTube distraction-free YouTube feed reader"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
+license = "GPL-3.0-only"
 dependencies = [
     "aiosqlite>=0.22.1",
     "alembic>=1.16.4",
@@ -70,3 +71,6 @@ omit = [
 [tool.coverage.report]
 precision = 2
 show_missing = true
+
+[tool.mypy]
+explicit_package_bases = true

@@ -137,7 +137,11 @@ export const playerState = createPlayerState();
 let queueInitPromise: Promise<void> | null = null;
 let queueMutationChain: Promise<void> = Promise.resolve();
 
-function normalizeQueueState(state: PlayerState, queue: VideoOut[], position: number | null): PlayerState {
+function normalizeQueueState(
+	state: PlayerState,
+	queue: VideoOut[],
+	position: number | null
+): PlayerState {
 	if (position === null || position < 0 || position >= queue.length) {
 		return {
 			...state,

@@ -1,5 +1,6 @@
 import asyncio
 import re
+from typing import cast
 from urllib.parse import urlparse
 
 from fastapi import HTTPException
@@ -80,16 +81,12 @@ async def get_all_channels(
         Dictionary with pagination metadata and channel items
     """
     # Build filter kwargs
-    filters = {}
-    if is_favorited is not None:
-        filters["is_favorited"] = is_favorited
-    if folder_id is not None:
-        # Support folder_id=0 to mean "no folder" (None in database)
-        filters["folder_id"] = None if folder_id == "0" else folder_id
-
-    # Get ALL channels matching database filters first (no limit/offset yet)
+    normalized_folder_id = None if folder_id == "0" else folder_id
     all_channels = await crud_channel.get_channels(
-        db_session, owner_id=owner_id, **filters
+        db_session,
+        owner_id=owner_id,
+        is_favorited=is_favorited,
+        folder_id=normalized_folder_id if folder_id is not None else crud_channel._UNSET,
     )
 
     # Post-filter for tag_id (since tags are a relationship, not a direct field)
@@ -107,7 +104,7 @@ async def get_all_channels(
     # Build pagination response
     return PaginatedResponse[ChannelOut](
         total=total,
-        items=paginated_channels,
+        items=cast(list[ChannelOut], paginated_channels),
         limit=limit,
         offset=offset,
         has_more=offset + len(paginated_channels) < total,

@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { backendFetchMock, setAuthCookieMock, setRefreshAuthCookieMock, mapAuthErrorMock } = vi.hoisted(
-	() => ({
-	backendFetchMock: vi.fn(),
-	setAuthCookieMock: vi.fn(),
-	setRefreshAuthCookieMock: vi.fn(),
-	mapAuthErrorMock: vi.fn((detail: unknown) => String(detail ?? 'AUTH_UNKNOWN_ERROR'))
-	})
-);
+const { backendFetchMock, setAuthCookieMock, setRefreshAuthCookieMock, mapAuthErrorMock } =
+	vi.hoisted(() => ({
+		backendFetchMock: vi.fn(),
+		setAuthCookieMock: vi.fn(),
+		setRefreshAuthCookieMock: vi.fn(),
+		mapAuthErrorMock: vi.fn(
+			(payload: { detail?: string }) => payload.detail ?? 'AUTH_UNKNOWN_ERROR'
+		)
+	}));
 
 vi.mock('$lib/server/auth', () => ({
 	backendFetch: backendFetchMock,
@@ -73,7 +74,7 @@ describe('POST /api/auth/login', () => {
 			cookies: {}
 		} as any);
 
-		expect(mapAuthErrorMock).toHaveBeenCalledWith('INVALID_CREDENTIALS');
+		expect(mapAuthErrorMock).toHaveBeenCalledWith({ detail: 'INVALID_CREDENTIALS' });
 		expect(setAuthCookieMock).not.toHaveBeenCalled();
 		expect(response.status).toBe(401);
 		expect(await response.json()).toEqual({ error: 'INVALID_CREDENTIALS' });

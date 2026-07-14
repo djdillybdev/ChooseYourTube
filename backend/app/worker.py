@@ -1,4 +1,8 @@
-from datetime import timedelta
+import asyncio
+import contextlib
+import json
+import socket
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 import arq
 from arq import cron
@@ -6,18 +10,42 @@ from arq import cron
 from .core.config import settings
 from .db.session import sessionmanager
 from .services import channel_service, video_service, channel_playlist_service
+from .routers.health import WORKER_HEARTBEAT_KEY
 
 REDIS_SETTINGS = settings.get_redis_settings()
+HEARTBEAT_INTERVAL_SECONDS = 30
+HEARTBEAT_TTL_SECONDS = 90
+
+
+async def maintain_worker_heartbeat(ctx):
+    while True:
+        payload = json.dumps(
+            {
+                "worker": socket.gethostname(),
+                "version": "0.1.0",
+                "seen_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        await ctx["redis"].set(
+            WORKER_HEARTBEAT_KEY, payload, ex=HEARTBEAT_TTL_SECONDS
+        )
+        await asyncio.sleep(HEARTBEAT_INTERVAL_SECONDS)
 
 
 async def startup(ctx):
     # Reuse a single ArqRedis connection for cron enqueues
     ctx["redis"] = await arq.create_pool(REDIS_SETTINGS)
+    ctx["heartbeat_task"] = asyncio.create_task(maintain_worker_heartbeat(ctx))
 
 
 async def shutdown(ctx):
-    # ArqRedis uses a pool; nothing special required, but keep for symmetry
-    pass
+    heartbeat_task = ctx.get("heartbeat_task")
+    if heartbeat_task:
+        heartbeat_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await heartbeat_task
+    if redis := ctx.get("redis"):
+        await redis.close()
 
 
 async def enqueue_channel_refreshes(ctx):

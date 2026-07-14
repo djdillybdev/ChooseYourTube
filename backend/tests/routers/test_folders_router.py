@@ -96,7 +96,7 @@ class TestFoldersRouter:
         )
 
         assert response.status_code == 404
-        assert "not found" in response.json()["detail"].lower()
+        assert response.json()["code"] == "NOT_FOUND"
 
     async def test_update_folder_self_parent_raises_400(self, test_client, db_session):
         """Test PATCH /folders/{id} with self as parent returns 400."""
@@ -108,7 +108,7 @@ class TestFoldersRouter:
         response = test_client.patch("/folders/1", json={"parent_id": "1"})
 
         assert response.status_code == 400
-        assert "own parent" in response.json()["detail"].lower()
+        assert response.json()["code"] == "BAD_REQUEST"
 
     async def test_update_folder_cycle_raises_400(self, test_client, db_session):
         """Test PATCH /folders/{id} creating cycle returns 400."""
@@ -127,7 +127,7 @@ class TestFoldersRouter:
         response = test_client.patch("/folders/1", json={"parent_id": "3"})
 
         assert response.status_code == 400
-        assert "descendant" in response.json()["detail"].lower()
+        assert response.json()["code"] == "BAD_REQUEST"
 
     async def test_read_folder_by_id_found(self, test_client, db_session):
         """Test GET /folders/{id} returns the folder when it exists."""
@@ -149,7 +149,7 @@ class TestFoldersRouter:
         response = test_client.get("/folders/99999")
 
         assert response.status_code == 404
-        assert "not found" in response.json()["detail"].lower()
+        assert response.json()["code"] == "NOT_FOUND"
 
     async def test_create_folder_with_icon_key(self, test_client, db_session):
         """Test POST /folders/ creates root folder with icon_key."""

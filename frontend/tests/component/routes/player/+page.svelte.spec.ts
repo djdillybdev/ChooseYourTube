@@ -2,13 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PlayerPage from '../../../../src/routes/player/+page.svelte';
 
-const {
-	gotoMock,
-	initializeQueueMock,
-	openSaveVideoMock,
-	playerStateMock,
-	currentVideo
-} = vi.hoisted(() => {
+const { gotoMock, initializeQueueMock, openSaveVideoMock, playerStateMock } = vi.hoisted(() => {
 	const currentVideo = {
 		id: 'video-1',
 		title: 'Theater Mode Test Video',

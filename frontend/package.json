@@ -1,7 +1,12 @@
 {
 	"name": "chooseyourtube",
 	"private": true,
-	"version": "0.0.1",
+	"version": "0.1.0",
+	"license": "GPL-3.0-only",
+	"packageManager": "pnpm@10.33.0",
+	"engines": {
+		"node": ">=22"
+	},
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -12,12 +17,16 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
+		"api:schema": "cd ../backend && UV_CACHE_DIR=${TMPDIR:-/tmp}/chooseyourtube-uv-cache uv run python scripts/export_openapi.py ../frontend/openapi.json",
+		"api:types": "openapi-typescript openapi.json -o src/lib/types/generated.ts && prettier --write openapi.json src/lib/types/generated.ts",
+		"api:generate": "pnpm run api:schema && pnpm run api:types",
+		"api:check": "node scripts/check-api-contract.mjs",
 		"test:unit": "vitest run --project server --project component",
 		"test:component": "vitest run --project component",
 		"test:coverage": "vitest run --project server --project component --coverage",
 		"test:e2e:setup": "playwright install chromium",
 		"test:e2e": "playwright test",
-		"test:ci": "pnpm run test:coverage && pnpm run test:e2e:setup && pnpm run test:e2e",
+		"test:ci": "pnpm run api:check && pnpm run test:coverage && pnpm run test:e2e:setup && pnpm run test:e2e",
 		"test": "pnpm run test:ci"
 	},
 	"devDependencies": {
@@ -41,6 +50,7 @@
 		"globals": "^17.1.0",
 		"jsdom": "^27.0.1",
 		"msw": "^2.11.5",
+		"openapi-typescript": "7.10.1",
 		"playwright": "^1.58.0",
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.4.1",

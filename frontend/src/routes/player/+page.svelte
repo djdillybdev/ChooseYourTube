@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { playerState, initializeQueue } from '$lib/stores/playerState.svelte';
 	import { openSaveVideo } from '$lib/stores/modalState.svelte';
 	import YouTubePlayer from '$lib/components/player/YouTubePlayer.svelte';
@@ -16,7 +17,7 @@
 	let { data }: Props = $props();
 
 	// Access parent layout data
-	const channels = $derived((data as any).channels ?? []);
+	const channels = $derived(data.channels ?? []);
 	const channelMap = $derived(channels.length > 0 ? createChannelMap(channels) : undefined);
 	const currentVideoId = $derived(playerState.current.currentVideo?.id ?? null);
 
@@ -48,7 +49,10 @@
 		}
 
 		const reservedWidth = QUEUE_RESERVED_REM * getRootFontSizePx() + QUEUE_GAP_PX;
-		return Math.max(0, Math.min(viewportWidth * DESKTOP_WIDTH_RATIO - reservedWidth, DESKTOP_MAX_WIDTH));
+		return Math.max(
+			0,
+			Math.min(viewportWidth * DESKTOP_WIDTH_RATIO - reservedWidth, DESKTOP_MAX_WIDTH)
+		);
 	}
 
 	function updatePlayerFrameSize() {
@@ -61,14 +65,14 @@
 	}
 
 	$effect(() => {
-		currentVideoId;
+		void currentVideoId;
 		showDescription = false;
 	});
 
 	$effect(() => {
 		const stage = playerStageEl;
-		showQueue;
-		showDescription;
+		void showQueue;
+		void showDescription;
 		if (typeof window === 'undefined' || !stage) return;
 
 		const rafId = window.requestAnimationFrame(() => {
@@ -92,12 +96,12 @@
 
 		void initializeQueue().then(() => {
 			if (!playerState.current.currentVideo && playerState.current.queue.length === 0) {
-				goto(returnUrl, { replaceState: true });
+				goto(resolve(returnUrl as '/inbox'), { replaceState: true });
 			}
 		});
 
 		const onKey = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') goto(returnUrl);
+			if (e.key === 'Escape') goto(resolve(returnUrl as '/inbox'));
 		};
 
 		const onResize = () => {
@@ -123,7 +127,7 @@
 	});
 
 	function handleBack() {
-		goto(returnUrl);
+		goto(resolve(returnUrl as '/inbox'));
 	}
 </script>
 
@@ -191,7 +195,10 @@
 			<div
 				class="player-layout mx-auto flex min-h-0 w-full flex-col gap-4 lg:flex-row lg:items-center lg:justify-center"
 			>
-				<div bind:this={playerStageEl} class="player-stage flex min-h-0 h-full flex-1 items-center justify-center">
+				<div
+					bind:this={playerStageEl}
+					class="player-stage flex h-full min-h-0 flex-1 items-center justify-center"
+				>
 					<div
 						class="player-frame aspect-video w-full"
 						style:width={frameWidth > 0 ? `${frameWidth}px` : undefined}

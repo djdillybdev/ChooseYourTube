@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { ChannelOut } from '$lib/types/api';
 	import { page } from '$app/stores';
 
@@ -13,16 +14,13 @@
 </script>
 
 <li>
-	<div
-		class="channel-item flex items-center"
-		style="padding-left: {depth * 1}rem"
-	>
+	<div class="channel-item flex items-center" style="padding-left: {depth * 1}rem">
 		<!-- Spacer to align with folders that have chevrons -->
 		<span class="mr-1 w-4"></span>
 
 		<!-- Channel link -->
 		<a
-			href="/channels/{channel.id}"
+			href={resolve('/channels/[id]', { id: channel.id })}
 			class="flex flex-1 items-center gap-2 rounded px-2 py-1.5 transition-colors"
 			class:bg-base-200={isActive}
 		>
@@ -59,4 +57,3 @@
 		</a>
 	</div>
 </li>
-

@@ -1,42 +1,43 @@
-# sv
+# ChooseYourTube frontend
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+SvelteKit frontend for ChooseYourTube. The root repository README is the primary setup and architecture guide.
 
-## Creating a project
+## Requirements
 
-If you're seeing this, you've probably already done this step. Congrats!
+- Node.js 22 or newer
+- pnpm 10.33.0 (pinned in `package.json`)
+- A running ChooseYourTube API, normally at `http://localhost:8000`
 
-```sh
-# create a new project
-npx sv create my-app
+## Development
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-To recreate this project with the same configuration:
+Set `API_BASE_URL` when the backend is not available at its local default. Browser requests go through SvelteKit server routes so access and refresh tokens remain in HTTP-only cookies.
 
-```sh
-# recreate this project
-pnpm dlx sv create --template minimal --types ts --add prettier eslint tailwindcss="plugins:typography" vitest="usages:unit,component" playwright --install pnpm ./
+## API contract
+
+The backend OpenAPI document is the source of truth. Regenerate the checked-in schema and TypeScript types after an API change:
+
+```bash
+pnpm api:generate
 ```
 
-## Developing
+Verify that both generated files are current without rewriting them:
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+```bash
+pnpm api:check
 ```
 
-## Building
+Do not edit `openapi.json` or `src/lib/types/generated.ts` manually. Add ergonomic aliases and frontend-only filter types in `src/lib/types/api.ts`.
 
-To create a production version of your app:
+## Validation
 
-```sh
-npm run build
+```bash
+pnpm check
+pnpm lint
+pnpm test:coverage
+pnpm test:e2e
 ```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.

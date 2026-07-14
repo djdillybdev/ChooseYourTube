@@ -35,5 +35,12 @@ export default defineConfig(
 				svelteConfig
 			}
 		}
+	},
+	{
+		files: ['tests/**/*.{ts,js}'],
+		rules: {
+			// Route and hook tests intentionally construct partial framework events and load inputs.
+			'@typescript-eslint/no-explicit-any': 'off'
+		}
 	}
 );

@@ -14,7 +14,8 @@ declare global {
 	}
 
 	namespace YT {
-		interface Player {
+		class Player {
+			constructor(elementId: string | HTMLElement, options: PlayerOptions);
 			loadVideoById(videoId: string): void;
 			playVideo(): void;
 			pauseVideo(): void;
@@ -70,10 +71,6 @@ declare global {
 			onReady?: (event: PlayerEvent) => void;
 			onStateChange?: (event: OnStateChangeEvent) => void;
 			onError?: (event: OnErrorEvent) => void;
-		}
-
-		class Player {
-			constructor(elementId: string | HTMLElement, options: PlayerOptions);
 		}
 	}
 }

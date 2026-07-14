@@ -14,20 +14,20 @@
 		channelMap?: Map<string, ChannelOut>;
 	}
 
-let { channelMap }: Props = $props();
+	let { channelMap }: Props = $props();
 
-let dragIndex = $state<number | null>(null);
-const isQueueMutable = $derived(playerState.current.queueMutable);
+	let dragIndex = $state<number | null>(null);
+	const isQueueMutable = $derived(playerState.current.queueMutable);
 
 	async function handleQueueItemClick(index: number) {
 		if (playerState.current.isQueueSyncing) return;
 		await jumpToQueueItem(index);
 	}
 
-async function handleRemove(videoId: string) {
-	if (playerState.current.isQueueSyncing || !isQueueMutable) return;
-	await removeFromQueue(videoId);
-}
+	async function handleRemove(videoId: string) {
+		if (playerState.current.isQueueSyncing || !isQueueMutable) return;
+		await removeFromQueue(videoId);
+	}
 
 	function handleDragStart(index: number) {
 		dragIndex = index;

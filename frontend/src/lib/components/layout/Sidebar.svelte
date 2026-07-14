@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { uiState, toggleSidebar } from '$lib/stores/uiState.svelte';
 	import type { FolderOut, ChannelOut } from '$lib/types/api';
 	import FolderTree from './FolderTree.svelte';
@@ -51,7 +52,7 @@
 				<ul class="menu">
 					<!-- Inbox -->
 					<li>
-						<a href="/inbox" class="flex items-center gap-2">
+						<a href={resolve('/inbox')} class="flex items-center gap-2">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								fill="none"
@@ -72,7 +73,7 @@
 
 					<!-- Playlists -->
 					<li>
-						<a href="/playlists" class="flex items-center gap-2">
+						<a href={resolve('/playlists')} class="flex items-center gap-2">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								fill="none"
@@ -135,11 +136,14 @@
 						<li class="text-sm text-base-content/60">
 							<span>No channels yet</span>
 						</li>
-						{:else}
-							{#each unfolderedChannels as channel (channel.id)}
-								<li class="group">
-									<div class="channel-item flex items-center">
-										<a href="/channels/{channel.id}" class="flex flex-1 items-center gap-2">
+					{:else}
+						{#each unfolderedChannels as channel (channel.id)}
+							<li class="group">
+								<div class="channel-item flex items-center">
+									<a
+										href={resolve('/channels/[id]', { id: channel.id })}
+										class="flex flex-1 items-center gap-2"
+									>
 										{#if channel.thumbnail_url}
 											<img
 												src={channel.thumbnail_url}
@@ -170,28 +174,28 @@
 										<span>{channel.title}</span>
 									</a>
 
-										<button
-											class="btn btn-square btn-ghost btn-xs opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto"
-											onclick={(e) => {
-												e.stopPropagation();
-												openEditChannel(channel);
-											}}
-											aria-label="Edit channel"
+									<button
+										class="btn pointer-events-none btn-square opacity-0 btn-ghost transition-opacity btn-xs group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
+										onclick={(e) => {
+											e.stopPropagation();
+											openEditChannel(channel);
+										}}
+										aria-label="Edit channel"
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 24 24"
+											fill="currentColor"
+											class="h-4 w-4"
 										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 24 24"
-												fill="currentColor"
-												class="h-4 w-4"
-											>
-												<path
-													d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM11.25 18.75a.75.75 0 111.5 0 .75.75 0 01-1.5 0z"
-												/>
-											</svg>
-										</button>
-									</div>
-								</li>
-							{/each}
+											<path
+												d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM11.25 18.75a.75.75 0 111.5 0 .75.75 0 01-1.5 0z"
+											/>
+										</svg>
+									</button>
+								</div>
+							</li>
+						{/each}
 					{/if}
 				</ul>
 			</nav>

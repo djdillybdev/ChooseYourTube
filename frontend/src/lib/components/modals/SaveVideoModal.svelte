@@ -117,7 +117,9 @@
 					})
 				)
 			);
-			await Promise.all(toRemove.map((playlistId) => api.playlists.removeVideo(playlistId, video.id)));
+			await Promise.all(
+				toRemove.map((playlistId) => api.playlists.removeVideo(playlistId, video.id))
+			);
 			onClose();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to save video';
@@ -179,7 +181,11 @@
 					bind:value={newDescription}
 					disabled={isCreating || isSaving}
 				/>
-				<button class="btn btn-sm" type="submit" disabled={isCreating || !newName.trim() || isSaving}>
+				<button
+					class="btn btn-sm"
+					type="submit"
+					disabled={isCreating || !newName.trim() || isSaving}
+				>
 					{#if isCreating}<span class="loading loading-xs loading-spinner"></span>{/if}
 					Create
 				</button>
@@ -191,8 +197,14 @@
 		{/if}
 
 		<div class="modal-action">
-			<button class="btn btn-ghost" onclick={onClose} disabled={isSaving || isCreating}>Cancel</button>
-			<button class="btn btn-primary" onclick={() => void handleSave()} disabled={isSaving || isCreating}>
+			<button class="btn btn-ghost" onclick={onClose} disabled={isSaving || isCreating}
+				>Cancel</button
+			>
+			<button
+				class="btn btn-primary"
+				onclick={() => void handleSave()}
+				disabled={isSaving || isCreating}
+			>
 				{#if isSaving}<span class="loading loading-sm loading-spinner"></span>{/if}
 				Save
 			</button>

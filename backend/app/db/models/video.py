@@ -11,7 +11,6 @@ from sqlalchemy import (
     ForeignKeyConstraint,
     JSON,
     Index,
-    and_,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.ext.mutable import MutableList

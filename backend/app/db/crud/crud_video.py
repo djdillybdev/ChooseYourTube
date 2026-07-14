@@ -1,7 +1,8 @@
 import re
 from datetime import datetime
-from typing import Literal, Any
+from typing import Literal, Any, overload
 from sqlalchemy import select, func, or_
+from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.video import Video
 from ..models.association_tables import video_tags
@@ -74,7 +75,7 @@ def _build_search_conditions(q: str, dialect_name: str | None):
             tsquery = func.to_tsquery("english", prefix_query)
         else:
             tsquery = func.plainto_tsquery("english", q)
-        video_cond = tsvector.op("@@")(tsquery)
+        video_cond: ColumnElement[bool] = tsvector.op("@@")(tsquery)
         rank_expr = func.ts_rank(tsvector, tsquery)
     else:
         # SQLite fallback: LIKE-based search (already supports substring/prefix)
@@ -196,21 +197,68 @@ async def create_videos_bulk(
     # constructor so we can call `on_conflict_do_nothing()` on both
     # Postgres and SQLite engines.
     dialect_name = _get_dialect_name(db_session)
+    stmt: Any
 
     if dialect_name == "sqlite":
-        from sqlalchemy.dialects.sqlite import insert as dialect_insert
+        from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
-        stmt = dialect_insert(Video).values(video_dicts)
+        stmt = sqlite_insert(Video).values(video_dicts)
         stmt = stmt.on_conflict_do_nothing(index_elements=["owner_id", "id"])
     else:
         # Default to Postgres-style insert which supports ON CONFLICT
-        from sqlalchemy.dialects.postgresql import insert as dialect_insert
+        from sqlalchemy.dialects.postgresql import insert as postgres_insert
 
-        stmt = dialect_insert(Video).values(video_dicts)
+        stmt = postgres_insert(Video).values(video_dicts)
         stmt = stmt.on_conflict_do_nothing(index_elements=["owner_id", "id"])
 
     await db_session.execute(stmt)
     await db_session.commit()
+
+
+@overload
+async def get_videos(
+    db: AsyncSession,
+    *,
+    owner_id: str | None = None,
+    id: str | list[str] | None = None,
+    channel_id: str | list[str] | None = None,
+    is_favorited: bool | None = None,
+    is_short: bool | None = None,
+    is_watched: bool | None = None,
+    tag_id: str | None = None,
+    published_after: datetime | None = None,
+    published_before: datetime | None = None,
+    q: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+    order_by: str = "published_at",
+    order_direction: Literal["asc", "desc"] = "desc",
+    first: Literal[True],
+    **kwargs: Any,
+) -> Video | None: ...
+
+
+@overload
+async def get_videos(
+    db: AsyncSession,
+    *,
+    owner_id: str | None = None,
+    id: str | list[str] | None = None,
+    channel_id: str | list[str] | None = None,
+    is_favorited: bool | None = None,
+    is_short: bool | None = None,
+    is_watched: bool | None = None,
+    tag_id: str | None = None,
+    published_after: datetime | None = None,
+    published_before: datetime | None = None,
+    q: str | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+    order_by: str = "published_at",
+    order_direction: Literal["asc", "desc"] = "desc",
+    first: Literal[False] = False,
+    **kwargs: Any,
+) -> list[Video]: ...
 
 
 async def get_videos(
@@ -280,7 +328,7 @@ async def get_videos(
     if order_by == RELEVANCE_ORDER_BY and q is None:
         order_by = "published_at"
 
-    filters = {}
+    filters: dict[str, Any] = {}
     if owner_id is not None:
         filters["owner_id"] = owner_id
     if id is not None:
@@ -416,7 +464,7 @@ async def count_videos(
     if q is not None and q.strip() == "":
         q = None
 
-    filters = {}
+    filters: dict[str, Any] = {}
     if owner_id is not None:
         filters["owner_id"] = owner_id
     if id is not None:
