@@ -2,6 +2,7 @@
 	import { invalidate } from '$app/navigation';
 	import { api } from '$lib/api';
 	import type { PageData } from './$types';
+	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
 
 	interface Props {
 		data: PageData;
@@ -13,6 +14,12 @@
 	let editingName = $state('');
 	let busyId = $state<string | null>(null);
 	let error = $state<string | null>(null);
+	let pendingDelete = $state<{
+		id: string;
+		name: string;
+		channels: number;
+		videos: number;
+	} | null>(null);
 
 	async function refreshTags() {
 		await invalidate('app:tags');
@@ -55,13 +62,12 @@
 		}
 	}
 
-	async function deleteTag(id: string, name: string, channels: number, videos: number) {
-		const usage = `${channels} channel${channels === 1 ? '' : 's'} and ${videos} video${videos === 1 ? '' : 's'}`;
-		if (!confirm(`Delete “${name}”? It will be removed from ${usage}.`)) return;
+	async function deleteTag(id: string) {
 		busyId = id;
 		error = null;
 		try {
 			await api.tags.delete(id);
+			pendingDelete = null;
 			await refreshTags();
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : 'Could not delete tag.';
@@ -142,8 +148,12 @@
 											class="btn text-error btn-ghost btn-xs"
 											disabled={busyId === tag.id}
 											onclick={() =>
-												void deleteTag(tag.id, tag.name, tag.channel_count, tag.video_count)}
-											>Delete</button
+												(pendingDelete = {
+													id: tag.id,
+													name: tag.name,
+													channels: tag.channel_count,
+													videos: tag.video_count
+												})}>Delete</button
 										>
 									{/if}
 								</td>
@@ -155,3 +165,15 @@
 		{/if}
 	</section>
 </div>
+
+{#if pendingDelete}
+	<ConfirmDialog
+		title="Delete tag?"
+		message={`“${pendingDelete.name}” will be removed from ${pendingDelete.channels} channel${pendingDelete.channels === 1 ? '' : 's'} and ${pendingDelete.videos} video${pendingDelete.videos === 1 ? '' : 's'}.`}
+		confirmLabel="Delete tag"
+		busy={busyId === pendingDelete.id}
+		{error}
+		onConfirm={() => deleteTag(pendingDelete!.id)}
+		onCancel={() => (pendingDelete = null)}
+	/>
+{/if}

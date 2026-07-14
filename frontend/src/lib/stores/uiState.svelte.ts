@@ -13,6 +13,7 @@ export type FeedLayout = 'compact' | 'comfortable' | 'list';
  */
 interface UIState {
 	sidebarCollapsed: boolean;
+	mobileSidebarOpen: boolean;
 	sidebarWidth: number;
 	viewMode: ViewMode;
 	feedLayout: FeedLayout;
@@ -25,6 +26,7 @@ interface UIState {
  */
 const defaultState: UIState = {
 	sidebarCollapsed: false,
+	mobileSidebarOpen: false,
 	sidebarWidth: 280,
 	viewMode: 'feed',
 	feedLayout: 'comfortable',
@@ -90,6 +92,18 @@ export function toggleSidebar() {
 		...state,
 		sidebarCollapsed: !state.sidebarCollapsed
 	}));
+}
+
+export function openMobileSidebar() {
+	uiState.update((state) => ({ ...state, mobileSidebarOpen: true }));
+}
+
+export function closeMobileSidebar() {
+	const wasOpen = uiState.current.mobileSidebarOpen;
+	uiState.update((state) => ({ ...state, mobileSidebarOpen: false }));
+	if (wasOpen && typeof document !== 'undefined') {
+		queueMicrotask(() => document.getElementById('mobile-nav-trigger')?.focus());
+	}
 }
 
 /**

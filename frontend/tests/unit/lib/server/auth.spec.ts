@@ -44,6 +44,19 @@ describe('auth helpers', () => {
 		expect(del).toHaveBeenCalledWith(AUTH_COOKIE_NAME, { path: '/' });
 	});
 
+	it('sets secure cookies for an HTTPS request URL', () => {
+		const set = vi.fn();
+		const cookies = { set };
+
+		setAuthCookie(cookies as any, 'secure-token', new URL('https://demo.example.com/login'));
+
+		expect(set).toHaveBeenCalledWith(
+			AUTH_COOKIE_NAME,
+			'secure-token',
+			expect.objectContaining({ httpOnly: true, sameSite: 'lax', secure: true })
+		);
+	});
+
 	it('maps auth error details to stable string values', () => {
 		expect(mapAuthError('BAD_CREDENTIALS')).toBe('BAD_CREDENTIALS');
 		expect(mapAuthError({ code: 'INVALID_TOKEN' })).toBe('INVALID_TOKEN');

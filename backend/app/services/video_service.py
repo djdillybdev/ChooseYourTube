@@ -496,9 +496,10 @@ async def update_video(
 async def delete_video_by_id(
     video_id: str, db_session: AsyncSession, owner_id: str = "test-user"
 ) -> None:
-    """
-    Deletes a video by its ID. Verifies it exists first.
-    """
+    """Delete an owned video after verifying it exists."""
+    from app.core.demo_policy import DemoOperation, require_demo_safe
+
+    require_demo_safe(DemoOperation.VIDEO_DELETE)
     # First, get the video to ensure it exists (this also handles the 404 case)
     video_to_delete = await get_video_by_id(video_id, db_session, owner_id=owner_id)
 

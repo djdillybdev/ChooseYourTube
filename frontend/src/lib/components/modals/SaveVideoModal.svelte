@@ -154,7 +154,14 @@
 	}
 </script>
 
-<dialog bind:this={dialogElement} class="modal-open modal">
+<dialog
+	bind:this={dialogElement}
+	class="modal-open modal"
+	oncancel={(event) => {
+		event.preventDefault();
+		if (!isSaving) onClose();
+	}}
+>
 	<div class="modal-box max-w-2xl">
 		<h3 class="text-lg font-bold">Save Video to Playlists</h3>
 		<p class="mt-1 line-clamp-2 text-sm text-base-content/70">{video.title}</p>

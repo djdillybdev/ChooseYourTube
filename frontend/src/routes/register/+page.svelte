@@ -32,6 +32,11 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Create Account - ChooseYourTube</title>
+	<meta name="description" content="Create a self-hosted ChooseYourTube account." />
+</svelte:head>
+
 <div class="flex min-h-screen items-center justify-center bg-base-200 px-4">
 	<div class="card w-full max-w-md border border-base-300 bg-base-100 shadow-sm">
 		<div class="card-body">

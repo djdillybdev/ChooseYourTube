@@ -21,23 +21,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	'/auth/forgot-password': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Reset:Forgot Password */
-		post: operations['reset_forgot_password_auth_forgot_password_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	'/auth/jwt/login': {
 		parameters: {
 			query?: never;
@@ -89,40 +72,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	'/auth/request-verify-token': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Verify:Request-Token */
-		post: operations['verify_request_token_auth_request_verify_token_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/auth/reset-password': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Reset:Reset Password */
-		post: operations['reset_reset_password_auth_reset_password_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	'/auth/session/login': {
 		parameters: {
 			query?: never;
@@ -168,23 +117,6 @@ export interface paths {
 		put?: never;
 		/** Session Refresh */
 		post: operations['session_refresh_auth_session_refresh_post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/auth/verify': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Verify:Verify */
-		post: operations['verify_verify_auth_verify_post'];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -900,34 +832,15 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Users:Current User */
-		get: operations['users_current_user_users_me_get'];
+		/** Get Current User */
+		get: operations['get_current_user_users_me_get'];
 		put?: never;
 		post?: never;
-		delete?: never;
+		/** Delete Current User */
+		delete: operations['delete_current_user_users_me_delete'];
 		options?: never;
 		head?: never;
-		/** Users:Patch Current User */
-		patch: operations['users_patch_current_user_users_me_patch'];
-		trace?: never;
-	};
-	'/users/{id}': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Users:User */
-		get: operations['users_user_users__id__get'];
-		put?: never;
-		post?: never;
-		/** Users:Delete User */
-		delete: operations['users_delete_user_users__id__delete'];
-		options?: never;
-		head?: never;
-		/** Users:Patch User */
-		patch: operations['users_patch_user_users__id__patch'];
+		patch?: never;
 		trace?: never;
 	};
 	'/videos/': {
@@ -1022,6 +935,11 @@ export interface components {
 			 */
 			retryable: boolean;
 		};
+		/** AccountDeleteRequest */
+		AccountDeleteRequest: {
+			/** Current Password */
+			current_password: string;
+		};
 		/** BearerResponse */
 		BearerResponse: {
 			/** Access Token */
@@ -1053,21 +971,6 @@ export interface components {
 			/** Username */
 			username: string;
 		};
-		/** Body_reset_forgot_password_auth_forgot_password_post */
-		Body_reset_forgot_password_auth_forgot_password_post: {
-			/**
-			 * Email
-			 * Format: email
-			 */
-			email: string;
-		};
-		/** Body_reset_reset_password_auth_reset_password_post */
-		Body_reset_reset_password_auth_reset_password_post: {
-			/** Password */
-			password: string;
-			/** Token */
-			token: string;
-		};
 		/** Body_upload_takeout_csv_imports_subscriptions_csv_post */
 		Body_upload_takeout_csv_imports_subscriptions_csv_post: {
 			/**
@@ -1075,19 +978,6 @@ export interface components {
 			 * Format: binary
 			 */
 			file: string;
-		};
-		/** Body_verify_request_token_auth_request_verify_token_post */
-		Body_verify_request_token_auth_request_verify_token_post: {
-			/**
-			 * Email
-			 * Format: email
-			 */
-			email: string;
-		};
-		/** Body_verify_verify_auth_verify_post */
-		Body_verify_verify_auth_verify_post: {
-			/** Token */
-			token: string;
 		};
 		/** CandidateSelectionUpdate */
 		CandidateSelectionUpdate: {
@@ -1856,19 +1746,6 @@ export interface components {
 			 */
 			is_verified: boolean;
 		};
-		/** UserUpdate */
-		UserUpdate: {
-			/** Email */
-			email?: string | null;
-			/** Is Active */
-			is_active?: boolean | null;
-			/** Is Superuser */
-			is_superuser?: boolean | null;
-			/** Is Verified */
-			is_verified?: boolean | null;
-			/** Password */
-			password?: string | null;
-		};
 		/**
 		 * VideoOut
 		 * @description Schema for returning a video from the API.
@@ -1969,93 +1846,6 @@ export interface operations {
 					'application/json': {
 						[key: string]: unknown;
 					};
-				};
-			};
-			/** @description Safe API error */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			403: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			409: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			500: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-		};
-	};
-	reset_forgot_password_auth_forgot_password_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['Body_reset_forgot_password_auth_forgot_password_post'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			202: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': unknown;
 				};
 			};
 			/** @description Safe API error */
@@ -2384,180 +2174,6 @@ export interface operations {
 			};
 		};
 	};
-	verify_request_token_auth_request_verify_token_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['Body_verify_request_token_auth_request_verify_token_post'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			202: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': unknown;
-				};
-			};
-			/** @description Safe API error */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			403: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			409: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			500: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-		};
-	};
-	reset_reset_password_auth_reset_password_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['Body_reset_reset_password_auth_reset_password_post'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': unknown;
-				};
-			};
-			/** @description Bad Request */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['ErrorModel'];
-				};
-			};
-			/** @description Safe API error */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			403: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			409: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			500: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-		};
-	};
 	session_login_auth_session_login_post: {
 		parameters: {
 			query?: never;
@@ -2761,93 +2377,6 @@ export interface operations {
 				};
 				content: {
 					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			403: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			409: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			500: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-		};
-	};
-	verify_verify_auth_verify_post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['Body_verify_verify_auth_verify_post'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['UserRead'];
-				};
-			};
-			/** @description Bad Request */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['ErrorModel'];
 				};
 			};
 			/** @description Safe API error */
@@ -7140,7 +6669,7 @@ export interface operations {
 			};
 		};
 	};
-	users_current_user_users_me_get: {
+	get_current_user_users_me_get: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -7167,12 +6696,14 @@ export interface operations {
 					'application/json': components['schemas']['APIErrorBody'];
 				};
 			};
-			/** @description Missing token or inactive user. */
+			/** @description Safe API error */
 			401: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
 			};
 			/** @description Safe API error */
 			403: {
@@ -7221,7 +6752,7 @@ export interface operations {
 			};
 		};
 	};
-	users_patch_current_user_users_me_patch: {
+	delete_current_user_users_me_delete: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -7230,171 +6761,9 @@ export interface operations {
 		};
 		requestBody: {
 			content: {
-				'application/json': components['schemas']['UserUpdate'];
+				'application/json': components['schemas']['AccountDeleteRequest'];
 			};
 		};
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['UserRead'];
-				};
-			};
-			/** @description Bad Request */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['ErrorModel'];
-				};
-			};
-			/** @description Missing token or inactive user. */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Safe API error */
-			403: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			409: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			500: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-		};
-	};
-	users_user_users__id__get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['UserRead'];
-				};
-			};
-			/** @description Safe API error */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Missing token or inactive user. */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Not a superuser. */
-			403: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description The user does not exist. */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Safe API error */
-			409: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			500: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-		};
-	};
-	users_delete_user_users__id__delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
 		responses: {
 			/** @description Successful Response */
 			204: {
@@ -7412,109 +6781,32 @@ export interface operations {
 					'application/json': components['schemas']['APIErrorBody'];
 				};
 			};
-			/** @description Missing token or inactive user. */
+			/** @description Safe API error */
 			401: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
 			};
-			/** @description Not a superuser. */
+			/** @description Safe API error */
 			403: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
 			};
-			/** @description The user does not exist. */
+			/** @description Safe API error */
 			404: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
-			};
-			/** @description Safe API error */
-			409: {
-				headers: {
-					[name: string]: unknown;
-				};
 				content: {
 					'application/json': components['schemas']['APIErrorBody'];
 				};
-			};
-			/** @description Safe API error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-			/** @description Safe API error */
-			500: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['APIErrorBody'];
-				};
-			};
-		};
-	};
-	users_patch_user_users__id__patch: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['UserUpdate'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['UserRead'];
-				};
-			};
-			/** @description Bad Request */
-			400: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['ErrorModel'];
-				};
-			};
-			/** @description Missing token or inactive user. */
-			401: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description Not a superuser. */
-			403: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description The user does not exist. */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
 			};
 			/** @description Safe API error */
 			409: {

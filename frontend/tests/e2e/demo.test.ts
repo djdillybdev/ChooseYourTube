@@ -75,8 +75,10 @@ test('tags can be created, renamed, and deleted in organization settings', async
 	await page.locator('input.input-sm').fill('Engineering');
 	await page.getByRole('button', { name: 'Save' }).click();
 	await expect(page.getByText('engineering', { exact: true })).toBeVisible();
-	page.on('dialog', (dialog) => dialog.accept());
 	await page.getByRole('button', { name: 'Delete' }).click();
+	const confirmation = page.getByRole('dialog', { name: 'Delete tag?' });
+	await expect(confirmation).toBeVisible();
+	await confirmation.getByRole('button', { name: 'Delete tag' }).click();
 	await expect(page.getByText(/No tags yet/)).toBeVisible();
 });
 
@@ -105,4 +107,34 @@ test('Takeout CSV can be reviewed and committed as a durable import', async ({ p
 	await expect(page.getByText('Imported Portfolio Channel')).toBeVisible();
 	await page.getByRole('button', { name: 'Import 1 channels' }).click();
 	await expect(page.getByText('succeeded', { exact: true })).toBeVisible({ timeout: 15_000 });
+});
+
+test('application shell remains usable at phone, tablet, and desktop widths', async ({
+	page,
+	context
+}) => {
+	await context.addCookies([
+		{
+			name: 'cyt_access_token',
+			value: 'e2e-access',
+			url: 'http://localhost:4173',
+			httpOnly: true,
+			sameSite: 'Lax'
+		}
+	]);
+
+	for (const width of [375, 768, 1280]) {
+		await page.setViewportSize({ width, height: 720 });
+		await page.goto('/inbox');
+		const overflows = await page.evaluate(
+			() => document.documentElement.scrollWidth > document.documentElement.clientWidth
+		);
+		expect(overflows).toBe(false);
+	}
+
+	await page.setViewportSize({ width: 375, height: 720 });
+	await page.getByRole('button', { name: 'Open navigation' }).click();
+	await expect(page.getByLabel('Primary navigation')).toBeVisible();
+	await page.keyboard.press('Escape');
+	await expect(page.getByRole('button', { name: 'Open navigation' })).toBeFocused();
 });

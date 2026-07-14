@@ -3,6 +3,7 @@
 	import type { FolderOut } from '$lib/types/api';
 	import { invalidate } from '$app/navigation';
 	import { SvelteSet } from 'svelte/reactivity';
+	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
 
 	interface Props {
 		folder: FolderOut;
@@ -18,6 +19,7 @@
 	let isSubmitting = $state(false);
 	let error = $state<string | null>(null);
 	let dialogElement: HTMLDialogElement;
+	let confirmingDelete = $state(false);
 
 	$effect(() => {
 		if (folder.id !== syncedFolderId) {
@@ -90,7 +92,6 @@
 	}
 
 	async function handleDelete() {
-		if (!confirm(`Delete folder "${folder.name}"? Channels inside will move to root.`)) return;
 		isSubmitting = true;
 		error = null;
 		try {
@@ -106,7 +107,14 @@
 	}
 </script>
 
-<dialog bind:this={dialogElement} class="modal-open modal">
+<dialog
+	bind:this={dialogElement}
+	class="modal-open modal"
+	oncancel={(event) => {
+		event.preventDefault();
+		if (!isSubmitting) onClose();
+	}}
+>
 	<div class="modal-box">
 		<div class="mb-4 flex items-center gap-3">
 			<svg
@@ -183,7 +191,7 @@
 				<button
 					type="button"
 					class="btn text-error btn-ghost btn-sm"
-					onclick={handleDelete}
+					onclick={() => (confirmingDelete = true)}
 					disabled={isSubmitting}
 				>
 					Delete
@@ -203,3 +211,15 @@
 		<button type="button" onclick={onClose} aria-label="Close modal">close</button>
 	</form>
 </dialog>
+
+{#if confirmingDelete}
+	<ConfirmDialog
+		title="Delete folder?"
+		message={`“${folder.name}” will be deleted. Channels inside it will move to the root.`}
+		confirmLabel="Delete folder"
+		busy={isSubmitting}
+		{error}
+		onConfirm={handleDelete}
+		onCancel={() => (confirmingDelete = false)}
+	/>
+{/if}

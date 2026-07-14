@@ -52,7 +52,18 @@ def test_registration_router_is_omitted_when_disabled() -> None:
     )
     demo_app = create_app(configured)
 
-    assert "/auth/register" not in {route.path for route in demo_app.routes}
+    paths = {route.path for route in demo_app.routes}
+    assert "/auth/register" not in paths
+    assert "/auth/jwt/login" not in paths
+    assert "/auth/demo" in paths
+
+
+def test_incomplete_email_flows_are_not_exposed() -> None:
+    paths = {route.path for route in app.routes}
+    assert "/auth/forgot-password" not in paths
+    assert "/auth/reset-password" not in paths
+    assert "/auth/request-verify-token" not in paths
+    assert "/auth/verify" not in paths
 
 
 @pytest.mark.asyncio

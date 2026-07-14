@@ -51,7 +51,14 @@
 	}
 </script>
 
-<dialog bind:this={dialogElement} class="modal-open modal">
+<dialog
+	bind:this={dialogElement}
+	class="modal-open modal"
+	oncancel={(event) => {
+		event.preventDefault();
+		if (!isSubmitting) onClose();
+	}}
+>
 	<div class="modal-box">
 		<h3 class="text-lg font-bold">Add YouTube Channel</h3>
 		<p class="py-2 text-sm text-base-content/60">

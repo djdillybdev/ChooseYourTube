@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { uiState, toggleSidebar } from '$lib/stores/uiState.svelte';
+	import { uiState, toggleSidebar, openMobileSidebar } from '$lib/stores/uiState.svelte';
 	import { authState } from '$lib/stores/authState.svelte';
 	import type { ChannelOut, TagOut, UserRead } from '$lib/types/api';
 	import { parseVideoFilterQuery } from '$lib/utils/videoFilterQuery';
@@ -116,9 +116,19 @@
 
 <header class="flex h-16 items-center justify-between border-b border-base-300 bg-base-100 px-4">
 	<div class="flex items-center gap-2">
+		<button
+			id="mobile-nav-trigger"
+			class="btn btn-square btn-ghost btn-sm md:hidden"
+			onclick={openMobileSidebar}
+			aria-label="Open navigation"
+		>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5" aria-hidden="true">
+				<path stroke-linecap="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16" />
+			</svg>
+		</button>
 		{#if uiState.current.sidebarCollapsed}
 			<button
-				class="btn btn-square btn-ghost btn-sm"
+				class="btn hidden btn-square btn-ghost btn-sm md:inline-flex"
 				onclick={toggleSidebar}
 				aria-label="Open sidebar"
 			>
@@ -142,7 +152,7 @@
 
 	{#if isVideoListPage}
 		<div class="flex flex-1 items-center justify-center gap-2 px-4">
-			<div class="join">
+			<div class="join hidden sm:flex">
 				<button
 					class="btn join-item btn-sm"
 					class:btn-active={uiFilters.is_watched === undefined}
@@ -177,8 +187,27 @@
 					class="dropdown-content z-20 mt-2 w-80 rounded-box border border-base-300 bg-base-100 p-3 shadow-sm"
 				>
 					<div class="space-y-2">
-						<div class="pb-1 text-xs text-base-content/60">Favorite</div>
+						<div class="sm:hidden">
+							<label class="pb-1 text-xs text-base-content/60" for="mobile-watched-filter"
+								>Viewing state</label
+							>
+							<select
+								id="mobile-watched-filter"
+								class="select-bordered select w-full select-sm"
+								value={uiFilters.is_watched === undefined ? '' : String(uiFilters.is_watched)}
+								onchange={(event) => {
+									const value = event.currentTarget.value;
+									setBooleanFilter('is_watched', value === '' ? undefined : value === 'true');
+								}}
+							>
+								<option value="">All videos</option>
+								<option value="false">Unwatched</option>
+								<option value="true">Watched</option>
+							</select>
+						</div>
+						<label class="pb-1 text-xs text-base-content/60" for="favorite-filter">Favorite</label>
 						<select
+							id="favorite-filter"
 							class="select-bordered select w-full select-sm"
 							value={uiFilters.is_favorited === undefined ? '' : String(uiFilters.is_favorited)}
 							onchange={(e) =>
@@ -194,8 +223,9 @@
 							<option value="false">Not favorited</option>
 						</select>
 
-						<div class="pb-1 text-xs text-base-content/60">Length</div>
+						<label class="pb-1 text-xs text-base-content/60" for="length-filter">Length</label>
 						<select
+							id="length-filter"
 							class="select-bordered select w-full select-sm"
 							value={uiFilters.is_short === undefined ? '' : String(uiFilters.is_short)}
 							onchange={(e) =>

@@ -76,6 +76,10 @@
 
 <svelte:head>
 	<title>{data.channel.title} - ChooseYourTube</title>
+	<meta
+		name="description"
+		content={`Browse saved videos and synchronization status for ${data.channel.title}.`}
+	/>
 </svelte:head>
 
 <div class="container mx-auto max-w-7xl p-6">

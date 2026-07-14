@@ -34,7 +34,10 @@ describe('AuthAPI', () => {
 
 		const result = await api.register('dup@example.com', 'pw');
 
-		expect(result).toEqual({ ok: false, error: 'EMAIL_ALREADY_EXISTS' });
+		expect(result).toEqual({
+			ok: false,
+			error: 'An account with this email already exists.'
+		});
 	});
 
 	it('logout posts to logout endpoint', async () => {
@@ -46,6 +49,29 @@ describe('AuthAPI', () => {
 			method: 'POST',
 			credentials: 'include'
 		});
+	});
+
+	it('uses the one-click demo session endpoint', async () => {
+		fetchMock.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+		expect(await api.demoLogin()).toEqual({ ok: true });
+		expect(fetchMock).toHaveBeenCalledWith(
+			'/api/auth/demo',
+			expect.objectContaining({ method: 'POST', credentials: 'include' })
+		);
+	});
+
+	it('requires the current password when deleting an account', async () => {
+		fetchMock.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+		expect(await api.deleteAccount('secret')).toEqual({ ok: true });
+		expect(fetchMock).toHaveBeenCalledWith(
+			'/api/auth/account',
+			expect.objectContaining({
+				method: 'DELETE',
+				body: JSON.stringify({ current_password: 'secret' })
+			})
+		);
 	});
 
 	it('me returns user payload when authenticated', async () => {

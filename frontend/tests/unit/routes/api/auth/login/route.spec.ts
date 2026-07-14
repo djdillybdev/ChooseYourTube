@@ -51,8 +51,18 @@ describe('POST /api/auth/login', () => {
 				headers: { 'Content-Type': 'application/json' }
 			})
 		);
-		expect(setAuthCookieMock).toHaveBeenCalledWith(expect.anything(), 'token-1');
-		expect(setRefreshAuthCookieMock).toHaveBeenCalledWith(expect.anything(), 'refresh-1');
+		expect(setAuthCookieMock).toHaveBeenCalledWith(
+			expect.anything(),
+			'token-1',
+			undefined,
+			undefined
+		);
+		expect(setRefreshAuthCookieMock).toHaveBeenCalledWith(
+			expect.anything(),
+			'refresh-1',
+			undefined,
+			undefined
+		);
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ ok: true });
 	});

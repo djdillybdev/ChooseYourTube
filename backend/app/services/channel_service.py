@@ -162,12 +162,10 @@ async def create_channel(
     youtube_client: YouTubeAPI,
     owner_id: str = "test-user",
 ) -> Channel:
-    """
-    Orchestrates creating a new channel.
-    1. Fetches data from YouTube API.
-    2. Checks if channel already exists.
-    3. Creates the channel in the database.
-    """
+    """Fetch YouTube metadata and create an owned channel."""
+    from app.core.demo_policy import DemoOperation, require_demo_safe
+
+    require_demo_safe(DemoOperation.CHANNEL_CREATE)
     # 1. Fetch data from YouTube API.
     channel_data.handle = _normalize_channel_handle(channel_data.handle)
     try:
@@ -292,9 +290,10 @@ async def update_channel(
 async def delete_channel_by_id(
     channel_id: str, db_session: AsyncSession, owner_id: str = "test-user"
 ) -> None:
-    """
-    Deletes a channel by its ID. Verifies it exists first.
-    """
+    """Delete a channel by ID after verifying ownership."""
+    from app.core.demo_policy import DemoOperation, require_demo_safe
+
+    require_demo_safe(DemoOperation.CHANNEL_DELETE)
     # First, get the channel to ensure it exists (this also handles the 404 case)
     channel_to_delete = await get_channel_by_id(
         channel_id, db_session, owner_id=owner_id
@@ -307,7 +306,8 @@ async def delete_channel_by_id(
 async def delete_all_channels(
     db_session: AsyncSession, owner_id: str = "test-user"
 ) -> int:
-    """
-    Deletes all channels and returns the number of channels deleted.
-    """
+    """Delete all channels owned by one user."""
+    from app.core.demo_policy import DemoOperation, require_demo_safe
+
+    require_demo_safe(DemoOperation.CHANNEL_DELETE)
     return await crud_channel.delete_all_channels(db_session, owner_id=owner_id)

@@ -9,15 +9,17 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.auth import auth_backend, fastapi_users
-from app.auth.schemas import UserCreate, UserRead, UserUpdate
+from app.auth.schemas import UserCreate, UserRead
 from app.core.config import Settings, settings
 from app.core.errors import APIErrorBody, ApplicationError, safe_error_details
 from app.core.observability import RequestContextMiddleware, configure_logging
 from app.db.schema_guard import assert_required_playlist_schema
 from app.db.session import sessionmanager
 from app.routers import (
+    accounts,
     auth_session,
     channels,
+    demo_auth,
     folders,
     health,
     playlists,
@@ -94,26 +96,19 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
     application.include_router(health.router)
     application.include_router(sync_runs.router)
     application.include_router(subscription_imports.router)
-    application.include_router(
-        fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
-    )
+    if app_settings.APP_MODE == "full":
+        application.include_router(
+            fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
+        )
     if app_settings.REGISTRATION_ENABLED:
         application.include_router(
             fastapi_users.get_register_router(UserRead, UserCreate),
             prefix="/auth",
             tags=["auth"],
         )
-    application.include_router(
-        fastapi_users.get_reset_password_router(), prefix="/auth", tags=["auth"]
-    )
-    application.include_router(
-        fastapi_users.get_verify_router(UserRead), prefix="/auth", tags=["auth"]
-    )
-    application.include_router(
-        fastapi_users.get_users_router(UserRead, UserUpdate),
-        prefix="/users",
-        tags=["users"],
-    )
+    application.include_router(accounts.router)
+    if app_settings.APP_MODE == "demo" and app_settings.DEMO_LOGIN_ENABLED:
+        application.include_router(demo_auth.router)
     application.include_router(auth_session.router)
 
     @application.exception_handler(ApplicationError)

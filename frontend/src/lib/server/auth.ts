@@ -12,23 +12,33 @@ function getBackendBaseURL(): string {
 	return value.endsWith('/') ? value.slice(0, -1) : value;
 }
 
-export function setAuthCookie(cookies: Cookies, token: string): void {
+export function setAuthCookie(
+	cookies: Cookies,
+	token: string,
+	requestUrl?: URL,
+	maxAge = ACCESS_COOKIE_MAX_AGE_SECONDS
+): void {
 	cookies.set(AUTH_COOKIE_NAME, token, {
 		path: '/',
 		httpOnly: true,
 		sameSite: 'lax',
-		secure: !dev,
-		maxAge: ACCESS_COOKIE_MAX_AGE_SECONDS
+		secure: requestUrl ? requestUrl.protocol === 'https:' : !dev,
+		maxAge
 	});
 }
 
-export function setRefreshAuthCookie(cookies: Cookies, token: string): void {
+export function setRefreshAuthCookie(
+	cookies: Cookies,
+	token: string,
+	requestUrl?: URL,
+	maxAge = REFRESH_COOKIE_MAX_AGE_SECONDS
+): void {
 	cookies.set(AUTH_REFRESH_COOKIE_NAME, token, {
 		path: '/',
 		httpOnly: true,
 		sameSite: 'lax',
-		secure: !dev,
-		maxAge: REFRESH_COOKIE_MAX_AGE_SECONDS
+		secure: requestUrl ? requestUrl.protocol === 'https:' : !dev,
+		maxAge
 	});
 }
 
@@ -123,10 +133,12 @@ export async function refreshAuthSession(event: RequestEvent): Promise<boolean> 
 		const data = (await response.json()) as {
 			access_token: string;
 			refresh_token: string;
+			access_expires_in?: number;
+			refresh_expires_in?: number;
 		};
 
-		setAuthCookie(event.cookies, data.access_token);
-		setRefreshAuthCookie(event.cookies, data.refresh_token);
+		setAuthCookie(event.cookies, data.access_token, event.url, data.access_expires_in);
+		setRefreshAuthCookie(event.cookies, data.refresh_token, event.url, data.refresh_expires_in);
 		event.locals.authToken = data.access_token;
 		return true;
 	} catch {

@@ -2,6 +2,12 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { playerState, playNext } from '$lib/stores/playerState.svelte';
 
+	interface Props {
+		onPlaybackError?: (title: string) => void;
+	}
+
+	let { onPlaybackError = () => undefined }: Props = $props();
+
 	let playerElement: HTMLDivElement;
 	let player: YT.Player | null = null;
 	let isReady = $state(false);
@@ -63,6 +69,7 @@
 
 	function handleError(event: YT.OnErrorEvent) {
 		console.error('YouTube Player Error:', event.data);
+		onPlaybackError(playerState.current.currentVideo?.title ?? 'This video');
 		// Skip to next video on error
 		if (!isAdvancingQueue) {
 			isAdvancingQueue = true;

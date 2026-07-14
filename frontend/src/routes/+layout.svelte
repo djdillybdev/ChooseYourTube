@@ -14,6 +14,9 @@
 	import type { FolderOut } from '$lib/types/api';
 	import type { RuntimeMetadata } from '$lib/types/runtime';
 	import { provideWatchLater } from '$lib/stores/watchLater.svelte';
+	import DemoBanner from '$lib/components/layout/DemoBanner.svelte';
+	import { uiState } from '$lib/stores/uiState.svelte';
+	import { navigating } from '$app/state';
 
 	interface Props {
 		children: Snippet;
@@ -36,22 +39,35 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
+	<meta
+		name="description"
+		content="ChooseYourTube is a distraction-free feed reader for selected YouTube channels."
+	/>
 </svelte:head>
 
 {#if data.isPublicAuthRoute}
 	{@render children()}
 {:else}
+	<a class="skip-link" href="#main-content">Skip to content</a>
+	<div class="sr-only" aria-live="polite" aria-atomic="true">
+		{navigating ? 'Loading page' : ''}
+	</div>
 	<div class="app-shell flex h-screen overflow-hidden">
 		<Sidebar
 			folders={data.folders}
 			unfolderedChannels={data.unfolderedChannels}
 			channels={data.channels}
 			backgroundJobsEnabled={data.runtime.features.background_jobs}
+			demoMode={data.runtime.mode === 'demo'}
 		/>
 
-		<div class="flex flex-1 flex-col overflow-hidden">
+		<div
+			class="flex min-w-0 flex-1 flex-col overflow-hidden"
+			inert={uiState.current.mobileSidebarOpen ? true : undefined}
+		>
 			<TopBar channels={data.channels} tags={data.tags} currentUser={data.currentUser} />
-			<main class="flex-1 overflow-auto bg-base-200">
+			{#if data.runtime.mode === 'demo'}<DemoBanner />{/if}
+			<main id="main-content" tabindex="-1" class="flex-1 overflow-auto bg-base-200">
 				{@render children()}
 			</main>
 		</div>
@@ -70,6 +86,7 @@
 			folders={data.folders}
 			tags={data.tags}
 			onClose={closeModal}
+			demoMode={data.runtime.mode === 'demo'}
 		/>
 	{/if}
 	{#if modalState.current.type === 'editFolder'}

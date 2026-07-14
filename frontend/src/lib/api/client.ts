@@ -76,6 +76,12 @@ export class APIClient {
 				// Handle non-2xx responses
 				if (!response.ok) {
 					const errorBody = await response.json().catch(() => ({}));
+					if (response.status === 401 && typeof window !== 'undefined') {
+						const next = `${window.location.pathname}${window.location.search}`;
+						window.location.assign(
+							`/login?reason=session_expired&next=${encodeURIComponent(next)}`
+						);
+					}
 					throw new APIError(response.status, errorBody);
 				}
 

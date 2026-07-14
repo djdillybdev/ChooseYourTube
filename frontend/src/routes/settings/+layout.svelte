@@ -32,6 +32,12 @@
 			class:tab-active={page.url.pathname.startsWith('/settings/sync')}
 			href={resolve('/settings/sync')}>Sync Activity</a
 		>
+		<a
+			role="tab"
+			class="tab"
+			class:tab-active={page.url.pathname.startsWith('/settings/account')}
+			href={resolve('/settings/account')}>Account</a
+		>
 	</div>
 </div>
 

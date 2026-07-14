@@ -29,6 +29,7 @@
 	let frameWidth = $state(0);
 	let frameHeight = $state(0);
 	let stageResizeObserver: ResizeObserver | null = null;
+	let playbackError = $state<string | null>(null);
 
 	const DESKTOP_BREAKPOINT = 1024;
 	const MOBILE_WIDTH_RATIO = 0.9;
@@ -68,6 +69,7 @@
 	$effect(() => {
 		void currentVideoId;
 		showDescription = false;
+		playbackError = null;
 	});
 
 	$effect(() => {
@@ -134,6 +136,10 @@
 
 <svelte:head>
 	<title>{playerState.current.currentVideo?.title ?? 'Player'} – ChooseYourTube</title>
+	<meta
+		name="description"
+		content="Play the current ChooseYourTube queue without recommendations."
+	/>
 </svelte:head>
 
 <!-- Full-viewport overlay – covers sidebar rendered by root layout -->
@@ -194,6 +200,11 @@
 			</div>
 		</div>
 	{:else}
+		{#if playbackError}
+			<div class="alert rounded-none alert-warning" role="status" aria-live="assertive">
+				{playbackError} could not be played. Moving to the next video in the queue.
+			</div>
+		{/if}
 		<!-- Video area with optional right queue panel -->
 		<div class="relative z-0 flex min-h-0 flex-1 overflow-hidden bg-base-200 p-6">
 			<div
@@ -209,7 +220,7 @@
 						style:height={frameHeight > 0 ? `${frameHeight}px` : undefined}
 					>
 						{#key playerState.current.currentVideo?.id}
-							<YouTubePlayer />
+							<YouTubePlayer onPlaybackError={(title) => (playbackError = title)} />
 						{/key}
 					</div>
 				</div>

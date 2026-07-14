@@ -6,6 +6,7 @@
 	import { playFromPlaylist } from '$lib/stores/playerState.svelte';
 	import { formatDuration } from '$lib/utils/formatDuration';
 	import { createChannelMap, getChannelTitle } from '$lib/utils/channelLookup';
+	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
 
 	interface Props {
 		data: PageData;
@@ -21,6 +22,7 @@
 	let description = $state('');
 	let isSavingMeta = $state(false);
 	let isDeleting = $state(false);
+	let confirmingDelete = $state(false);
 	let actionError = $state<string | null>(null);
 	let dragIndex = $state<number | null>(null);
 	let syncedPlaylistId = $state<string | null>(null);
@@ -64,11 +66,11 @@
 	}
 
 	async function handleDeletePlaylist() {
-		if (!confirm(`Delete playlist "${data.playlist.name}"?`)) return;
 		isDeleting = true;
 		actionError = null;
 		try {
 			await api.playlists.delete(data.playlist.id);
+			confirmingDelete = false;
 			await goto(resolve('/playlists'));
 		} catch (err) {
 			actionError = err instanceof Error ? err.message : 'Failed to delete playlist';
@@ -138,7 +140,7 @@
 			<a href={resolve('/playlists')} class="btn btn-ghost btn-sm">Back</a>
 			<button
 				class="btn text-error btn-ghost btn-sm"
-				onclick={handleDeletePlaylist}
+				onclick={() => (confirmingDelete = true)}
 				disabled={isDeleting}
 			>
 				Delete Playlist
@@ -231,3 +233,15 @@
 		</div>
 	{/if}
 </div>
+
+{#if confirmingDelete}
+	<ConfirmDialog
+		title="Delete playlist?"
+		message={`“${data.playlist.name}” and its ordering will be permanently deleted.`}
+		confirmLabel="Delete playlist"
+		busy={isDeleting}
+		error={actionError}
+		onConfirm={handleDeletePlaylist}
+		onCancel={() => (confirmingDelete = false)}
+	/>
+{/if}

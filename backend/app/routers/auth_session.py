@@ -14,6 +14,7 @@ from app.auth.backend import get_jwt_strategy
 from app.auth.manager import get_user_manager
 from app.auth.models import RefreshSession
 from app.core.config import settings
+from app.core.errors import ApplicationError
 from app.db.session import get_db_session
 
 router = APIRouter(prefix="/auth/session", tags=["auth"])
@@ -43,6 +44,26 @@ def _create_refresh_token() -> str:
 async def _mint_access_token(user) -> str:
     strategy = get_jwt_strategy()
     return await strategy.write_token(user)
+
+
+async def issue_session(
+    db_session: AsyncSession, user, request: Request
+) -> dict[str, str | int]:
+    _, refresh_token = await _create_refresh_session(
+        db_session,
+        user.id,
+        request.headers.get("user-agent"),
+        request.client.host if request.client else None,
+    )
+    access_token = await _mint_access_token(user)
+    await db_session.commit()
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "access_expires_in": settings.ACCESS_TOKEN_TTL_SECONDS,
+        "refresh_token": refresh_token,
+        "refresh_expires_in": settings.REFRESH_TOKEN_TTL_SECONDS,
+    }
 
 
 async def _create_refresh_session(
@@ -87,6 +108,12 @@ async def session_login(
     db_session: AsyncSession = Depends(get_db_session),
     user_manager=Depends(get_user_manager),
 ):
+    if settings.APP_MODE == "demo":
+        raise ApplicationError(
+            "FEATURE_DISABLED_IN_DEMO",
+            "Password login is disabled in the shared recruiter demo.",
+            403,
+        )
     credentials = OAuth2PasswordRequestForm(
         username=payload.email,
         password=payload.password,
@@ -98,23 +125,7 @@ async def session_login(
             detail={"code": "INVALID_CREDENTIALS"},
         )
 
-    _, refresh_token = await _create_refresh_session(
-        db_session,
-        user.id,
-        request.headers.get("user-agent"),
-        request.client.host if request.client else None,
-    )
-    access_token = await _mint_access_token(user)
-
-    await db_session.commit()
-
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "access_expires_in": settings.ACCESS_TOKEN_TTL_SECONDS,
-        "refresh_token": refresh_token,
-        "refresh_expires_in": settings.REFRESH_TOKEN_TTL_SECONDS,
-    }
+    return await issue_session(db_session, user, request)
 
 
 @router.post("/refresh")

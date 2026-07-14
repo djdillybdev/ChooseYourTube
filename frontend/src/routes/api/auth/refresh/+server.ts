@@ -36,8 +36,10 @@ export const POST: RequestHandler = async (event) => {
 	const data = (await response.json()) as {
 		access_token: string;
 		refresh_token: string;
+		access_expires_in?: number;
+		refresh_expires_in?: number;
 	};
-	setAuthCookie(event.cookies, data.access_token);
-	setRefreshAuthCookie(event.cookies, data.refresh_token);
+	setAuthCookie(event.cookies, data.access_token, event.url, data.access_expires_in);
+	setRefreshAuthCookie(event.cookies, data.refresh_token, event.url, data.refresh_expires_in);
 	return json({ ok: true });
 };

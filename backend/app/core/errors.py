@@ -29,11 +29,29 @@ DEFAULT_ERROR_MESSAGES = {
     422: ("VALIDATION_ERROR", "The request contains invalid data."),
 }
 
+SAFE_DETAIL_CODES = {
+    "REGISTER_USER_ALREADY_EXISTS": (
+        "EMAIL_ALREADY_REGISTERED",
+        "An account with this email already exists.",
+    ),
+    "REGISTER_INVALID_PASSWORD": (
+        "INVALID_PASSWORD",
+        "The password does not meet the account requirements.",
+    ),
+    "LOGIN_BAD_CREDENTIALS": (
+        "INVALID_CREDENTIALS",
+        "The email or password is incorrect.",
+    ),
+}
+
 
 def safe_error_details(status_code: int, detail: object) -> tuple[str, str, bool]:
     default_code, default_message = DEFAULT_ERROR_MESSAGES.get(
         status_code, ("REQUEST_FAILED", "The request could not be completed.")
     )
+    if isinstance(detail, str) and detail in SAFE_DETAIL_CODES:
+        safe_code, safe_message = SAFE_DETAIL_CODES[detail]
+        return safe_code, safe_message, False
     if not isinstance(detail, dict):
         return default_code, default_message, False
 

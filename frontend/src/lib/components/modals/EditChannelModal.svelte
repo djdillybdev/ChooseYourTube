@@ -2,15 +2,17 @@
 	import { api } from '$lib/api';
 	import type { ChannelOut, FolderOut, TagOut } from '$lib/types/api';
 	import { invalidate } from '$app/navigation';
+	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
 
 	interface Props {
 		channel: ChannelOut;
 		folders: FolderOut[];
 		tags?: TagOut[];
 		onClose: () => void;
+		demoMode?: boolean;
 	}
 
-	let { channel, folders, tags = [], onClose }: Props = $props();
+	let { channel, folders, tags = [], onClose, demoMode = false }: Props = $props();
 
 	let isFavorited = $state(false);
 	let selectedFolder = $state<string | null>(null);
@@ -19,6 +21,7 @@
 	let isSubmitting = $state(false);
 	let error = $state<string | null>(null);
 	let dialogElement: HTMLDialogElement;
+	let confirmingDelete = $state(false);
 
 	$effect(() => {
 		if (channel.id !== syncedChannelId) {
@@ -63,7 +66,6 @@
 	}
 
 	async function handleDelete() {
-		if (!confirm(`Delete "${channel.title}" and all its videos?`)) return;
 		isSubmitting = true;
 		error = null;
 		try {
@@ -79,7 +81,14 @@
 	}
 </script>
 
-<dialog bind:this={dialogElement} class="modal-open modal">
+<dialog
+	bind:this={dialogElement}
+	class="modal-open modal"
+	oncancel={(event) => {
+		event.preventDefault();
+		if (!isSubmitting) onClose();
+	}}
+>
 	<div class="modal-box">
 		<!-- Channel identity (read-only header) -->
 		<div class="mb-4 flex items-center gap-3">
@@ -192,14 +201,14 @@
 
 			<!-- Actions -->
 			<div class="modal-action">
-				<button
-					type="button"
-					class="btn text-error btn-ghost btn-sm"
-					onclick={handleDelete}
-					disabled={isSubmitting}
-				>
-					Delete
-				</button>
+				{#if !demoMode}<button
+						type="button"
+						class="btn text-error btn-ghost btn-sm"
+						onclick={() => (confirmingDelete = true)}
+						disabled={isSubmitting}
+					>
+						Delete
+					</button>{/if}
 				<div class="flex-1"></div>
 				<button type="button" class="btn btn-ghost" onclick={onClose} disabled={isSubmitting}
 					>Cancel</button
@@ -215,3 +224,15 @@
 		<button type="button" onclick={onClose} aria-label="Close modal">close</button>
 	</form>
 </dialog>
+
+{#if confirmingDelete}
+	<ConfirmDialog
+		title="Delete channel?"
+		message={`“${channel.title}” and all of its cached videos will be permanently deleted.`}
+		confirmLabel="Delete channel"
+		busy={isSubmitting}
+		{error}
+		onConfirm={handleDelete}
+		onCancel={() => (confirmingDelete = false)}
+	/>
+{/if}

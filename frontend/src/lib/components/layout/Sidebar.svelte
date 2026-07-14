@@ -1,44 +1,67 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { uiState, toggleSidebar } from '$lib/stores/uiState.svelte';
+	import { uiState, toggleSidebar, closeMobileSidebar } from '$lib/stores/uiState.svelte';
 	import type { FolderOut, ChannelOut } from '$lib/types/api';
 	import FolderTree from './FolderTree.svelte';
 	import { openAddChannel, openCreateFolder, openEditChannel } from '$lib/stores/modalState.svelte';
+	import { afterNavigate } from '$app/navigation';
 
 	interface Props {
 		folders?: FolderOut[];
 		unfolderedChannels?: ChannelOut[];
 		channels?: ChannelOut[];
 		backgroundJobsEnabled?: boolean;
+		demoMode?: boolean;
 	}
 
 	let {
 		folders = [],
 		unfolderedChannels = [],
 		channels = [],
-		backgroundJobsEnabled = true
+		backgroundJobsEnabled = true,
+		demoMode = false
 	}: Props = $props();
 
 	// Filter to only root folders (FolderTree handles children recursively)
 	const rootFolders = $derived(folders.filter((f) => f.parent_id === null));
 
 	const allChannels = $derived(channels);
+	afterNavigate(closeMobileSidebar);
+	let closeButton = $state<HTMLButtonElement>();
+	$effect(() => {
+		if (uiState.current.mobileSidebarOpen) queueMicrotask(() => closeButton?.focus());
+	});
 </script>
+
+<svelte:window
+	onkeydown={(event) => {
+		if (event.key === 'Escape' && uiState.current.mobileSidebarOpen) closeMobileSidebar();
+	}}
+/>
+
+{#if uiState.current.mobileSidebarOpen}
+	<button class="sidebar-backdrop" aria-label="Close navigation" onclick={closeMobileSidebar}
+	></button>
+{/if}
 
 <aside
 	class="sidebar flex h-full flex-col border-r border-base-300 bg-base-100 transition-all duration-300"
 	class:collapsed={uiState.current.sidebarCollapsed}
+	class:mobile-open={uiState.current.mobileSidebarOpen}
+	aria-label="Primary navigation"
 	style="width: {uiState.current.sidebarCollapsed ? '0' : uiState.current.sidebarWidth}px;"
 >
-	{#if !uiState.current.sidebarCollapsed}
+	{#if !uiState.current.sidebarCollapsed || uiState.current.mobileSidebarOpen}
 		<div class="flex h-full flex-col overflow-hidden">
 			<!-- Header -->
 			<div class="flex items-center justify-between border-b border-base-300 p-4">
 				<h2 class="text-lg font-bold">ChooseYourTube</h2>
 				<button
+					bind:this={closeButton}
 					class="btn btn-square btn-ghost btn-sm"
-					onclick={toggleSidebar}
-					aria-label="Collapse sidebar"
+					onclick={() =>
+						uiState.current.mobileSidebarOpen ? closeMobileSidebar() : toggleSidebar()}
+					aria-label={uiState.current.mobileSidebarOpen ? 'Close navigation' : 'Collapse sidebar'}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -239,21 +262,21 @@
 			</nav>
 
 			<!-- Footer Actions -->
-			<div class="border-t border-base-300 p-4">
-				<button class="btn w-full gap-2 btn-sm btn-primary" onclick={openAddChannel}>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="1.5"
-						stroke="currentColor"
-						class="h-5 w-5"
-					>
-						<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-					</svg>
-					<span>Add Channel</span>
-				</button>
-			</div>
+			{#if !demoMode}<div class="border-t border-base-300 p-4">
+					<button class="btn w-full gap-2 btn-sm btn-primary" onclick={openAddChannel}>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="h-5 w-5"
+						>
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+						</svg>
+						<span>Add Channel</span>
+					</button>
+				</div>{/if}
 		</div>
 	{/if}
 </aside>
@@ -262,5 +285,26 @@
 	.sidebar.collapsed {
 		width: 0 !important;
 		overflow: hidden;
+	}
+	.sidebar-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: 39;
+		background: rgb(0 0 0 / 45%);
+	}
+	@media (max-width: 767px) {
+		.sidebar {
+			position: fixed;
+			inset: 0 auto 0 0;
+			z-index: 40;
+			width: min(88vw, 320px) !important;
+			transform: translateX(-100%);
+		}
+		.sidebar.mobile-open {
+			transform: translateX(0);
+		}
+		.sidebar.collapsed {
+			width: min(88vw, 320px) !important;
+		}
 	}
 </style>
