@@ -7,5 +7,6 @@ export interface RuntimeMetadata {
 		background_jobs: boolean;
 		youtube_oauth: boolean;
 		demo_login: boolean;
+		subscription_imports: boolean;
 	};
 }

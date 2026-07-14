@@ -14,6 +14,11 @@ export type UserRead = Schemas['UserRead'];
 export type SyncRunOut = Schemas['SyncRunOut'];
 export type LatestSyncSummary = Schemas['LatestSyncSummary'];
 export type YouTubeQuotaStatusOut = Schemas['YouTubeQuotaStatusOut'];
+export type SubscriptionImportOut = Schemas['SubscriptionImportOut'];
+export type SubscriptionImportCandidateOut = Schemas['SubscriptionImportCandidateOut'];
+export type SubscriptionImportDetailOut = Schemas['SubscriptionImportDetailOut'];
+export type OAuthStartOut = Schemas['OAuthStartOut'];
+export type SubscriptionCandidateState = Schemas['SubscriptionCandidateState'];
 
 export type ChannelCreate = Schemas['ChannelCreate'];
 export type ChannelUpdate = Schemas['ChannelUpdate'];
@@ -31,6 +36,8 @@ export type PlaylistAddVideo = Schemas['PlaylistAddVideo'];
 export type PlaylistAddVideos = Schemas['PlaylistAddVideos'];
 export type PlaylistMoveVideo = Schemas['PlaylistMoveVideo'];
 export type PlaylistSetPosition = Schemas['PlaylistSetPosition'];
+export type CandidateSelectionUpdate = Schemas['CandidateSelectionUpdate'];
+export type SubscriptionImportCommit = Schemas['SubscriptionImportCommit'];
 
 export interface PaginatedResponse<T> {
 	total: number;

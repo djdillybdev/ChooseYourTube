@@ -67,10 +67,10 @@ export class APIClient {
 				const response = await this.fetcher(url, {
 					...fetchOptions,
 					credentials: 'include',
-					headers: {
-						'Content-Type': 'application/json',
-						...fetchOptions.headers
-					}
+					headers:
+						fetchOptions.body instanceof FormData
+							? fetchOptions.headers
+							: { 'Content-Type': 'application/json', ...fetchOptions.headers }
 				});
 
 				// Handle non-2xx responses
@@ -130,6 +130,13 @@ export class APIClient {
 		return this.fetch<T>(endpoint, {
 			method: 'POST',
 			body: body ? JSON.stringify(body) : undefined
+		});
+	}
+
+	async postForm<T>(endpoint: string, body: FormData): Promise<T> {
+		return this.fetch<T>(endpoint, {
+			method: 'POST',
+			body
 		});
 	}
 

@@ -6,6 +6,7 @@ import pytest
 from app.db.crud import crud_sync_run
 from app.db.models.channel import Channel
 from app.db.models.sync_run import SyncRun, YouTubeAPIUsage
+from app.db.models.subscription_import import SubscriptionImport
 from app.schemas.sync_run import SyncRunKind, SyncRunStatus
 from app.services import sync_service
 
@@ -55,6 +56,28 @@ async def test_enqueue_uses_run_id_as_job_id(db_session, channel, mock_arq_redis
     mock_arq_redis.enqueue_job.assert_awaited_once_with(
         "execute_sync_run", str(run.id), _job_id=str(run.id)
     )
+
+
+@pytest.mark.asyncio
+async def test_import_runs_are_deduplicated_by_import(db_session):
+    import_record = SubscriptionImport(owner_id="owner-1", source="youtube_takeout_csv")
+    db_session.add(import_record)
+    await db_session.commit()
+    first, created = await sync_service.create_or_get_active_run(
+        db_session,
+        owner_id="owner-1",
+        subscription_import_id=import_record.id,
+        kind=SyncRunKind.SUBSCRIPTION_IMPORT,
+    )
+    second, created_again = await sync_service.create_or_get_active_run(
+        db_session,
+        owner_id="owner-1",
+        subscription_import_id=import_record.id,
+        kind=SyncRunKind.SUBSCRIPTION_IMPORT,
+    )
+    assert created is True
+    assert created_again is False
+    assert first.id == second.id
 
 
 @pytest.mark.asyncio

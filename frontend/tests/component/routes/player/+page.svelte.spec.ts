@@ -67,7 +67,8 @@ describe('player route layout', () => {
 				registration: true,
 				background_jobs: true,
 				youtube_oauth: false,
-				demo_login: false
+				demo_login: false,
+				subscription_imports: true
 			}
 		}
 	};

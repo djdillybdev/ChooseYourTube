@@ -8,7 +8,13 @@ const fallbackRuntime: RuntimeMetadata = {
 	name: 'ChooseYourTube',
 	version: '0.1.0',
 	mode: 'full',
-	features: { registration: true, background_jobs: true, youtube_oauth: false, demo_login: false }
+	features: {
+		registration: true,
+		background_jobs: true,
+		youtube_oauth: false,
+		demo_login: false,
+		subscription_imports: true
+	}
 };
 
 function isPublicAuthRoute(pathname: string): boolean {

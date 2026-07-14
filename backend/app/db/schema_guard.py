@@ -14,6 +14,16 @@ REQUIRED_PLAYLIST_COLUMNS: tuple[str, ...] = (
     "source_is_active",
     "source_last_synced_at",
 )
+REQUIRED_IMPORT_COLUMNS: dict[str, tuple[str, ...]] = {
+    "subscription_imports": ("id", "owner_id", "source", "status"),
+    "subscription_import_candidates": (
+        "id",
+        "import_id",
+        "owner_id",
+        "channel_id",
+        "state",
+    ),
+}
 
 
 class SchemaMismatchError(RuntimeError):
@@ -43,14 +53,14 @@ async def _get_table_columns(db_session: AsyncSession, table_name: str) -> set[s
 
 
 async def assert_required_playlist_schema(db_session: AsyncSession) -> None:
-    columns = await _get_table_columns(db_session, "playlists")
-    missing = sorted(set(REQUIRED_PLAYLIST_COLUMNS) - columns)
-    if not missing:
-        return
-
-    missing_csv = ", ".join(missing)
-    raise SchemaMismatchError(
-        "Database schema mismatch for table 'playlists'. "
-        f"Missing required columns: {missing_csv}. "
-        "Run `alembic upgrade head` before starting the API."
-    )
+    required = {"playlists": REQUIRED_PLAYLIST_COLUMNS, **REQUIRED_IMPORT_COLUMNS}
+    for table_name, expected_columns in required.items():
+        columns = await _get_table_columns(db_session, table_name)
+        missing = sorted(set(expected_columns) - columns)
+        if missing:
+            missing_csv = ", ".join(missing)
+            raise SchemaMismatchError(
+                f"Database schema mismatch for table '{table_name}'. "
+                f"Missing required columns: {missing_csv}. "
+                "Run `alembic upgrade head` before starting the API."
+            )

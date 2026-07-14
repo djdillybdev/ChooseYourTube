@@ -2,7 +2,7 @@
 Tests for YouTube API client.
 
 Tests the YouTubeAPI class and YouTubeAPIManager for interacting
-with the YouTube Data API, including OAuth and API key authentication.
+with the YouTube Data API using API key authentication.
 """
 
 import pytest
@@ -12,7 +12,7 @@ from app.clients.youtube import YouTubeAPI, YouTubeAPIManager, get_youtube_api
 
 
 class TestYouTubeAPIInit:
-    """Test YouTubeAPI initialization with different auth methods."""
+    """Test YouTubeAPI initialization."""
 
     def test_init_with_api_key(self):
         """Test initialization with API key only."""
@@ -28,87 +28,12 @@ class TestYouTubeAPIInit:
             )
             assert client.youtube == mock_youtube
 
-    def test_init_with_client_secrets_oauth(self):
-        """Test initialization with OAuth client secrets."""
-        with patch(
-            "app.clients.youtube.google_auth_oauthlib.flow.InstalledAppFlow"
-        ) as mock_flow_cls:
-            with patch(
-                "app.clients.youtube.googleapiclient.discovery.build"
-            ) as mock_build:
-                # Mock OAuth flow
-                mock_flow = MagicMock()
-                mock_credentials = MagicMock()
-                mock_flow.run_console.return_value = mock_credentials
-                mock_flow_cls.from_client_secrets_file.return_value = mock_flow
-
-                # Mock youtube client
-                mock_youtube = MagicMock()
-                mock_build.return_value = mock_youtube
-
-                client = YouTubeAPI(
-                    client_secrets_file="client_secrets.json",
-                    scopes=["https://www.googleapis.com/auth/youtube.readonly"],
-                )
-
-                # Verify OAuth flow was used
-                mock_flow_cls.from_client_secrets_file.assert_called_once_with(
-                    "client_secrets.json",
-                    scopes=["https://www.googleapis.com/auth/youtube.readonly"],
-                )
-                mock_flow.run_console.assert_called_once()
-
-                # Verify build was called with credentials
-                mock_build.assert_called_once_with(
-                    "youtube", "v3", credentials=mock_credentials
-                )
-                assert client.youtube == mock_youtube
-
-    def test_init_with_client_secrets_default_scopes(self):
-        """Test that OAuth defaults to readonly scope if not provided."""
-        with patch(
-            "app.clients.youtube.google_auth_oauthlib.flow.InstalledAppFlow"
-        ) as mock_flow_cls:
-            with patch("app.clients.youtube.googleapiclient.discovery.build"):
-                mock_flow = MagicMock()
-                mock_flow_cls.from_client_secrets_file.return_value = mock_flow
-
-                YouTubeAPI(client_secrets_file="client_secrets.json")
-
-                # Verify default scope was used
-                call_args = mock_flow_cls.from_client_secrets_file.call_args
-                assert call_args[1]["scopes"] == [
-                    "https://www.googleapis.com/auth/youtube.readonly"
-                ]
-
     def test_init_without_credentials_raises(self):
         """Test that initialization without credentials raises ValueError."""
         with pytest.raises(ValueError) as exc_info:
             YouTubeAPI()
 
-        assert "Must provide either" in str(exc_info.value)
-
-    def test_init_with_both_credentials_prefers_oauth(self):
-        """Test that OAuth is preferred when both credentials are provided."""
-        with patch(
-            "app.clients.youtube.google_auth_oauthlib.flow.InstalledAppFlow"
-        ) as mock_flow_cls:
-            with patch(
-                "app.clients.youtube.googleapiclient.discovery.build"
-            ) as mock_build:
-                mock_flow = MagicMock()
-                mock_credentials = MagicMock()
-                mock_flow.run_console.return_value = mock_credentials
-                mock_flow_cls.from_client_secrets_file.return_value = mock_flow
-
-                YouTubeAPI(
-                    client_secrets_file="client_secrets.json", api_key="test_api_key"
-                )
-
-                # Verify OAuth was used (not API key)
-                mock_build.assert_called_once_with(
-                    "youtube", "v3", credentials=mock_credentials
-                )
+        assert "Must provide an api_key" in str(exc_info.value)
 
 
 class TestYouTubeAPISyncMethods:

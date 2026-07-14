@@ -129,6 +129,9 @@ class Settings(BaseSettings):
             "background_jobs": bool(self.BACKGROUND_JOBS_ENABLED),
             "youtube_oauth": bool(self.YOUTUBE_OAUTH_ENABLED),
             "demo_login": bool(self.DEMO_LOGIN_ENABLED),
+            "subscription_imports": bool(
+                self.APP_MODE == "full" and self.BACKGROUND_JOBS_ENABLED
+            ),
         }
 
 

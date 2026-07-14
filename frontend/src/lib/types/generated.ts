@@ -405,6 +405,108 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/imports/subscriptions/csv': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Upload Takeout Csv */
+		post: operations['upload_takeout_csv_imports_subscriptions_csv_post'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/imports/youtube/oauth/callback': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Youtube Oauth Callback */
+		get: operations['youtube_oauth_callback_imports_youtube_oauth_callback_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/imports/youtube/oauth/start': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Start Youtube Oauth */
+		get: operations['start_youtube_oauth_imports_youtube_oauth_start_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/imports/{import_id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get Import */
+		get: operations['get_import_imports__import_id__get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/imports/{import_id}/candidates': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/** Update Candidates */
+		patch: operations['update_candidates_imports__import_id__candidates_patch'];
+		trace?: never;
+	};
+	'/imports/{import_id}/commit': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Commit Import */
+		post: operations['commit_import_imports__import_id__commit_post'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/playlists/': {
 		parameters: {
 			query?: never;
@@ -966,6 +1068,14 @@ export interface components {
 			/** Token */
 			token: string;
 		};
+		/** Body_upload_takeout_csv_imports_subscriptions_csv_post */
+		Body_upload_takeout_csv_imports_subscriptions_csv_post: {
+			/**
+			 * File
+			 * Format: binary
+			 */
+			file: string;
+		};
 		/** Body_verify_request_token_auth_request_verify_token_post */
 		Body_verify_request_token_auth_request_verify_token_post: {
 			/**
@@ -978,6 +1088,13 @@ export interface components {
 		Body_verify_verify_auth_verify_post: {
 			/** Token */
 			token: string;
+		};
+		/** CandidateSelectionUpdate */
+		CandidateSelectionUpdate: {
+			/** Candidate Ids */
+			candidate_ids: string[];
+			/** Selected */
+			selected: boolean;
 		};
 		/**
 		 * ChannelCreate
@@ -1163,6 +1280,16 @@ export interface components {
 			retryable: boolean;
 			status: components['schemas']['SyncRunStatus'];
 		};
+		/** OAuthStartOut */
+		OAuthStartOut: {
+			/** Authorization Url */
+			authorization_url: string;
+			/**
+			 * Import Id
+			 * Format: uuid
+			 */
+			import_id: string;
+		};
 		/** PaginatedResponse[ChannelOut] */
 		PaginatedResponse_ChannelOut_: {
 			/** Has More */
@@ -1195,6 +1322,19 @@ export interface components {
 			has_more: boolean;
 			/** Items */
 			items: components['schemas']['PlaylistOut'][];
+			/** Limit */
+			limit: number;
+			/** Offset */
+			offset: number;
+			/** Total */
+			total: number;
+		};
+		/** PaginatedResponse[SubscriptionImportCandidateOut] */
+		PaginatedResponse_SubscriptionImportCandidateOut_: {
+			/** Has More */
+			has_more: boolean;
+			/** Items */
+			items: components['schemas']['SubscriptionImportCandidateOut'][];
 			/** Limit */
 			limit: number;
 			/** Offset */
@@ -1436,6 +1576,111 @@ export interface components {
 			/** Refresh Token */
 			refresh_token: string;
 		};
+		/**
+		 * SubscriptionCandidateState
+		 * @enum {string}
+		 */
+		SubscriptionCandidateState: 'new' | 'existing' | 'invalid' | 'selected' | 'imported' | 'failed';
+		/** SubscriptionImportCandidateOut */
+		SubscriptionImportCandidateOut: {
+			/** Channel Id */
+			channel_id: string | null;
+			/** Channel Title */
+			channel_title: string | null;
+			/** Channel Url */
+			channel_url: string | null;
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id: string;
+			/** Message */
+			message: string | null;
+			/** Source Index */
+			source_index: number;
+			state: components['schemas']['SubscriptionCandidateState'];
+		};
+		/** SubscriptionImportCommit */
+		SubscriptionImportCommit: {
+			/** Folder Id */
+			folder_id?: string | null;
+			/** Selected Candidate Ids */
+			selected_candidate_ids?: string[] | null;
+			/** Tag Ids */
+			tag_ids?: string[];
+		};
+		/** SubscriptionImportDetailOut */
+		SubscriptionImportDetailOut: {
+			candidates: components['schemas']['PaginatedResponse_SubscriptionImportCandidateOut_'];
+			import: components['schemas']['SubscriptionImportOut'];
+		};
+		/** SubscriptionImportOut */
+		SubscriptionImportOut: {
+			/** Candidate Count */
+			candidate_count: number;
+			/**
+			 * Created At
+			 * Format: date-time
+			 */
+			created_at: string;
+			/** Destination Folder Id */
+			destination_folder_id: string | null;
+			/** Destination Tag Ids */
+			destination_tag_ids: string[];
+			/** Error Code */
+			error_code: string | null;
+			/** Error Message */
+			error_message: string | null;
+			/** Existing Count */
+			existing_count: number;
+			/** Failed Count */
+			failed_count: number;
+			/** Finished At */
+			finished_at: string | null;
+			/**
+			 * Id
+			 * Format: uuid
+			 */
+			id: string;
+			/** Imported Count */
+			imported_count: number;
+			/** Invalid Count */
+			invalid_count: number;
+			/** New Count */
+			new_count: number;
+			/** Queued At */
+			queued_at: string | null;
+			/** Ready At */
+			ready_at: string | null;
+			/** Selected Count */
+			selected_count: number;
+			source: components['schemas']['SubscriptionImportSource'];
+			/** Started At */
+			started_at: string | null;
+			status: components['schemas']['SubscriptionImportStatus'];
+			/**
+			 * Updated At
+			 * Format: date-time
+			 */
+			updated_at: string;
+		};
+		/**
+		 * SubscriptionImportSource
+		 * @enum {string}
+		 */
+		SubscriptionImportSource: 'youtube_oauth' | 'youtube_takeout_csv';
+		/**
+		 * SubscriptionImportStatus
+		 * @enum {string}
+		 */
+		SubscriptionImportStatus:
+			| 'collecting'
+			| 'ready'
+			| 'queued'
+			| 'running'
+			| 'succeeded'
+			| 'partial'
+			| 'failed';
 		/**
 		 * SyncRunKind
 		 * @enum {string}
@@ -3973,6 +4218,531 @@ export interface operations {
 				};
 				content: {
 					'application/json': unknown;
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	upload_takeout_csv_imports_subscriptions_csv_post: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'multipart/form-data': components['schemas']['Body_upload_takeout_csv_imports_subscriptions_csv_post'];
+			};
+		};
+		responses: {
+			/** @description Successful Response */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['SubscriptionImportDetailOut'];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	youtube_oauth_callback_imports_youtube_oauth_callback_get: {
+		parameters: {
+			query?: {
+				state?: string | null;
+				code?: string | null;
+				error?: string | null;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': unknown;
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	start_youtube_oauth_imports_youtube_oauth_start_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['OAuthStartOut'];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	get_import_imports__import_id__get: {
+		parameters: {
+			query?: {
+				state?: components['schemas']['SubscriptionCandidateState'] | null;
+				search?: string | null;
+				limit?: number;
+				offset?: number;
+			};
+			header?: never;
+			path: {
+				import_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['SubscriptionImportDetailOut'];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	update_candidates_imports__import_id__candidates_patch: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				import_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CandidateSelectionUpdate'];
+			};
+		};
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['SubscriptionImportOut'];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	commit_import_imports__import_id__commit_post: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				import_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['SubscriptionImportCommit'];
+			};
+		};
+		responses: {
+			/** @description Successful Response */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['SyncRunOut'];
 				};
 			};
 			/** @description Safe API error */

@@ -1,8 +1,7 @@
 import asyncio
-from typing import Dict, Any, Iterator, List, Optional
+from typing import Dict, Any, Iterator, Optional
 from contextlib import contextmanager
 
-import google_auth_oauthlib.flow  # type: ignore[import-untyped]
 import googleapiclient.discovery  # type: ignore[import-untyped]
 import googleapiclient.errors  # type: ignore[import-untyped]
 
@@ -15,51 +14,33 @@ class YouTubeAPI:
     A helper class to interact with the YouTube Data API using the
     googleapiclient.discovery library.
 
-    Supports two authentication methods:
-    1) OAuth 2.0 client credentials (for private or user-specific data).
-    2) API Key (for public data, read-only).
+    Uses an API key for public read-only data. Web OAuth imports use the
+    dedicated, short-lived client in ``youtube_oauth.py``.
     """
 
     def __init__(
         self,
         api_service_name: str = "youtube",
         api_version: str = "v3",
-        client_secrets_file: Optional[str] = None,
         api_key: Optional[str] = None,
-        scopes: Optional[List[str]] = None,
         account_usage: bool = False,
     ):
         """
-        Initialize a YouTube client using either OAuth 2.0 or an API key.
+        Initialize a YouTube client using an API key.
 
         :param api_service_name: The name of the Google API service, defaults to "youtube".
         :param api_version: The version of the API, defaults to "v3".
-        :param client_secrets_file: Path to OAuth2 client secrets JSON file (from Google Cloud Console).
         :param api_key: A public API key for read-only access to public resources.
-        :param scopes: List of OAuth scopes; e.g., ["https://www.googleapis.com/auth/youtube.readonly"].
         """
         self.account_usage = account_usage
-        # If BOTH api_key and client_secrets_file are provided, we'll just prefer OAuth2.
-        if client_secrets_file is not None:
-            if not scopes:
-                scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
-            # Run the OAuth flow
-            flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
-                client_secrets_file,
-                scopes=scopes,
-            )
-            credentials = flow.run_console()
-            self.youtube = googleapiclient.discovery.build(
-                api_service_name, api_version, credentials=credentials
-            )
-        elif api_key is not None:
+        if api_key is not None:
             # Build using an API key (sufficient for public data).
             self.youtube = googleapiclient.discovery.build(
                 api_service_name, api_version, developerKey=api_key
             )
         else:
             raise ValueError(
-                "Must provide either a client_secrets_file (OAuth) or an api_key."
+                "Must provide an api_key."
             )
 
     def channels_list(self, **kwargs):

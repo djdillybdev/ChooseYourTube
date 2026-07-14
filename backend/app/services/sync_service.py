@@ -81,9 +81,13 @@ async def create_or_get_active_run(
     subscription_import_id: uuid.UUID | None = None,
     max_attempts: int = 4,
 ) -> tuple[SyncRun, bool]:
-    if channel_id is not None:
+    if channel_id is not None or subscription_import_id is not None:
         existing = await crud_sync_run.get_active_sync_run(
-            db_session, owner_id=owner_id, channel_id=channel_id, kind=kind.value
+            db_session,
+            owner_id=owner_id,
+            channel_id=channel_id,
+            subscription_import_id=subscription_import_id,
+            kind=kind.value,
         )
         if existing is not None:
             return existing, False
@@ -101,10 +105,14 @@ async def create_or_get_active_run(
         await db_session.commit()
     except IntegrityError:
         await db_session.rollback()
-        if channel_id is None:
+        if channel_id is None and subscription_import_id is None:
             raise
         existing = await crud_sync_run.get_active_sync_run(
-            db_session, owner_id=owner_id, channel_id=channel_id, kind=kind.value
+            db_session,
+            owner_id=owner_id,
+            channel_id=channel_id,
+            subscription_import_id=subscription_import_id,
+            kind=kind.value,
         )
         if existing is None:
             raise

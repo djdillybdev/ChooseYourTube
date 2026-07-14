@@ -201,32 +201,60 @@ async def create_channel(
 
     # 2. Extract data and check if channel already exists in our DB
     yt_channel_data = items[0]
-    channel_id = yt_channel_data["id"]
+    return await create_channel_from_metadata(
+        yt_channel_data,
+        db_session,
+        owner_id=owner_id,
+        folder_id=channel_data.folder_id,
+        handle=channel_data.handle,
+    )
 
+
+async def create_channel_from_metadata(
+    yt_channel_data: dict,
+    db_session: AsyncSession,
+    *,
+    owner_id: str,
+    folder_id: str | None = None,
+    tag_ids: list[str] | None = None,
+    handle: str | None = None,
+) -> Channel:
+    """Create an owned channel from a channels.list item."""
+    channel_id = yt_channel_data["id"]
     existing_channel = await crud_channel.get_channels(
         db_session, owner_id=owner_id, id=channel_id, first=True
     )
     if existing_channel:
-        raise HTTPException(
-            status_code=409, detail="This channel has already been added."
-        )
+        raise HTTPException(status_code=409, detail="This channel has already been added.")
 
-    # 3. Prepare and create the new channel in the database
     snippet = yt_channel_data.get("snippet", {})
     content_details = yt_channel_data.get("contentDetails", {})
+    uploads_playlist_id = content_details.get("relatedPlaylists", {}).get("uploads")
+    if not uploads_playlist_id or not snippet.get("title"):
+        raise ApplicationError(
+            "YOUTUBE_CHANNEL_INVALID",
+            "YouTube returned incomplete channel metadata.",
+            502,
+        )
 
     new_channel = Channel(
         owner_id=owner_id,
         id=channel_id,
         title=snippet.get("title"),
-        handle=channel_data.handle,  # Use the handle provided by the user
+        handle=handle or snippet.get("customUrl") or channel_id,
         description=snippet.get("description"),
         thumbnail_url=_get_best_thumbnail_url(snippet.get("thumbnails", {})),
-        uploads_playlist_id=content_details.get("relatedPlaylists", {}).get("uploads"),
-        folder_id=channel_data.folder_id,
+        uploads_playlist_id=uploads_playlist_id,
+        folder_id=folder_id,
     )
+    db_session.add(new_channel)
+    if tag_ids:
+        from .tag_service import sync_entity_tags
 
-    return await crud_channel.create_channel(db_session, new_channel)
+        await sync_entity_tags(new_channel, tag_ids, db_session, owner_id=owner_id)
+    await db_session.commit()
+    await db_session.refresh(new_channel)
+    return new_channel
 
 
 async def update_channel(

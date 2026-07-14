@@ -97,8 +97,35 @@ describe('backend proxy route', () => {
 			'/channels',
 			expect.objectContaining({
 				method: 'POST',
-				body: JSON.stringify({ handle: '@abc' }),
+				body: expect.any(ArrayBuffer),
 				headers: { 'Content-Type': 'application/json' }
+			})
+		);
+		const forwarded = backendFetchFromEventMock.mock.calls[0][2].body as ArrayBuffer;
+		expect(new TextDecoder().decode(forwarded)).toBe(JSON.stringify({ handle: '@abc' }));
+	});
+
+	it('allows imports and preserves multipart bytes and boundary', async () => {
+		backendFetchFromEventMock.mockResolvedValue(
+			new Response(JSON.stringify({ import: { id: 'import-1' } }), {
+				status: 201,
+				headers: { 'content-type': 'application/json' }
+			})
+		);
+		const response = await POST(
+			makeEvent('/api/backend/imports/subscriptions/csv', {
+				method: 'POST',
+				body: '--boundary\r\nCSV data\r\n--boundary--',
+				contentType: 'multipart/form-data; boundary=boundary'
+			})
+		);
+		expect(response.status).toBe(201);
+		expect(backendFetchFromEventMock).toHaveBeenCalledWith(
+			expect.anything(),
+			'/imports/subscriptions/csv',
+			expect.objectContaining({
+				headers: { 'Content-Type': 'multipart/form-data; boundary=boundary' },
+				body: expect.any(ArrayBuffer)
 			})
 		);
 	});

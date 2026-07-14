@@ -20,7 +20,12 @@ from .db.crud import crud_channel, crud_sync_run
 from .db.session import sessionmanager
 from .routers.health import WORKER_HEARTBEAT_KEY
 from .schemas.sync_run import SyncRunKind, SyncRunStatus
-from .services import channel_playlist_service, sync_service, video_service
+from .services import (
+    channel_playlist_service,
+    subscription_import_service,
+    sync_service,
+    video_service,
+)
 
 logger = logging.getLogger(__name__)
 REDIS_SETTINGS = settings.get_redis_settings()
@@ -125,7 +130,21 @@ async def enqueue_channel_refreshes(ctx: dict) -> None:
             await redis.delete(SCHEDULER_LOCK_KEY)
 
 
-async def _execute_kind(run, db, youtube_client: YouTubeAPI) -> sync_service.SyncProgress:
+async def _execute_kind(
+    run, db, youtube_client: YouTubeAPI, redis
+) -> sync_service.SyncProgress:
+    if run.kind == SyncRunKind.SUBSCRIPTION_IMPORT.value:
+        if run.subscription_import_id is None:
+            raise ApplicationError(
+                "INVALID_SYNC_TARGET", "The subscription import target is invalid.", 422
+            )
+        return await subscription_import_service.execute_import(
+            db,
+            redis,
+            youtube_client,
+            import_id=run.subscription_import_id,
+            owner_id=run.owner_id,
+        )
     if run.channel_id is None:
         raise ApplicationError(
             "INVALID_SYNC_TARGET", "The synchronization target is invalid.", 422
@@ -168,19 +187,26 @@ async def execute_sync_run(ctx: dict, sync_run_id: str) -> None:
             run = await crud_sync_run.get_sync_run(db, run_uuid)
             if run is None:
                 return
-            progress = await _execute_kind(run, db, youtube_client)
+            progress = await _execute_kind(run, db, youtube_client, ctx["redis"])
             run.items_discovered += progress.discovered
             run.items_created += progress.created
             run.items_updated += progress.updated
             run.items_skipped += progress.skipped
             run.items_failed += progress.failed
-            run.status = (
-                SyncRunStatus.PARTIAL.value
-                if progress.failed
-                else SyncRunStatus.SUCCEEDED.value
-            )
-            run.error_code = None
-            run.error_message = None
+            if progress.failed:
+                run.status = (
+                    SyncRunStatus.FAILED.value
+                    if run.kind == SyncRunKind.SUBSCRIPTION_IMPORT.value
+                    and not (progress.created or progress.skipped)
+                    else SyncRunStatus.PARTIAL.value
+                )
+                if run.kind == SyncRunKind.SUBSCRIPTION_IMPORT.value:
+                    run.error_code = "IMPORT_CANDIDATES_FAILED"
+                    run.error_message = "Some selected channels could not be imported."
+            else:
+                run.status = SyncRunStatus.SUCCEEDED.value
+                run.error_code = None
+                run.error_message = None
             run.finished_at = datetime.now(timezone.utc)
             run.next_retry_at = None
             await db.commit()
@@ -191,6 +217,11 @@ async def execute_sync_run(ctx: dict, sync_run_id: str) -> None:
                     "task_kind": run.kind,
                     "owner_id": run.owner_id,
                     "channel_id": run.channel_id,
+                    "subscription_import_id": (
+                        str(run.subscription_import_id)
+                        if run.subscription_import_id
+                        else None
+                    ),
                     "attempt": run.attempt_count,
                     "duration_ms": round((time.perf_counter() - started) * 1000, 2),
                     "outcome": run.status,
@@ -213,6 +244,14 @@ async def execute_sync_run(ctx: dict, sync_run_id: str) -> None:
                 delay = RETRY_DELAYS_SECONDS[run.attempt_count - 1]
                 run.status = SyncRunStatus.QUEUED.value
                 run.next_retry_at = datetime.now(timezone.utc) + timedelta(seconds=delay)
+                if run.subscription_import_id is not None:
+                    await subscription_import_service.defer_execution(
+                        db,
+                        import_id=run.subscription_import_id,
+                        owner_id=run.owner_id,
+                        code=exc.code,
+                        message=exc.message,
+                    )
                 await db.commit()
                 logger.warning(
                     "sync_run_retry_scheduled",
@@ -221,11 +260,24 @@ async def execute_sync_run(ctx: dict, sync_run_id: str) -> None:
                         "task_kind": run.kind,
                         "owner_id": run.owner_id,
                         "channel_id": run.channel_id,
+                        "subscription_import_id": (
+                            str(run.subscription_import_id)
+                            if run.subscription_import_id
+                            else None
+                        ),
                         "attempt": run.attempt_count,
                         "outcome": "retrying",
                     },
                 )
                 raise arq.Retry(defer=delay) from exc
+            if run.subscription_import_id is not None:
+                await subscription_import_service.fail_execution(
+                    db,
+                    import_id=run.subscription_import_id,
+                    owner_id=run.owner_id,
+                    code=exc.code,
+                    message=exc.message,
+                )
             run.status = SyncRunStatus.FAILED.value
             run.finished_at = datetime.now(timezone.utc)
             run.next_retry_at = None
@@ -237,6 +289,11 @@ async def execute_sync_run(ctx: dict, sync_run_id: str) -> None:
                     "task_kind": run.kind,
                     "owner_id": run.owner_id,
                     "channel_id": run.channel_id,
+                    "subscription_import_id": (
+                        str(run.subscription_import_id)
+                        if run.subscription_import_id
+                        else None
+                    ),
                     "attempt": run.attempt_count,
                     "duration_ms": round((time.perf_counter() - started) * 1000, 2),
                     "outcome": "failed",
@@ -247,6 +304,14 @@ async def execute_sync_run(ctx: dict, sync_run_id: str) -> None:
         async with sessionmanager.session() as db:
             run = await crud_sync_run.get_sync_run(db, run_uuid)
             if run is not None:
+                if run.subscription_import_id is not None:
+                    await subscription_import_service.fail_execution(
+                        db,
+                        import_id=run.subscription_import_id,
+                        owner_id=run.owner_id,
+                        code="SYNC_INTERNAL_ERROR",
+                        message="The subscription import failed unexpectedly.",
+                    )
                 run.status = SyncRunStatus.FAILED.value
                 run.error_code = "SYNC_INTERNAL_ERROR"
                 run.error_message = "Synchronization failed unexpectedly."

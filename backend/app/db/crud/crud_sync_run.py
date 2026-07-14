@@ -19,19 +19,25 @@ async def get_sync_run(
 
 
 async def get_active_sync_run(
-    db: AsyncSession, *, owner_id: str, channel_id: str, kind: str
+    db: AsyncSession,
+    *,
+    owner_id: str,
+    kind: str,
+    channel_id: str | None = None,
+    subscription_import_id: uuid.UUID | None = None,
 ) -> SyncRun | None:
-    return await db.scalar(
-        select(SyncRun)
-        .where(
-            SyncRun.owner_id == owner_id,
-            SyncRun.channel_id == channel_id,
-            SyncRun.kind == kind,
-            SyncRun.status.in_(("queued", "running")),
-        )
-        .order_by(SyncRun.queued_at.desc())
-        .limit(1)
+    stmt = select(SyncRun).where(
+        SyncRun.owner_id == owner_id,
+        SyncRun.kind == kind,
+        SyncRun.status.in_(("queued", "running")),
     )
+    if channel_id is not None:
+        stmt = stmt.where(SyncRun.channel_id == channel_id)
+    elif subscription_import_id is not None:
+        stmt = stmt.where(SyncRun.subscription_import_id == subscription_import_id)
+    else:
+        return None
+    return await db.scalar(stmt.order_by(SyncRun.queued_at.desc()).limit(1))
 
 
 def _filtered_runs_query(

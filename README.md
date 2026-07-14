@@ -23,6 +23,19 @@ ChooseYourTube is GPL-3.0-only licensed and currently targets Python 3.12, Node.
 
 `APP_ENV=production` enables strict validation for secrets, CORS origins, and OAuth transport. See `.env.example` for the complete typed configuration surface.
 
+### Subscription imports
+
+Full mode can import subscriptions from a Google Takeout CSV without additional credentials. To also enable one-time Google account imports, create a Google OAuth web client, authorize the read-only YouTube Data API scope, and configure:
+
+```env
+YOUTUBE_OAUTH_ENABLED=true
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=http://localhost:8000/imports/youtube/oauth/callback
+```
+
+The redirect URI must match Google Cloud exactly. OAuth credentials are used only to discover subscriptions and are not persisted; channel metadata and synchronization continue with `YOUTUBE_API_KEY`.
+
 
 ## Quick Start
 

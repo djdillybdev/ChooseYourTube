@@ -6,6 +6,7 @@ import { TagsAPI } from './tags';
 import { PlaylistsAPI } from './playlists';
 import { AuthAPI, authApi } from './auth';
 import { SyncRunsAPI } from './syncRuns';
+import { ImportsAPI } from './imports';
 
 /**
  * Unified API interface providing access to all backend resources
@@ -18,6 +19,7 @@ interface API {
 	playlists: PlaylistsAPI;
 	auth: AuthAPI;
 	syncRuns: SyncRunsAPI;
+	imports: ImportsAPI;
 	invalidateAll: () => void;
 	invalidate: (pattern: string) => void;
 }
@@ -34,6 +36,7 @@ function createAPI(client: APIClient): API {
 		playlists: new PlaylistsAPI(client),
 		auth: authApi,
 		syncRuns: new SyncRunsAPI(client),
+		imports: new ImportsAPI(client),
 		invalidateAll: () => client.invalidateCache(),
 		invalidate: (pattern: string) => client.invalidateCache(pattern)
 	};

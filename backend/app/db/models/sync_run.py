@@ -21,6 +21,9 @@ from ..base import Base
 
 
 ACTIVE_SYNC_PREDICATE = "status IN ('queued', 'running') AND channel_id IS NOT NULL"
+ACTIVE_IMPORT_PREDICATE = (
+    "status IN ('queued', 'running') AND subscription_import_id IS NOT NULL"
+)
 
 
 class SyncRun(Base):
@@ -54,6 +57,21 @@ class SyncRun(Base):
             postgresql_where=text(ACTIVE_SYNC_PREDICATE),
             sqlite_where=text(ACTIVE_SYNC_PREDICATE),
         ),
+        Index(
+            "uq_sync_runs_active_import_kind",
+            "owner_id",
+            "subscription_import_id",
+            "kind",
+            unique=True,
+            postgresql_where=text(ACTIVE_IMPORT_PREDICATE),
+            sqlite_where=text(ACTIVE_IMPORT_PREDICATE),
+        ),
+        ForeignKeyConstraint(
+            ["owner_id", "subscription_import_id"],
+            ["subscription_imports.owner_id", "subscription_imports.id"],
+            name="fk_sync_runs_subscription_import",
+            ondelete="CASCADE",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -63,7 +81,6 @@ class SyncRun(Base):
         String(16), nullable=False, default="queued", server_default="queued"
     )
     channel_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    # Phase 4 adds the foreign key when subscription_imports exists.
     subscription_import_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
 
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -93,6 +110,9 @@ class SyncRun(Base):
     )
 
     channel = relationship("Channel", back_populates="sync_runs")
+    subscription_import = relationship(
+        "SubscriptionImport", back_populates="sync_runs", overlaps="channel,sync_runs"
+    )
 
 
 class YouTubeAPIUsage(Base):

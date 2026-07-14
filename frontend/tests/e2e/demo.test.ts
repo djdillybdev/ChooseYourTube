@@ -79,3 +79,30 @@ test('tags can be created, renamed, and deleted in organization settings', async
 	await page.getByRole('button', { name: 'Delete' }).click();
 	await expect(page.getByText(/No tags yet/)).toBeVisible();
 });
+
+test('Takeout CSV can be reviewed and committed as a durable import', async ({ page, context }) => {
+	await context.addCookies([
+		{
+			name: 'cyt_access_token',
+			value: 'e2e-access',
+			url: 'http://localhost:4173',
+			httpOnly: true,
+			sameSite: 'Lax'
+		}
+	]);
+
+	await page.goto('/settings/imports');
+	await page.getByLabel('Choose CSV').setInputFiles({
+		name: 'subscriptions.csv',
+		mimeType: 'text/csv',
+		buffer: Buffer.from(
+			'Channel Id,Channel Url,Channel Title\nUC_imported_portfolio1,,Imported Portfolio Channel'
+		)
+	});
+	await expect(page.getByRole('heading', { name: 'Review subscriptions' })).toBeVisible();
+	await page.getByRole('checkbox', { name: /Select Imported Portfolio Channel/ }).check();
+	await page.getByRole('tab', { name: /Selected/ }).click();
+	await expect(page.getByText('Imported Portfolio Channel')).toBeVisible();
+	await page.getByRole('button', { name: 'Import 1 channels' }).click();
+	await expect(page.getByText('succeeded', { exact: true })).toBeVisible({ timeout: 15_000 });
+});

@@ -8,6 +8,7 @@ Backend API for managing YouTube channels, videos, playlists, folders, and tags 
 - Lets users organize channels in folders and attach tags.
 - Supports manual and system playlists with ordered video positions.
 - Syncs channel videos and channel playlists in the background.
+- Imports subscriptions from Google Takeout CSV or one-time Google OAuth authorization.
 - Exposes JWT-based authentication and user management.
 
 ## Tech Stack
@@ -90,6 +91,8 @@ Required variables:
 - `AUTH_SECRET`: JWT signing secret
 
 Use a strong `AUTH_SECRET` outside local development.
+
+Google OAuth import is optional. When enabled, configure a web OAuth client with an exact redirect URI of `http://localhost:8000/imports/youtube/oauth/callback` for the default Docker stack. Imported Google credentials are discarded after subscription discovery.
 
 ## Local Setup (First Run)
 

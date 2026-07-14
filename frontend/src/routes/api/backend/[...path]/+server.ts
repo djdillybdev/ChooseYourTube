@@ -8,6 +8,7 @@ const ALLOWED_PREFIXES = [
 	'tags',
 	'playlists',
 	'sync-runs',
+	'imports',
 	'users/me'
 ];
 
@@ -24,7 +25,8 @@ async function proxy(event: RequestEvent, method: string) {
 	}
 
 	const query = event.url.search || '';
-	const body = method === 'GET' || method === 'DELETE' ? undefined : await event.request.text();
+	const body =
+		method === 'GET' || method === 'DELETE' ? undefined : await event.request.arrayBuffer();
 	const contentType = event.request.headers.get('content-type');
 
 	let response = await backendFetchFromEvent(event, `/${rawPath}${query}`, {

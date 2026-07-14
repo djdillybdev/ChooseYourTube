@@ -12,8 +12,14 @@
 
 <div class="container mx-auto max-w-6xl p-6 pb-0">
 	<h1 class="text-3xl font-bold">Settings</h1>
-	<p class="text-base-content/60">Manage organization and review background activity.</p>
+	<p class="text-base-content/60">Manage organization, imports, and background activity.</p>
 	<div role="tablist" class="tabs-border mt-5 tabs">
+		<a
+			role="tab"
+			class="tab"
+			class:tab-active={page.url.pathname.startsWith('/settings/imports')}
+			href={resolve('/settings/imports')}>Imports</a
+		>
 		<a
 			role="tab"
 			class="tab"

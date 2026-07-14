@@ -15,7 +15,17 @@ from app.core.errors import APIErrorBody, ApplicationError, safe_error_details
 from app.core.observability import RequestContextMiddleware, configure_logging
 from app.db.schema_guard import assert_required_playlist_schema
 from app.db.session import sessionmanager
-from app.routers import auth_session, channels, folders, health, playlists, sync_runs, tags, videos
+from app.routers import (
+    auth_session,
+    channels,
+    folders,
+    health,
+    playlists,
+    subscription_imports,
+    sync_runs,
+    tags,
+    videos,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +93,7 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
     application.include_router(playlists.router)
     application.include_router(health.router)
     application.include_router(sync_runs.router)
+    application.include_router(subscription_imports.router)
     application.include_router(
         fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
     )

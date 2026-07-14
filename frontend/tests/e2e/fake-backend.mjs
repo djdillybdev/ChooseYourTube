@@ -54,6 +54,53 @@ const baseRun = {
 };
 let refreshPolls = 0;
 let failedStatus = 'failed';
+const importId = '10000000-0000-0000-0000-000000000001';
+const candidateId = '20000000-0000-0000-0000-000000000001';
+const importRunId = '30000000-0000-0000-0000-000000000001';
+let importStatus = 'ready';
+let candidateState = 'new';
+let importPolls = 0;
+
+function importDetail(state) {
+	const counts = {
+		new_count: candidateState === 'new' ? 1 : 0,
+		selected_count: candidateState === 'selected' ? 1 : 0,
+		imported_count: candidateState === 'imported' ? 1 : 0,
+		failed_count: 0
+	};
+	const candidate = {
+		id: candidateId,
+		channel_id: 'UC_imported_portfolio1',
+		channel_title: 'Imported Portfolio Channel',
+		channel_url: 'https://youtube.com/channel/UC_imported_portfolio1',
+		state: candidateState,
+		source_index: 2,
+		message: null
+	};
+	const items = !state || state === candidateState ? [candidate] : [];
+	return {
+		import: {
+			id: importId,
+			source: 'youtube_takeout_csv',
+			status: importStatus,
+			candidate_count: 1,
+			...counts,
+			existing_count: 0,
+			invalid_count: 0,
+			destination_folder_id: null,
+			destination_tag_ids: [],
+			error_code: null,
+			error_message: null,
+			created_at: '2026-07-14T10:00:00Z',
+			ready_at: '2026-07-14T10:00:00Z',
+			queued_at: null,
+			started_at: null,
+			finished_at: null,
+			updated_at: '2026-07-14T10:00:00Z'
+		},
+		candidates: { total: items.length, items, limit: 50, offset: 0, has_more: false }
+	};
+}
 
 function send(response, status, payload) {
 	response.writeHead(status, { 'content-type': 'application/json' });
@@ -78,7 +125,8 @@ createServer(async (request, response) => {
 				registration: true,
 				background_jobs: true,
 				youtube_oauth: false,
-				demo_login: false
+				demo_login: false,
+				subscription_imports: true
 			}
 		});
 	if (path === '/auth/session/login')
@@ -96,6 +144,48 @@ createServer(async (request, response) => {
 			is_verified: true
 		});
 	if (path === '/folders/tree') return send(response, 200, []);
+	if (path === '/imports/subscriptions/csv' && request.method === 'POST') {
+		importStatus = 'ready';
+		candidateState = 'new';
+		return send(response, 201, importDetail());
+	}
+	if (path === `/imports/${importId}` && request.method === 'GET')
+		return send(response, 200, importDetail(url.searchParams.get('state')));
+	if (path === `/imports/${importId}/candidates` && request.method === 'PATCH') {
+		const body = await readBody(request);
+		candidateState = body.selected ? 'selected' : 'new';
+		return send(response, 200, importDetail().import);
+	}
+	if (path === `/imports/${importId}/commit` && request.method === 'POST') {
+		importStatus = 'queued';
+		importPolls = 0;
+		return send(response, 202, {
+			...baseRun,
+			id: importRunId,
+			kind: 'subscription_import',
+			status: 'queued',
+			channel_id: null,
+			subscription_import_id: importId
+		});
+	}
+	if (path === `/sync-runs/${importRunId}`) {
+		importPolls += 1;
+		const status = importPolls > 1 ? 'succeeded' : 'running';
+		if (status === 'succeeded') {
+			importStatus = 'succeeded';
+			candidateState = 'imported';
+		}
+		return send(response, 200, {
+			...baseRun,
+			id: importRunId,
+			kind: 'subscription_import',
+			status,
+			channel_id: null,
+			subscription_import_id: importId,
+			items_discovered: 1,
+			items_created: status === 'succeeded' ? 1 : 0
+		});
+	}
 	if (path === '/tags' && request.method === 'GET')
 		return send(response, 200, {
 			total: tags.length,

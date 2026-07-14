@@ -2,6 +2,7 @@
 	import { api } from '$lib/api';
 	import type { FolderOut } from '$lib/types/api';
 	import { invalidate } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	interface Props {
 		folders: FolderOut[];
@@ -56,6 +57,9 @@
 		<p class="py-2 text-sm text-base-content/60">
 			Enter the channel handle (e.g., @mkbhd) or channel URL
 		</p>
+		<a class="link text-sm link-primary" href={resolve('/settings/imports')} onclick={onClose}>
+			Import subscriptions from YouTube
+		</a>
 
 		<form onsubmit={handleSubmit} class="space-y-4">
 			<!-- Channel handle input -->
