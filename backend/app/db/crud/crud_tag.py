@@ -2,6 +2,7 @@ from typing import Any, Literal, overload
 from sqlalchemy import delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.tag import Tag
+from ..models.association_tables import channel_tags, video_tags
 from .crud_base import (
     base_get,
     _validate_pagination,
@@ -139,6 +140,41 @@ async def count_tags(
 
     result = await db.execute(query)
     return result.scalar() or 0
+
+
+async def get_tag_usage_counts(
+    db: AsyncSession, owner_id: str, tag_ids: list[str]
+) -> dict[str, tuple[int, int]]:
+    """Return channel and video association counts for each requested tag."""
+    if not tag_ids:
+        return {}
+
+    channel_rows = await db.execute(
+        select(channel_tags.c.tag_id, func.count(channel_tags.c.channel_id))
+        .where(
+            channel_tags.c.owner_id == owner_id,
+            channel_tags.c.tag_id.in_(tag_ids),
+        )
+        .group_by(channel_tags.c.tag_id)
+    )
+    video_rows = await db.execute(
+        select(video_tags.c.tag_id, func.count(video_tags.c.video_id))
+        .where(
+            video_tags.c.owner_id == owner_id,
+            video_tags.c.tag_id.in_(tag_ids),
+        )
+        .group_by(video_tags.c.tag_id)
+    )
+    channel_counts: dict[str, int] = {
+        str(row[0]): int(row[1]) for row in channel_rows.all()
+    }
+    video_counts: dict[str, int] = {
+        str(row[0]): int(row[1]) for row in video_rows.all()
+    }
+    return {
+        tag_id: (channel_counts.get(tag_id, 0), video_counts.get(tag_id, 0))
+        for tag_id in tag_ids
+    }
 
 
 async def create_tag(db_session: AsyncSession, tag_to_create: Tag) -> Tag:

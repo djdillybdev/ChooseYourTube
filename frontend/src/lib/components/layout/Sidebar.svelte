@@ -98,6 +98,20 @@
 						</a>
 					</li>
 
+					<li>
+						<a href={resolve('/watch-later')} class="flex items-center gap-2">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="1.5"
+									d="M17.25 6.75v12L12 15.75 6.75 18.75v-12A2.25 2.25 0 019 4.5h6a2.25 2.25 0 012.25 2.25z"
+								/>
+							</svg>
+							<span>Watch Later</span>
+						</a>
+					</li>
+
 					<!-- Folders Section -->
 					<li>
 						<a href={resolve('/settings')} class="flex items-center gap-2">
@@ -109,7 +123,7 @@
 									d="M4 6h16M4 12h16M4 18h10"
 								/>
 							</svg>
-							<span>Sync Activity</span>
+							<span>Settings</span>
 							{#if !backgroundJobsEnabled}
 								<span class="badge badge-ghost badge-xs">Demo</span>
 							{/if}

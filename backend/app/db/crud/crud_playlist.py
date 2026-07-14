@@ -34,6 +34,7 @@ async def get_playlists(
     source_channel_id: str | None = None,
     source_youtube_playlist_id: str | None = None,
     source_is_active: bool | None = None,
+    system_key: str | None = None,
     limit: int | None = None,
     offset: int = 0,
     order_by: str = "name",
@@ -54,6 +55,7 @@ async def get_playlists(
     source_channel_id: str | None = None,
     source_youtube_playlist_id: str | None = None,
     source_is_active: bool | None = None,
+    system_key: str | None = None,
     limit: int | None = None,
     offset: int = 0,
     order_by: str = "name",
@@ -73,6 +75,7 @@ async def get_playlists(
     source_channel_id: str | None = None,
     source_youtube_playlist_id: str | None = None,
     source_is_active: bool | None = None,
+    system_key: str | None = None,
     limit: int | None = None,
     offset: int = 0,
     order_by: str = "name",
@@ -101,6 +104,8 @@ async def get_playlists(
         filters["source_youtube_playlist_id"] = source_youtube_playlist_id
     if source_is_active is not None:
         filters["source_is_active"] = source_is_active
+    if system_key is not None:
+        filters["system_key"] = system_key
 
     return await base_get(
         db,

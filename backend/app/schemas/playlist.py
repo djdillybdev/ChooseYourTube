@@ -84,6 +84,7 @@ class PlaylistOut(BaseSchema):
     description: str | None
     thumbnail_url: str | None = None
     is_system: bool
+    system_key: str | None = None
     source_type: str
     source_channel_id: str | None = None
     source_youtube_playlist_id: str | None = None
@@ -102,6 +103,7 @@ class PlaylistDetailOut(BaseSchema):
     description: str | None
     thumbnail_url: str | None = None
     is_system: bool
+    system_key: str | None = None
     source_type: str
     source_channel_id: str | None = None
     source_youtube_playlist_id: str | None = None

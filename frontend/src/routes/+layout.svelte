@@ -3,7 +3,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import TopBar from '$lib/components/layout/TopBar.svelte';
-	import type { ChannelOut, TagOut, UserRead } from '$lib/types/api';
+	import type { ChannelOut, PlaylistDetailOut, TagOut, UserRead } from '$lib/types/api';
 	import { modalState, closeModal } from '$lib/stores/modalState.svelte';
 	import AddChannelModal from '$lib/components/modals/AddChannelModal.svelte';
 	import CreateFolderModal from '$lib/components/modals/CreateFolderModal.svelte';
@@ -13,6 +13,7 @@
 	import type { Snippet } from 'svelte';
 	import type { FolderOut } from '$lib/types/api';
 	import type { RuntimeMetadata } from '$lib/types/runtime';
+	import { provideWatchLater } from '$lib/stores/watchLater.svelte';
 
 	interface Props {
 		children: Snippet;
@@ -23,11 +24,14 @@
 			unfolderedChannels: ChannelOut[];
 			channels: ChannelOut[];
 			tags: TagOut[];
+			watchLater: PlaylistDetailOut | null;
 			runtime: RuntimeMetadata;
 		};
 	}
 
 	let { children, data }: Props = $props();
+	const watchLaterState = provideWatchLater(null);
+	$effect(() => watchLaterState.sync(data.watchLater));
 </script>
 
 <svelte:head>
@@ -64,6 +68,7 @@
 		<EditChannelModal
 			channel={modalState.current.channel}
 			folders={data.folders}
+			tags={data.tags}
 			onClose={closeModal}
 		/>
 	{/if}
@@ -75,6 +80,6 @@
 		/>
 	{/if}
 	{#if modalState.current.type === 'saveVideo'}
-		<SaveVideoModal video={modalState.current.video} onClose={closeModal} />
+		<SaveVideoModal video={modalState.current.video} tags={data.tags} onClose={closeModal} />
 	{/if}
 {/if}

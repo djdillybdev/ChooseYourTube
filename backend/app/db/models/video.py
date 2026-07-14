@@ -97,3 +97,7 @@ class Video(Base):
 
     def __repr__(self) -> str:
         return f"<Video(id={self.id}, title='{self.title}')>"
+
+    @property
+    def tag_ids(self) -> list[str]:
+        return [tag.id for tag in self.tags]

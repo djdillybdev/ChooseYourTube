@@ -1,14 +1,17 @@
 <script lang="ts">
 	import { api } from '$lib/api';
-	import type { PlaylistOut, VideoOut } from '$lib/types/api';
+	import type { PlaylistOut, TagOut, VideoOut } from '$lib/types/api';
 	import { isManualPlaylist } from '$lib/utils/playlistScope';
+	import { useWatchLater } from '$lib/stores/watchLater.svelte';
 
 	interface Props {
 		video: VideoOut;
+		tags?: TagOut[];
 		onClose: () => void;
 	}
 
-	let { video, onClose }: Props = $props();
+	let { video, tags = [], onClose }: Props = $props();
+	const watchLater = useWatchLater();
 
 	let dialogElement: HTMLDialogElement;
 	let playlists = $state<PlaylistOut[]>([]);
@@ -20,6 +23,17 @@
 	let error = $state<string | null>(null);
 	let newName = $state('');
 	let newDescription = $state('');
+	let saveToWatchLater = $state(false);
+	let selectedTagIds = $state<string[]>([]);
+	let syncedVideoId = $state<string | null>(null);
+
+	$effect(() => {
+		if (syncedVideoId !== video.id) {
+			saveToWatchLater = watchLater.isSaved(video.id);
+			selectedTagIds = [...video.tag_ids];
+			syncedVideoId = video.id;
+		}
+	});
 
 	$effect(() => {
 		dialogElement?.showModal();
@@ -74,6 +88,12 @@
 		selectedIds = selectedIds.filter((id) => id !== playlistId);
 	}
 
+	function toggleTag(tagId: string, checked: boolean) {
+		selectedTagIds = checked
+			? [...new Set([...selectedTagIds, tagId])]
+			: selectedTagIds.filter((id) => id !== tagId);
+	}
+
 	async function handleCreatePlaylist(e: Event) {
 		e.preventDefault();
 		if (!newName.trim()) return;
@@ -102,7 +122,12 @@
 		const toAdd = selectedIds.filter((playlistId) => !initialSet.has(playlistId));
 		const toRemove = initialMemberIds.filter((playlistId) => !selectedSet.has(playlistId));
 
-		if (toAdd.length === 0 && toRemove.length === 0) {
+		const watchLaterChanged = saveToWatchLater !== watchLater.isSaved(video.id);
+		const tagsChanged =
+			selectedTagIds.length !== video.tag_ids.length ||
+			selectedTagIds.some((id) => !video.tag_ids.includes(id));
+
+		if (toAdd.length === 0 && toRemove.length === 0 && !watchLaterChanged && !tagsChanged) {
 			onClose();
 			return;
 		}
@@ -110,16 +135,16 @@
 		isSaving = true;
 		error = null;
 		try {
-			await Promise.all(
-				toAdd.map((playlistId) =>
+			await Promise.all([
+				...toAdd.map((playlistId) =>
 					api.playlists.addVideo(playlistId, {
 						video_id: video.id
 					})
-				)
-			);
-			await Promise.all(
-				toRemove.map((playlistId) => api.playlists.removeVideo(playlistId, video.id))
-			);
+				),
+				...toRemove.map((playlistId) => api.playlists.removeVideo(playlistId, video.id)),
+				...(watchLaterChanged ? [watchLater.setSaved(video.id, saveToWatchLater)] : []),
+				...(tagsChanged ? [api.videos.update(video.id, { tag_ids: selectedTagIds })] : [])
+			]);
 			onClose();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to save video';
@@ -134,6 +159,17 @@
 		<h3 class="text-lg font-bold">Save Video to Playlists</h3>
 		<p class="mt-1 line-clamp-2 text-sm text-base-content/70">{video.title}</p>
 
+		<label
+			class="mt-4 flex cursor-pointer items-center gap-3 rounded-box border border-primary/30 bg-primary/5 p-3"
+		>
+			<input type="checkbox" class="checkbox checkbox-primary" bind:checked={saveToWatchLater} />
+			<div>
+				<p class="font-semibold">Watch Later</p>
+				<p class="text-xs text-base-content/60">Keep this video in your quick-access list.</p>
+			</div>
+		</label>
+
+		<h4 class="mt-4 text-sm font-semibold">Custom playlists</h4>
 		<div class="my-4 max-h-72 overflow-y-auto rounded-box border border-base-300 p-2">
 			{#if isLoading}
 				<div class="flex items-center gap-2 p-2 text-sm text-base-content/70">
@@ -191,6 +227,27 @@
 				</button>
 			</div>
 		</form>
+
+		<div class="mt-4 rounded-box border border-base-300 p-3">
+			<h4 class="mb-2 text-sm font-semibold">Tags</h4>
+			{#if tags.length === 0}
+				<p class="text-sm text-base-content/60">Create tags in Settings to organize videos.</p>
+			{:else}
+				<div class="flex flex-wrap gap-2">
+					{#each tags as tag (tag.id)}
+						<label class="label cursor-pointer gap-2 rounded border border-base-300 px-2 py-1">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-xs"
+								checked={selectedTagIds.includes(tag.id)}
+								onchange={(event) => toggleTag(tag.id, event.currentTarget.checked)}
+							/>
+							<span class="label-text">{tag.name}</span>
+						</label>
+					{/each}
+				</div>
+			{/if}
+		</div>
 
 		{#if error}
 			<p class="mt-3 text-sm text-error">{error}</p>

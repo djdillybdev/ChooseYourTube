@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { load } from '../../../../src/routes/settings/+page';
+import { load } from '../../../../src/routes/settings/sync/+page';
 
 const { list, quota } = vi.hoisted(() => ({
 	list: vi.fn().mockResolvedValue({ total: 0, items: [], limit: 20, offset: 0, has_more: false }),

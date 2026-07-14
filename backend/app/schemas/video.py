@@ -58,3 +58,4 @@ class VideoOut(BaseSchema):
     is_favorited: bool
     is_watched: bool
     created_at: datetime
+    tag_ids: list[str] = []

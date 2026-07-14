@@ -8,6 +8,7 @@
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { getChannelTitle } from '$lib/utils/channelLookup';
+	import WatchLaterButton from './WatchLaterButton.svelte';
 
 	interface Props {
 		video: VideoOut;
@@ -88,6 +89,9 @@
 		<div class="flex gap-4">
 			<!-- Thumbnail -->
 			<div class="relative shrink-0">
+				<div class="absolute top-1 right-1 z-10 rounded-full bg-base-100/90">
+					<WatchLaterButton videoId={video.id} />
+				</div>
 				{#if video.thumbnail_url}
 					<img
 						src={video.thumbnail_url}

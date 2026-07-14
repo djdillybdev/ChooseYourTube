@@ -36,6 +36,7 @@ function makePlaylist(overrides: Partial<PlaylistOut>): PlaylistOut {
 		description: null,
 		thumbnail_url: null,
 		is_system: false,
+		system_key: null,
 		source_type: 'manual',
 		source_channel_id: null,
 		source_youtube_playlist_id: null,
@@ -60,6 +61,7 @@ function makeVideo(overrides: Partial<VideoOut> = {}): VideoOut {
 		is_favorited: false,
 		is_watched: false,
 		created_at: '2026-01-01T00:00:00Z',
+		tag_ids: [],
 		...overrides
 	};
 }

@@ -33,6 +33,24 @@ export class PlaylistsAPI {
 		return this.client.get<PlaylistDetailOut>(`/playlists/${id}`);
 	}
 
+	async getWatchLater(): Promise<PlaylistDetailOut> {
+		return this.client.get<PlaylistDetailOut>('/playlists/watch-later');
+	}
+
+	async addWatchLater(videoId: string): Promise<PlaylistDetailOut> {
+		const playlist = await this.client.put<PlaylistDetailOut>(
+			`/playlists/watch-later/videos/${videoId}`,
+			undefined
+		);
+		this.client.invalidateCache('/playlists/watch-later');
+		return playlist;
+	}
+
+	async removeWatchLater(videoId: string): Promise<void> {
+		await this.client.delete(`/playlists/watch-later/videos/${videoId}`);
+		this.client.invalidateCache('/playlists/watch-later');
+	}
+
 	async update(id: string, data: PlaylistUpdate): Promise<PlaylistOut> {
 		const playlist = await this.client.patch<PlaylistOut>(`/playlists/${id}`, data);
 		this.client.invalidateCache('playlists/');

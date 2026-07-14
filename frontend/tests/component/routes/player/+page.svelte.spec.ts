@@ -58,6 +58,7 @@ describe('player route layout', () => {
 		unfolderedChannels: [],
 		channels: [],
 		tags: [],
+		watchLater: null,
 		runtime: {
 			name: 'ChooseYourTube',
 			version: '0.1.0',

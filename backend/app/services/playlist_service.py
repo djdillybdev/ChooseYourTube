@@ -7,6 +7,7 @@ import uuid
 from typing import cast
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from app.schemas.base import PaginatedResponse
 from ..db.crud import crud_playlist
@@ -31,6 +32,15 @@ def _assert_playlist_is_mutable(playlist: Playlist) -> None:
             status_code=403,
             detail="Channel-synced playlists are read-only.",
         )
+
+
+def _assert_playlist_metadata_is_mutable(playlist: Playlist) -> None:
+    if playlist.system_key == "watch_later":
+        raise HTTPException(
+            status_code=403,
+            detail="Watch Later cannot be renamed or deleted.",
+        )
+    _assert_playlist_is_mutable(playlist)
 
 
 def _dedupe_video_ids_keep_first(video_ids: list[str]) -> list[str]:
@@ -101,6 +111,7 @@ async def _build_detail_out(
         description=playlist.description,
         thumbnail_url=playlist.thumbnail_url,
         is_system=playlist.is_system,
+        system_key=playlist.system_key,
         source_type=playlist.source_type,
         source_channel_id=playlist.source_channel_id,
         source_youtube_playlist_id=playlist.source_youtube_playlist_id,
@@ -110,6 +121,89 @@ async def _build_detail_out(
         total_videos=len(video_ids),
         created_at=playlist.created_at,
         video_ids=video_ids,
+    )
+
+
+async def ensure_watch_later(
+    db_session: AsyncSession, owner_id: str = "test-user"
+) -> Playlist:
+    """Return the owner's Watch Later playlist, creating it when needed."""
+    existing = await crud_playlist.get_playlists(
+        db_session,
+        owner_id=owner_id,
+        system_key="watch_later",
+        first=True,
+    )
+    if existing:
+        return existing
+
+    playlist = Playlist(
+        id=str(uuid.uuid4()),
+        owner_id=owner_id,
+        name="Watch Later",
+        description="Videos saved to watch later",
+        is_system=True,
+        system_key="watch_later",
+        source_type="manual",
+    )
+    db_session.add(playlist)
+    try:
+        await db_session.commit()
+        await db_session.refresh(playlist)
+        return playlist
+    except IntegrityError:
+        await db_session.rollback()
+        existing = await crud_playlist.get_playlists(
+            db_session,
+            owner_id=owner_id,
+            system_key="watch_later",
+            first=True,
+        )
+        if existing:
+            return existing
+        raise
+
+
+async def get_watch_later_detail(
+    db_session: AsyncSession, owner_id: str = "test-user"
+) -> PlaylistDetailOut:
+    playlist = await ensure_watch_later(db_session, owner_id=owner_id)
+    return await _build_detail_out(playlist, db_session, owner_id=owner_id)
+
+
+async def add_video_to_watch_later(
+    video_id: str,
+    db_session: AsyncSession,
+    owner_id: str = "test-user",
+) -> PlaylistDetailOut:
+    playlist = await ensure_watch_later(db_session, owner_id=owner_id)
+    video = await get_videos(db_session, owner_id=owner_id, id=video_id, first=True)
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    video_ids = await crud_playlist.get_playlist_video_ids(
+        db_session, playlist.id, owner_id=owner_id
+    )
+    if video_id not in video_ids:
+        await crud_playlist.add_video_to_playlist(
+            db_session, playlist.id, video_id, owner_id=owner_id
+        )
+    return await _build_detail_out(playlist, db_session, owner_id=owner_id)
+
+
+async def remove_video_from_watch_later(
+    video_id: str,
+    db_session: AsyncSession,
+    owner_id: str = "test-user",
+) -> None:
+    playlist = await ensure_watch_later(db_session, owner_id=owner_id)
+    video_ids = await crud_playlist.get_playlist_video_ids(
+        db_session, playlist.id, owner_id=owner_id
+    )
+    if video_id not in video_ids:
+        return
+    await remove_video_from_playlist(
+        playlist.id, video_id, db_session, owner_id=owner_id
     )
 
 
@@ -141,7 +235,7 @@ async def update_playlist(
     owner_id: str = "test-user",
 ) -> Playlist:
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
-    _assert_playlist_is_mutable(playlist)
+    _assert_playlist_metadata_is_mutable(playlist)
 
     if payload.name is not None:
         playlist.name = payload.name
@@ -158,7 +252,7 @@ async def delete_playlist_by_id(
     playlist_id: str, db_session: AsyncSession, owner_id: str = "test-user"
 ) -> None:
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
-    _assert_playlist_is_mutable(playlist)
+    _assert_playlist_metadata_is_mutable(playlist)
     await crud_playlist.delete_playlist(db_session, playlist)
 
 

@@ -1,5 +1,5 @@
 import { createScopedAPI, APIError } from '$lib/api';
-import type { FolderOut, ChannelOut, TagOut, UserRead } from '$lib/types/api';
+import type { FolderOut, ChannelOut, TagOut, UserRead, PlaylistDetailOut } from '$lib/types/api';
 import { isRedirect, redirect } from '@sveltejs/kit';
 import type { LayoutLoad } from './$types';
 import type { RuntimeMetadata } from '$lib/types/runtime';
@@ -24,6 +24,7 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 			unfolderedChannels: [] as ChannelOut[],
 			channels: [] as ChannelOut[],
 			tags: [] as TagOut[],
+			watchLater: null as PlaylistDetailOut | null,
 			runtime: fallbackRuntime
 		};
 	}
@@ -46,10 +47,11 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 		}
 		const currentUser = (await meResponse.json()) as UserRead;
 
-		const [folders, tagsResponse, metadataResponse] = await Promise.all([
+		const [folders, tagsResponse, metadataResponse, watchLater] = await Promise.all([
 			api.folders.getTree(),
 			api.tags.list({ limit: 200 }),
-			fetch('/api/meta')
+			fetch('/api/meta'),
+			api.playlists.getWatchLater()
 		]);
 		const runtime = metadataResponse.ok
 			? ((await metadataResponse.json()) as RuntimeMetadata)
@@ -76,6 +78,7 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 			unfolderedChannels,
 			channels,
 			tags: tagsResponse.items,
+			watchLater,
 			runtime
 		};
 	} catch (error) {
@@ -95,6 +98,7 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 			unfolderedChannels: [] as ChannelOut[],
 			channels: [] as ChannelOut[],
 			tags: [] as TagOut[],
+			watchLater: null as PlaylistDetailOut | null,
 			runtime: fallbackRuntime
 		};
 	}

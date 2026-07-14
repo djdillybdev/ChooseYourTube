@@ -233,6 +233,14 @@
 							}
 						]
 					},
+					"tag_ids": {
+						"default": [],
+						"items": {
+							"type": "string"
+						},
+						"title": "Tag Ids",
+						"type": "array"
+					},
 					"thumbnail_url": {
 						"anyOf": [
 							{
@@ -1024,6 +1032,17 @@
 						],
 						"title": "Source Youtube Playlist Id"
 					},
+					"system_key": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "System Key"
+					},
 					"thumbnail_url": {
 						"anyOf": [
 							{
@@ -1153,6 +1172,17 @@
 							}
 						],
 						"title": "Source Youtube Playlist Id"
+					},
+					"system_key": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "System Key"
 					},
 					"thumbnail_url": {
 						"anyOf": [
@@ -1481,6 +1511,11 @@
 			"TagOut": {
 				"description": "Schema for tag output.",
 				"properties": {
+					"channel_count": {
+						"default": 0,
+						"title": "Channel Count",
+						"type": "integer"
+					},
 					"created_at": {
 						"format": "date-time",
 						"title": "Created At",
@@ -1493,6 +1528,11 @@
 					"name": {
 						"title": "Name",
 						"type": "string"
+					},
+					"video_count": {
+						"default": 0,
+						"title": "Video Count",
+						"type": "integer"
 					}
 				},
 				"required": ["id", "name", "created_at"],
@@ -1720,6 +1760,14 @@
 						"format": "date-time",
 						"title": "Published At",
 						"type": "string"
+					},
+					"tag_ids": {
+						"default": [],
+						"items": {
+							"type": "string"
+						},
+						"title": "Tag Ids",
+						"type": "array"
 					},
 					"thumbnail_url": {
 						"anyOf": [
@@ -4986,6 +5034,304 @@
 					}
 				],
 				"summary": "Create Playlist",
+				"tags": ["Playlists"]
+			}
+		},
+		"/playlists/watch-later": {
+			"get": {
+				"description": "Get or initialize the current user's Watch Later playlist.",
+				"operationId": "get_watch_later_playlists_watch_later_get",
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PlaylistDetailOut"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Get Watch Later",
+				"tags": ["Playlists"]
+			}
+		},
+		"/playlists/watch-later/videos/{video_id}": {
+			"delete": {
+				"description": "Idempotently remove a video from Watch Later.",
+				"operationId": "remove_watch_later_video_playlists_watch_later_videos__video_id__delete",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "video_id",
+						"required": true,
+						"schema": {
+							"title": "Video Id",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Remove Watch Later Video",
+				"tags": ["Playlists"]
+			},
+			"put": {
+				"description": "Idempotently add a video to Watch Later.",
+				"operationId": "add_watch_later_video_playlists_watch_later_videos__video_id__put",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "video_id",
+						"required": true,
+						"schema": {
+							"title": "Video Id",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PlaylistDetailOut"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Add Watch Later Video",
 				"tags": ["Playlists"]
 			}
 		},

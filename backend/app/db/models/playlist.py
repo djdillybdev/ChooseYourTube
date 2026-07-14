@@ -2,12 +2,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from datetime import datetime, timezone
 
+import sqlalchemy as sa
 from sqlalchemy import (
     String,
     Text,
     DateTime,
     Boolean,
     Integer,
+    Index,
     ForeignKeyConstraint,
     UniqueConstraint,
 )
@@ -34,6 +36,14 @@ class Playlist(Base):
             ["channels.owner_id", "channels.id"],
             ondelete="CASCADE",
         ),
+        Index(
+            "uq_playlist_owner_system_key",
+            "owner_id",
+            "system_key",
+            unique=True,
+            postgresql_where=sa.text("system_key IS NOT NULL"),
+            sqlite_where=sa.text("system_key IS NOT NULL"),
+        ),
     )
 
     id: Mapped[str] = mapped_column(
@@ -46,6 +56,7 @@ class Playlist(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     thumbnail_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    system_key: Mapped[str | None] = mapped_column(String(32), nullable=True)
     source_type: Mapped[str] = mapped_column(
         String(20), nullable=False, default="manual"
     )

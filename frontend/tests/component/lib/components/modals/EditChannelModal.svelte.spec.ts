@@ -20,6 +20,7 @@ function makeChannel(overrides: Partial<ChannelOut>): ChannelOut {
 		folder_id: 'folder-a',
 		created_at: '2026-01-01T00:00:00Z',
 		last_updated: '2026-01-01T00:00:00Z',
+		tag_ids: [],
 		total_videos: 10,
 		...overrides
 	};

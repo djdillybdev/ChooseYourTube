@@ -20,7 +20,10 @@ class TagCreate(BaseModel):
     @classmethod
     def normalize_name(cls, v: str) -> str:
         """Normalize tag name to lowercase and strip whitespace."""
-        return v.strip().lower()
+        normalized = v.strip().lower()
+        if not normalized:
+            raise ValueError("Tag name must not be empty")
+        return normalized
 
 
 # --- Update Schema ---
@@ -38,7 +41,10 @@ class TagUpdate(BaseModel):
     def normalize_name(cls, v: str | None) -> str | None:
         """Normalize tag name to lowercase and strip whitespace."""
         if v is not None:
-            return v.strip().lower()
+            normalized = v.strip().lower()
+            if not normalized:
+                raise ValueError("Tag name must not be empty")
+            return normalized
         return v
 
 
@@ -51,5 +57,7 @@ class TagOut(BaseSchema):
     id: str
     name: str
     created_at: datetime
+    channel_count: int = 0
+    video_count: int = 0
 
     model_config = {"from_attributes": True}

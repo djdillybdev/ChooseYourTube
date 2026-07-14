@@ -1,155 +1,157 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
-	import { resolve } from '$app/paths';
+	import { invalidate } from '$app/navigation';
 	import { api } from '$lib/api';
 	import type { PageData } from './$types';
-	import type { SyncRunKind, SyncRunStatus } from '$lib/types/api';
-	import { formatRelativeDate } from '$lib/utils/formatDate';
-	import { SvelteURLSearchParams } from 'svelte/reactivity';
 
 	interface Props {
 		data: PageData;
 	}
+
 	let { data }: Props = $props();
-	let retrying = $state<string | null>(null);
-	let retryError = $state<string | null>(null);
+	let newName = $state('');
+	let editingId = $state<string | null>(null);
+	let editingName = $state('');
+	let busyId = $state<string | null>(null);
+	let error = $state<string | null>(null);
 
-	function updateFilters(status: string, kind: string) {
-		const params = new SvelteURLSearchParams();
-		if (status) params.set('status', status);
-		if (kind) params.set('kind', kind);
-		goto(resolve(`/settings${params.size ? `?${params}` : ''}` as '/settings'));
+	async function refreshTags() {
+		await invalidate('app:tags');
 	}
 
-	function pagePath(page: number) {
-		const params = new SvelteURLSearchParams({ page: String(page) });
-		if (data.status) params.set('status', data.status);
-		if (data.kind) params.set('kind', data.kind);
-		return `/settings?${params}` as '/settings';
-	}
-
-	async function retry(id: string) {
-		retrying = id;
-		retryError = null;
+	async function createTag(event: SubmitEvent) {
+		event.preventDefault();
+		if (!newName.trim()) return;
+		busyId = 'new';
+		error = null;
 		try {
-			await api.syncRuns.retry(id);
-			await invalidateAll();
-		} catch (error) {
-			retryError = error instanceof Error ? error.message : 'Could not retry synchronization.';
+			await api.tags.create({ name: newName });
+			newName = '';
+			await refreshTags();
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : 'Could not create tag.';
 		} finally {
-			retrying = null;
+			busyId = null;
 		}
 	}
 
-	const kindLabels: Record<SyncRunKind, string> = {
-		initial_channel_sync: 'Initial channel sync',
-		channel_refresh: 'Channel refresh',
-		playlist_sync: 'Playlist sync',
-		subscription_import: 'Subscription import',
-		demo_maintenance: 'Demo maintenance'
-	};
-	const statusClasses: Record<SyncRunStatus, string> = {
-		queued: 'badge-info',
-		running: 'badge-info',
-		succeeded: 'badge-success',
-		partial: 'badge-warning',
-		failed: 'badge-error'
-	};
+	function beginRename(id: string, name: string) {
+		editingId = id;
+		editingName = name;
+		error = null;
+	}
+
+	async function renameTag(id: string) {
+		if (!editingName.trim()) return;
+		busyId = id;
+		error = null;
+		try {
+			await api.tags.update(id, { name: editingName });
+			editingId = null;
+			await refreshTags();
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : 'Could not rename tag.';
+		} finally {
+			busyId = null;
+		}
+	}
+
+	async function deleteTag(id: string, name: string, channels: number, videos: number) {
+		const usage = `${channels} channel${channels === 1 ? '' : 's'} and ${videos} video${videos === 1 ? '' : 's'}`;
+		if (!confirm(`Delete “${name}”? It will be removed from ${usage}.`)) return;
+		busyId = id;
+		error = null;
+		try {
+			await api.tags.delete(id);
+			await refreshTags();
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : 'Could not delete tag.';
+		} finally {
+			busyId = null;
+		}
+	}
 </script>
 
-<svelte:head><title>Sync Activity - ChooseYourTube</title></svelte:head>
+<svelte:head><title>Organization - Settings - ChooseYourTube</title></svelte:head>
 
-<div class="container mx-auto max-w-6xl p-6">
-	<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
-		<div>
-			<h1 class="text-3xl font-bold">Sync Activity</h1>
-			<p class="text-base-content/60">Recent channel and playlist synchronization work.</p>
+<div class="container mx-auto max-w-6xl p-6 pt-5">
+	<section class="rounded-box border border-base-300 bg-base-100 p-5">
+		<div class="mb-4">
+			<h2 class="text-xl font-semibold">Tags</h2>
+			<p class="text-sm text-base-content/60">Tags organize channels and videos across folders.</p>
 		</div>
-		<div class="stats shadow">
-			<div class="stat py-3">
-				<div class="stat-title">YouTube quota · {data.quota.date}</div>
-				<div class="stat-value text-2xl">
-					{data.quota.estimated_units_used} / {data.quota.budget}
-				</div>
-				<div class="stat-desc">Estimated units · {data.quota.call_count} calls</div>
+
+		<form class="mb-5 flex max-w-xl gap-2" onsubmit={createTag}>
+			<label class="sr-only" for="new-tag">Tag name</label>
+			<input
+				id="new-tag"
+				class="input-bordered input flex-1"
+				placeholder="New tag"
+				maxlength="255"
+				bind:value={newName}
+				disabled={busyId === 'new'}
+			/>
+			<button class="btn btn-primary" disabled={!newName.trim() || busyId === 'new'}>
+				{busyId === 'new' ? 'Creating…' : 'Create tag'}
+			</button>
+		</form>
+
+		{#if error}<div class="mb-4 alert alert-error" role="alert">{error}</div>{/if}
+
+		{#if data.tags.length === 0}
+			<div class="rounded-box bg-base-200 p-8 text-center text-base-content/60">
+				No tags yet. Create one to categorize channels and videos.
 			</div>
-		</div>
-	</div>
-
-	<div class="mb-4 flex flex-wrap gap-3">
-		<select
-			class="select-bordered select select-sm"
-			aria-label="Filter by status"
-			value={data.status ?? ''}
-			onchange={(event) => updateFilters(event.currentTarget.value, data.kind ?? '')}
-		>
-			<option value="">All statuses</option>
-			{#each ['queued', 'running', 'succeeded', 'partial', 'failed'] as status (status)}<option
-					value={status}>{status}</option
-				>{/each}
-		</select>
-		<select
-			class="select-bordered select select-sm"
-			aria-label="Filter by kind"
-			value={data.kind ?? ''}
-			onchange={(event) => updateFilters(data.status ?? '', event.currentTarget.value)}
-		>
-			<option value="">All types</option>
-			{#each Object.entries(kindLabels) as [kind, label] (kind)}<option value={kind}>{label}</option
-				>{/each}
-		</select>
-	</div>
-
-	{#if retryError}<div class="mb-4 alert alert-error" role="alert">{retryError}</div>{/if}
-	<div class="sr-only" aria-live="polite">{retrying ? 'Retrying synchronization' : ''}</div>
-
-	{#if data.runs.items.length === 0}
-		<div class="rounded-box bg-base-100 p-10 text-center text-base-content/60">
-			No synchronization activity matches these filters.
-		</div>
-	{:else}
-		<div class="overflow-x-auto rounded-box bg-base-100 shadow-sm">
-			<table class="table">
-				<thead
-					><tr
-						><th>Type</th><th>Status</th><th>Progress</th><th>Started</th><th>Message</th><th
-						></th></tr
-					></thead
-				>
-				<tbody
-					>{#each data.runs.items as run (run.id)}<tr>
-							<td>{kindLabels[run.kind]}</td><td
-								><span class="badge badge-sm {statusClasses[run.status]}">{run.status}</span></td
-							>
-							<td
-								>{run.items_created} created · {run.items_updated} updated · {run.items_failed} failed</td
-							>
-							<td>{formatRelativeDate(run.started_at ?? run.queued_at)}</td><td class="max-w-xs"
-								>{run.error_message ?? '—'}</td
-							>
-							<td
-								>{#if run.retryable && (run.status === 'failed' || run.status === 'partial')}<button
-										class="btn btn-outline btn-xs"
-										disabled={retrying === run.id}
-										onclick={() => retry(run.id)}
-										>{retrying === run.id ? 'Retrying…' : 'Retry'}</button
-									>{/if}</td
-							>
-						</tr>{/each}</tbody
-				>
-			</table>
-		</div>
-	{/if}
-
-	{#if data.runs.total > data.pageSize}<div class="join mt-5">
-			<a
-				class="btn join-item btn-sm"
-				class:btn-disabled={data.page <= 1}
-				href={resolve(pagePath(Math.max(1, data.page - 1)))}>Previous</a
-			><span class="btn join-item btn-sm">Page {data.page}</span><a
-				class="btn join-item btn-sm"
-				class:btn-disabled={!data.runs.has_more}
-				href={resolve(pagePath(data.page + 1))}>Next</a
-			>
-		</div>{/if}
+		{:else}
+			<div class="overflow-x-auto">
+				<table class="table">
+					<thead
+						><tr
+							><th>Name</th><th>Channels</th><th>Videos</th><th class="text-right">Actions</th></tr
+						></thead
+					>
+					<tbody>
+						{#each data.tags as tag (tag.id)}
+							<tr>
+								<td>
+									{#if editingId === tag.id}
+										<input
+											class="input-bordered input input-sm"
+											maxlength="255"
+											bind:value={editingName}
+										/>
+									{:else}<span class="font-medium">{tag.name}</span>{/if}
+								</td>
+								<td>{tag.channel_count}</td>
+								<td>{tag.video_count}</td>
+								<td class="text-right">
+									{#if editingId === tag.id}
+										<button
+											class="btn btn-xs btn-primary"
+											disabled={!editingName.trim() || busyId === tag.id}
+											onclick={() => void renameTag(tag.id)}>Save</button
+										>
+										<button class="btn btn-ghost btn-xs" onclick={() => (editingId = null)}
+											>Cancel</button
+										>
+									{:else}
+										<button
+											class="btn btn-ghost btn-xs"
+											onclick={() => beginRename(tag.id, tag.name)}>Rename</button
+										>
+										<button
+											class="btn text-error btn-ghost btn-xs"
+											disabled={busyId === tag.id}
+											onclick={() =>
+												void deleteTag(tag.id, tag.name, tag.channel_count, tag.video_count)}
+											>Delete</button
+										>
+									{/if}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</section>
 </div>

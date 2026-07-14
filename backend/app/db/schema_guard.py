@@ -6,6 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 REQUIRED_PLAYLIST_COLUMNS: tuple[str, ...] = (
+    "system_key",
     "thumbnail_url",
     "source_type",
     "source_channel_id",

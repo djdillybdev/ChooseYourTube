@@ -18,6 +18,36 @@ from ..services import playlist_service
 router = APIRouter(prefix="/playlists", tags=["Playlists"])
 
 
+@router.get("/watch-later", response_model=PlaylistDetailOut)
+async def get_watch_later(db_session: DBSessionDep, user: CurrentUserDep):
+    """Get or initialize the current user's Watch Later playlist."""
+    return await playlist_service.get_watch_later_detail(
+        db_session=db_session, owner_id=str(user.id)
+    )
+
+
+@router.put("/watch-later/videos/{video_id}", response_model=PlaylistDetailOut)
+async def add_watch_later_video(
+    video_id: str, db_session: DBSessionDep, user: CurrentUserDep
+):
+    """Idempotently add a video to Watch Later."""
+    return await playlist_service.add_video_to_watch_later(
+        video_id=video_id, db_session=db_session, owner_id=str(user.id)
+    )
+
+
+@router.delete(
+    "/watch-later/videos/{video_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def remove_watch_later_video(
+    video_id: str, db_session: DBSessionDep, user: CurrentUserDep
+):
+    """Idempotently remove a video from Watch Later."""
+    await playlist_service.remove_video_from_watch_later(
+        video_id=video_id, db_session=db_session, owner_id=str(user.id)
+    )
+
+
 @router.get("/", response_model=PaginatedResponse[PlaylistOut])
 async def list_playlists(
     db_session: DBSessionDep,

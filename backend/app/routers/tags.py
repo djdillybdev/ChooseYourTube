@@ -30,7 +30,7 @@ async def get_tag_by_id(tag_id: str, db_session: DBSessionDep, user: CurrentUser
     """
     Get a single tag by ID.
     """
-    return await tag_service.get_tag_by_id(
+    return await tag_service.get_tag_out_by_id(
         tag_id=tag_id, db_session=db_session, owner_id=str(user.id)
     )
 

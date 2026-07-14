@@ -1,18 +1,20 @@
 <script lang="ts">
 	import { api } from '$lib/api';
-	import type { ChannelOut, FolderOut } from '$lib/types/api';
+	import type { ChannelOut, FolderOut, TagOut } from '$lib/types/api';
 	import { invalidate } from '$app/navigation';
 
 	interface Props {
 		channel: ChannelOut;
 		folders: FolderOut[];
+		tags?: TagOut[];
 		onClose: () => void;
 	}
 
-	let { channel, folders, onClose }: Props = $props();
+	let { channel, folders, tags = [], onClose }: Props = $props();
 
 	let isFavorited = $state(false);
 	let selectedFolder = $state<string | null>(null);
+	let selectedTagIds = $state<string[]>([]);
 	let syncedChannelId = $state<string | null>(null);
 	let isSubmitting = $state(false);
 	let error = $state<string | null>(null);
@@ -22,6 +24,7 @@
 		if (channel.id !== syncedChannelId) {
 			isFavorited = channel.is_favorited;
 			selectedFolder = channel.folder_id;
+			selectedTagIds = [...channel.tag_ids];
 			syncedChannelId = channel.id;
 		}
 	});
@@ -47,7 +50,8 @@
 		try {
 			await api.channels.update(channel.id, {
 				is_favorited: isFavorited,
-				folder_id: selectedFolder
+				folder_id: selectedFolder,
+				tag_ids: selectedTagIds
 			});
 			await invalidate('app:channels');
 			onClose();
@@ -137,6 +141,33 @@
 						<option value={f.id}>{f.name}</option>
 					{/each}
 				</select>
+			</div>
+
+			<div class="form-control">
+				<span class="label-text mb-2">Tags</span>
+				{#if tags.length === 0}
+					<p class="text-sm text-base-content/60">
+						Create tags in Settings to categorize channels.
+					</p>
+				{:else}
+					<div class="flex flex-wrap gap-2">
+						{#each tags as tag (tag.id)}
+							<label class="label cursor-pointer gap-2 rounded border border-base-300 px-2 py-1">
+								<input
+									type="checkbox"
+									class="checkbox checkbox-xs"
+									checked={selectedTagIds.includes(tag.id)}
+									onchange={(event) => {
+										selectedTagIds = event.currentTarget.checked
+											? [...new Set([...selectedTagIds, tag.id])]
+											: selectedTagIds.filter((id) => id !== tag.id);
+									}}
+								/>
+								<span class="label-text">{tag.name}</span>
+							</label>
+						{/each}
+					</div>
+				{/if}
 			</div>
 
 			<!-- Error -->

@@ -88,6 +88,10 @@ class Channel(Base):
     def __repr__(self) -> str:
         return f"<Channel(id={self.id}, title='{self.title}')>"
 
+    @property
+    def tag_ids(self) -> list[str]:
+        return [tag.id for tag in self.tags]
+
 
 Channel.total_videos = column_property(
     select(func.count(Video.id))

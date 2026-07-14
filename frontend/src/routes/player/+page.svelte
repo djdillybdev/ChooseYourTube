@@ -9,6 +9,7 @@
 	import { createChannelMap, getChannelTitle } from '$lib/utils/channelLookup';
 	import { fit16x9 } from '$lib/utils/playerFrameFit';
 	import type { PageData } from './$types';
+	import WatchLaterButton from '$lib/components/video/WatchLaterButton.svelte';
 
 	interface Props {
 		data: PageData;
@@ -163,6 +164,9 @@
 		</button>
 
 		<div class="flex items-center gap-2">
+			{#if playerState.current.currentVideo}
+				<WatchLaterButton videoId={playerState.current.currentVideo.id} compact={false} />
+			{/if}
 			<button
 				class="btn btn-ghost btn-sm"
 				onclick={() =>

@@ -429,6 +429,50 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/playlists/watch-later': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get Watch Later
+		 * @description Get or initialize the current user's Watch Later playlist.
+		 */
+		get: operations['get_watch_later_playlists_watch_later_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/playlists/watch-later/videos/{video_id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Add Watch Later Video
+		 * @description Idempotently add a video to Watch Later.
+		 */
+		put: operations['add_watch_later_video_playlists_watch_later_videos__video_id__put'];
+		post?: never;
+		/**
+		 * Remove Watch Later Video
+		 * @description Idempotently remove a video from Watch Later.
+		 */
+		delete: operations['remove_watch_later_video_playlists_watch_later_videos__video_id__delete'];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/playlists/{playlist_id}': {
 		parameters: {
 			query?: never;
@@ -972,6 +1016,11 @@ export interface components {
 			 */
 			last_updated: string;
 			latest_sync?: components['schemas']['LatestSyncSummary'] | null;
+			/**
+			 * Tag Ids
+			 * @default []
+			 */
+			tag_ids: string[];
 			/** Thumbnail Url */
 			thumbnail_url: string | null;
 			/** Title */
@@ -1276,6 +1325,8 @@ export interface components {
 			source_type: string;
 			/** Source Youtube Playlist Id */
 			source_youtube_playlist_id?: string | null;
+			/** System Key */
+			system_key?: string | null;
 			/** Thumbnail Url */
 			thumbnail_url?: string | null;
 			/** Total Videos */
@@ -1327,6 +1378,8 @@ export interface components {
 			source_type: string;
 			/** Source Youtube Playlist Id */
 			source_youtube_playlist_id?: string | null;
+			/** System Key */
+			system_key?: string | null;
 			/** Thumbnail Url */
 			thumbnail_url?: string | null;
 		};
@@ -1475,6 +1528,11 @@ export interface components {
 		 */
 		TagOut: {
 			/**
+			 * Channel Count
+			 * @default 0
+			 */
+			channel_count: number;
+			/**
 			 * Created At
 			 * Format: date-time
 			 */
@@ -1483,6 +1541,11 @@ export interface components {
 			id: string;
 			/** Name */
 			name: string;
+			/**
+			 * Video Count
+			 * @default 0
+			 */
+			video_count: number;
 		};
 		/**
 		 * TagUpdate
@@ -1590,6 +1653,11 @@ export interface components {
 			 * Format: date-time
 			 */
 			published_at: string;
+			/**
+			 * Tag Ids
+			 * @default []
+			 */
+			tag_ids: string[];
 			/** Thumbnail Url */
 			thumbnail_url: string | null;
 			/** Title */
@@ -4081,6 +4149,257 @@ export interface operations {
 				content: {
 					'application/json': components['schemas']['PlaylistOut'];
 				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	get_watch_later_playlists_watch_later_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['PlaylistDetailOut'];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	add_watch_later_video_playlists_watch_later_videos__video_id__put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				video_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['PlaylistDetailOut'];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	remove_watch_later_video_playlists_watch_later_videos__video_id__delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				video_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 			/** @description Safe API error */
 			400: {

@@ -43,3 +43,4 @@ class ChannelOut(BaseSchema):
     # Calculated fields
     total_videos: int = 0
     latest_sync: LatestSyncSummary | None = None
+    tag_ids: list[str] = []

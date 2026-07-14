@@ -23,6 +23,24 @@ class TaggableEntity(Protocol):
     tags: list  # Relationship to Tag model
 
 
+async def _serialize_tags_with_counts(
+    tags: list[Tag], db_session: AsyncSession, owner_id: str
+) -> list[TagOut]:
+    counts = await crud_tag.get_tag_usage_counts(
+        db_session, owner_id, [tag.id for tag in tags]
+    )
+    return [
+        TagOut(
+            id=tag.id,
+            name=tag.name,
+            created_at=tag.created_at,
+            channel_count=counts.get(tag.id, (0, 0))[0],
+            video_count=counts.get(tag.id, (0, 0))[1],
+        )
+        for tag in tags
+    ]
+
+
 async def sync_entity_tags(
     entity: TaggableEntity,
     tag_ids: list[str],
@@ -106,9 +124,12 @@ async def get_all_tags(
         order_direction="asc",
     )
 
+    serialized = await _serialize_tags_with_counts(
+        cast(list[Tag], tags), db_session, owner_id
+    )
     return PaginatedResponse[TagOut](
         total=total,
-        items=cast(list[TagOut], tags),
+        items=serialized,
         limit=limit,
         offset=offset,
         has_more=(offset + limit) < total if limit else False,
@@ -135,6 +156,13 @@ async def get_tag_by_id(
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
     return tag
+
+
+async def get_tag_out_by_id(
+    tag_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+) -> TagOut:
+    tag = await get_tag_by_id(tag_id, db_session, owner_id=owner_id)
+    return (await _serialize_tags_with_counts([tag], db_session, owner_id))[0]
 
 
 async def create_new_tag(
@@ -179,7 +207,7 @@ async def update_tag(
     payload: TagUpdate,
     db_session: AsyncSession,
     owner_id: str = "test-user",
-) -> Tag:
+) -> TagOut:
     """
     Update a tag's name.
 
@@ -213,7 +241,7 @@ async def update_tag(
     db_session.add(tag)
     await db_session.commit()
     await db_session.refresh(tag)
-    return tag
+    return (await _serialize_tags_with_counts([tag], db_session, owner_id))[0]
 
 
 async def delete_tag_by_id(
