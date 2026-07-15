@@ -76,3 +76,6 @@ show_missing = true
 
 [tool.mypy]
 explicit_package_bases = true
+
+[tool.vercel]
+entrypoint = "app.index:app"
