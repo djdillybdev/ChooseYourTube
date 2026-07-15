@@ -34,7 +34,7 @@ jobs:
       ENABLE_STARTUP_SCHEMA_CHECK: "false"
     steps:
       - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v8
+      - uses: astral-sh/setup-uv@v8.3.2
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
