@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 from sqlalchemy.pool import NullPool
@@ -37,3 +40,36 @@ def test_vercel_configuration_has_daily_maintenance() -> None:
     assert configured["crons"] == [
         {"path": "/internal/demo/maintenance", "schedule": "0 4 * * *"}
     ]
+
+
+def test_migration_model_import_accepts_sync_database_url() -> None:
+    backend_root = Path(__file__).resolve().parents[2]
+    sync_database_url = "postgresql+psycopg2://user:pass@localhost/database"
+    env = os.environ.copy()
+    env.update(
+        {
+            "APP_ENV": "production",
+            "APP_MODE": "demo",
+            "DATABASE_URL": sync_database_url,
+            "ALEMBIC_DATABASE_URL": sync_database_url,
+            "AUTH_SECRET": "migration-only-secret-not-used-by-runtime-2026",
+            "DEMO_USER_EMAIL": "migration@example.com",
+            "DEMO_MAINTENANCE_SECRET": "migration-only-maintenance-secret-2026",
+            "ENABLE_STARTUP_SCHEMA_CHECK": "false",
+        }
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from app.db.models import User; assert User.__tablename__ == 'users'",
+        ],
+        cwd=backend_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr

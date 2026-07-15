@@ -1,9 +1,6 @@
-from .backend import auth_backend
-from .deps import current_active_user, current_user, fastapi_users
+"""Authentication models and runtime integrations.
 
-__all__ = [
-    "auth_backend",
-    "current_user",
-    "current_active_user",
-    "fastapi_users",
-]
+Import concrete submodules explicitly. Keeping the package initializer free of
+runtime dependencies lets Alembic load authentication models without creating
+the application's async database engine.
+"""

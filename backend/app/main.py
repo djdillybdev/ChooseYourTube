@@ -8,7 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.auth import auth_backend, fastapi_users
+from app.auth.backend import auth_backend
+from app.auth.deps import fastapi_users
 from app.auth.schemas import UserCreate, UserRead
 from app.core.config import Settings, settings
 from app.core.errors import APIErrorBody, ApplicationError, safe_error_details
