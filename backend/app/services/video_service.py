@@ -1,5 +1,6 @@
 import asyncio
 import re
+from dataclasses import dataclass
 import feedparser  # type: ignore[import-untyped]
 import httpx
 
@@ -7,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, Literal, cast
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.schemas.base import PaginatedResponse
 from ..core.config import settings
@@ -33,6 +34,18 @@ SHORTS_MAX_SECONDS = getattr(
 SHORTS_DEFAULT_TO_SHORT = getattr(settings, "SHORTS_DEFAULT_TO_SHORT", True)
 
 _SHORTS_TAG_PATTERN = re.compile(r"(?<!\w)#?shorts?\b", re.IGNORECASE)
+
+
+@dataclass(frozen=True, slots=True)
+class RSSVideoEntry:
+    """Video metadata available directly from a YouTube channel feed."""
+
+    id: str
+    title: str
+    description: str | None
+    thumbnail_url: str
+    published_at: datetime
+    is_short: bool
 
 
 def parse_iso8601_duration(duration_string: str) -> int:
@@ -152,7 +165,9 @@ async def _fetch_rss_bytes(channel) -> bytes | None:
         headers["If-Modified-Since"] = channel.rss_last_modified
 
     try:
-        async with httpx.AsyncClient(timeout=RSS_TIMEOUT, follow_redirects=True) as client:
+        async with httpx.AsyncClient(
+            timeout=RSS_TIMEOUT, follow_redirects=True
+        ) as client:
             async with client.stream(
                 "GET", YT_RSS_BASE_URL + channel.id, headers=headers
             ) as response:
@@ -223,6 +238,160 @@ async def _rss_video_ids(channel) -> tuple[list[str], int]:
     return list(dict.fromkeys(ids)), malformed
 
 
+def _feed_value(entry: Any, key: str) -> Any:
+    if hasattr(entry, "get"):
+        value = entry.get(key)
+        if value is not None:
+            return value
+    return getattr(entry, key, None)
+
+
+def _parse_rss_timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed
+
+
+def _rss_timestamps_equal(left: datetime | None, right: datetime) -> bool:
+    if left is None:
+        return False
+    if left.tzinfo is None:
+        left = left.replace(tzinfo=timezone.utc)
+    return left.astimezone(timezone.utc) == right.astimezone(timezone.utc)
+
+
+def _parse_rss_video_entries(content: bytes) -> tuple[list[RSSVideoEntry], int]:
+    parsed = feedparser.parse(content)
+    entries = parsed.get("entries") if hasattr(parsed, "get") else None
+    if not isinstance(entries, list):
+        entries = getattr(parsed, "entries", None)
+    if not isinstance(entries, list):
+        raise ApplicationError(
+            "RSS_MALFORMED", "The channel feed returned malformed data.", 502
+        )
+
+    videos: dict[str, RSSVideoEntry] = {}
+    malformed = 0
+    for entry in entries:
+        video_id = _feed_value(entry, "yt_videoid")
+        title = _feed_value(entry, "title") or _feed_value(entry, "media_title")
+        published_at = _parse_rss_timestamp(
+            _feed_value(entry, "published") or _feed_value(entry, "updated")
+        )
+        if (
+            not isinstance(video_id, str)
+            or not video_id
+            or len(video_id) > 16
+            or not isinstance(title, str)
+            or not title
+            or published_at is None
+        ):
+            malformed += 1
+            continue
+
+        description = _feed_value(entry, "media_description") or _feed_value(
+            entry, "summary"
+        )
+        if not isinstance(description, str):
+            description = None
+        link = _feed_value(entry, "link")
+        thumbnails = _feed_value(entry, "media_thumbnail")
+        thumbnail_url = None
+        if isinstance(thumbnails, list) and thumbnails:
+            first_thumbnail = thumbnails[0]
+            if hasattr(first_thumbnail, "get"):
+                candidate = first_thumbnail.get("url")
+                if isinstance(candidate, str) and candidate.startswith(
+                    ("https://", "http://")
+                ):
+                    thumbnail_url = candidate
+        if thumbnail_url is None:
+            thumbnail_url = f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+
+        shorts_text = f"{title}\n{description or ''}"
+        videos[video_id] = RSSVideoEntry(
+            id=video_id,
+            title=title[:255],
+            description=description,
+            thumbnail_url=thumbnail_url,
+            published_at=published_at,
+            is_short=(isinstance(link, str) and "/shorts/" in link)
+            or bool(_SHORTS_TAG_PATTERN.search(shorts_text)),
+        )
+
+    if entries and not videos and malformed == len(entries):
+        raise ApplicationError(
+            "RSS_MALFORMED", "The channel feed returned malformed entries.", 502
+        )
+    return list(videos.values()), malformed
+
+
+async def refresh_latest_channel_videos_from_rss(
+    channel_id: str,
+    db_session: AsyncSession,
+    owner_id: str = "test-user",
+) -> SyncProgress:
+    """Refresh a channel using RSS metadata without calling the Data API."""
+
+    channel = await crud_channel.get_channels(
+        db_session, owner_id=owner_id, id=channel_id, first=True
+    )
+    if channel is None:
+        raise ApplicationError("NOT_FOUND", "Channel not found.", 404)
+
+    content = await _fetch_rss_bytes(channel)
+    if content is None:
+        return SyncProgress()
+    entries, malformed = await asyncio.to_thread(_parse_rss_video_entries, content)
+
+    entry_ids = [entry.id for entry in entries]
+    existing = await crud_video.get_videos(db_session, owner_id=owner_id, id=entry_ids)
+    existing_by_id = {video.id: video for video in existing}
+    progress = SyncProgress(discovered=len(entries), skipped=malformed)
+
+    for entry in entries:
+        video = existing_by_id.get(entry.id)
+        if video is None:
+            db_session.add(
+                Video(
+                    owner_id=owner_id,
+                    id=entry.id,
+                    channel_id=channel_id,
+                    title=entry.title,
+                    description=entry.description,
+                    thumbnail_url=entry.thumbnail_url,
+                    published_at=entry.published_at,
+                    duration_seconds=None,
+                    is_short=entry.is_short,
+                    yt_tags=[],
+                )
+            )
+            progress.created += 1
+            continue
+
+        metadata_unchanged = (
+            video.title == entry.title
+            and video.description == entry.description
+            and video.thumbnail_url == entry.thumbnail_url
+            and _rss_timestamps_equal(video.published_at, entry.published_at)
+        )
+        if metadata_unchanged:
+            progress.skipped += 1
+            continue
+        video.title = entry.title
+        video.description = entry.description
+        video.thumbnail_url = entry.thumbnail_url
+        video.published_at = entry.published_at
+        progress.updated += 1
+
+    await db_session.commit()
+    return progress
+
+
 async def refresh_latest_channel_videos(
     channel_id: str,
     db_session: AsyncSession,
@@ -284,9 +453,7 @@ async def create_and_update_videos(
     video_ids = [video_id for video_id in dict.fromkeys(video_ids) if video_id]
     if not video_ids:
         return SyncProgress()
-    existing = await crud_video.get_videos(
-        db_session, owner_id=owner_id, id=video_ids
-    )
+    existing = await crud_video.get_videos(db_session, owner_id=owner_id, id=video_ids)
     existing_ids = {video.id for video in existing}
     full_video_items = []
     for i in range(0, len(video_ids), 50):
@@ -341,9 +508,7 @@ async def create_and_update_videos(
 async def fetch_and_store_all_channel_videos_task(
     ctx: dict, channel_id: str, owner_id: str = "test-user"
 ) -> None:
-    youtube_client = YouTubeAPI(
-        api_key=settings.YOUTUBE_API_KEY, account_usage=True
-    )
+    youtube_client = YouTubeAPI(api_key=settings.YOUTUBE_API_KEY, account_usage=True)
     async with sessionmanager.session() as db_session:
         try:
             await fetch_initial_channel_videos(
@@ -361,9 +526,7 @@ async def fetch_and_store_all_channel_videos_task(
 async def refresh_latest_channel_videos_task(
     ctx: dict, channel_id: str, owner_id: str = "test-user"
 ) -> None:
-    youtube_client = YouTubeAPI(
-        api_key=settings.YOUTUBE_API_KEY, account_usage=True
-    )
+    youtube_client = YouTubeAPI(api_key=settings.YOUTUBE_API_KEY, account_usage=True)
     async with sessionmanager.session() as db_session:
         await refresh_latest_channel_videos(
             channel_id, db_session, youtube_client, owner_id=owner_id

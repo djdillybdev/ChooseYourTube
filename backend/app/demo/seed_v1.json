@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "snapshot_at": "2026-07-01T12:00:00+00:00",
+  "user_id": "70000000-0000-0000-0000-000000000001",
+  "folders": [
+    {"id": "71000000-0000-0000-0000-000000000001", "name": "Learn", "position": 0},
+    {"id": "71000000-0000-0000-0000-000000000002", "name": "Technology", "position": 0, "parent_id": "71000000-0000-0000-0000-000000000001"},
+    {"id": "71000000-0000-0000-0000-000000000003", "name": "Creative", "position": 1}
+  ],
+  "tags": [
+    {"id": "72000000-0000-0000-0000-000000000001", "name": "deep dives"},
+    {"id": "72000000-0000-0000-0000-000000000002", "name": "visual storytelling"},
+    {"id": "72000000-0000-0000-0000-000000000003", "name": "career"}
+  ],
+  "channels": [
+    {
+      "id": "UC9-y-6csu5WGm29I7JiwpnA", "title": "Computerphile", "handle": "computerphile",
+      "description": "Videos about computers and computer science.", "folder_id": "71000000-0000-0000-0000-000000000002",
+      "tag_ids": ["72000000-0000-0000-0000-000000000001"],
+      "videos": [
+        ["pLqjQ55tz-U", "SQL Injection: A Practical Explanation", 742],
+        ["NuyzuNBFWxQ", "Floating Point Numbers", 614],
+        ["cytCp000003", "How Password Hashing Protects Accounts", 536],
+        ["cytCp000004", "Public Key Cryptography", 801],
+        ["cytCp000005", "The Limits of Computation", 920],
+        ["cytCp000006", "A One-Minute Computing Idea", 48]
+      ]
+    },
+    {
+      "id": "UCsXVk37bltHxD1rDPwtNM8Q", "title": "Kurzgesagt – In a Nutshell", "handle": "kurzgesagt",
+      "description": "Animated stories about science and the world.", "folder_id": "71000000-0000-0000-0000-000000000001",
+      "tag_ids": ["72000000-0000-0000-0000-000000000002"],
+      "videos": [
+        ["h6fcK_fRYaI", "The Egg – A Short Story", 472],
+        ["UjtOGPJ0URM", "Optimistic Nihilism", 387],
+        ["MBRqu0YOH14", "Loneliness", 731],
+        ["cytKz000004", "The Scale of the Universe", 689],
+        ["cytKz000005", "A Journey Through the Immune System", 581],
+        ["cytKz000006", "Science in Under a Minute", 52]
+      ]
+    },
+    {
+      "id": "UC-b3c7kxa5vU-bnmaROgvog", "title": "The Futur", "handle": "thefutur",
+      "description": "Business and design education for creative professionals.", "folder_id": "71000000-0000-0000-0000-000000000003",
+      "tag_ids": ["72000000-0000-0000-0000-000000000003"],
+      "videos": [
+        ["cytTf000001", "How to Price Creative Work", 1324],
+        ["cytTf000002", "Build a Stronger Personal Brand", 984],
+        ["cytTf000003", "A Better Client Conversation", 744],
+        ["cytTf000004", "Design Career Advice", 615],
+        ["cytTf000005", "Finding Your Creative Purpose", 523],
+        ["cytTf000006", "One Useful Design Habit", 44]
+      ]
+    },
+    {
+      "id": "UCePDFpCr78_qmVtpoB1Axaw", "title": "Great Art Explained", "handle": "greatartexplained",
+      "description": "Accessible stories behind important works of art.", "folder_id": "71000000-0000-0000-0000-000000000003",
+      "tag_ids": ["72000000-0000-0000-0000-000000000001", "72000000-0000-0000-0000-000000000002"],
+      "videos": [
+        ["cytGa000001", "Mona Lisa by Leonardo da Vinci", 902],
+        ["cytGa000002", "The Starry Night by Vincent van Gogh", 867],
+        ["cytGa000003", "Frida Kahlo and The Two Fridas", 811],
+        ["cytGa000004", "The Arnolfini Portrait", 793],
+        ["cytGa000005", "Understanding Modern Art", 756],
+        ["cytGa000006", "An Artwork in Under a Minute", 55]
+      ]
+    }
+  ],
+  "video_tag_ids": {
+    "pLqjQ55tz-U": ["72000000-0000-0000-0000-000000000001"],
+    "h6fcK_fRYaI": ["72000000-0000-0000-0000-000000000002"],
+    "cytTf000002": ["72000000-0000-0000-0000-000000000003"]
+  },
+  "watched_ids": ["NuyzuNBFWxQ", "UjtOGPJ0URM", "cytGa000003"],
+  "favorite_ids": ["pLqjQ55tz-U", "h6fcK_fRYaI", "cytTf000002"],
+  "watch_later_ids": ["MBRqu0YOH14", "cytTf000001", "cytGa000002"],
+  "playlists": [
+    {"id": "73000000-0000-0000-0000-000000000001", "name": "Thought-provoking", "description": "Ideas worth returning to", "current_position": 1, "video_ids": ["UjtOGPJ0URM", "h6fcK_fRYaI", "cytGa000001"]},
+    {"id": "73000000-0000-0000-0000-000000000002", "name": "Creative career", "description": "Practical design and career guidance", "current_position": 0, "video_ids": ["cytTf000001", "cytTf000002", "cytTf000004"]}
+  ]
+}

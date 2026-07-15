@@ -78,6 +78,8 @@ jobs:
       - run: pnpm exec prettier --check .
       - run: pnpm exec eslint .
       - run: pnpm run check
+      - run: pnpm run build
+      - run: pnpm run build:vercel
       - run: pnpm run test:coverage
 
   schema:
@@ -147,6 +149,7 @@ jobs:
           echo 'YOUTUBE_API_KEY=ci-fixture-key' >> .env
           echo 'AUTH_SECRET=ci-auth-secret-with-at-least-thirty-two-characters' >> .env
       - run: docker compose --env-file .env config --quiet
+      - run: docker compose --env-file .env -f compose.yaml -f compose.release.yaml config --quiet
       - run: docker compose --env-file .env build backend worker frontend migrate
       - run: docker compose --env-file .env up -d postgres redis migrate backend worker frontend
       - run: python3 scripts/compose_smoke.py

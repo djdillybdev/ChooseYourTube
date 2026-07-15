@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app/index.py": {
+      "maxDuration": 300,
+      "includeFiles": "app/demo/seed_v1.json"
+    }
+  },
+  "regions": ["fra1"],
+  "crons": [
+    {
+      "path": "/internal/demo/maintenance",
+      "schedule": "0 4 * * *"
+    }
+  ]
+}

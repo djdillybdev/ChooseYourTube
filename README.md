@@ -36,20 +36,14 @@ GOOGLE_REDIRECT_URI=http://localhost:8000/imports/youtube/oauth/callback
 
 The redirect URI must match Google Cloud exactly. OAuth credentials are used only to discover subscriptions and are not persisted; channel metadata and synchronization continue with `YOUTUBE_API_KEY`.
 
-
 ## Quick Start
 
-1. Copy environment template:
-
 ```bash
-cp .env.example .env
+YOUTUBE_API_KEY=your-key make quickstart
 ```
 
-2. Start the full stack:
-
-```bash
-make up
-```
+See [deployment and release operations](docs/deployment.md) for the Vercel/Neon recruiter demo,
+release images, upgrades, backup, restore, and rollback.
 
 ## Services
 
@@ -77,8 +71,12 @@ make up
   - `make logs`
   - `make ps`
   - `make migrate`
+  - `make test`
+  - `make health`
+  - `make backup`
+  - `CONFIRM=RESTORE BACKUP_FILE=... make restore`
 - Reset database/redis volumes with `docker compose --env-file .env down -v`.
 
 ## AI Usage
 
-I made use of various coding agents to aid in the development of this project. This usage was mainly in the frontend as that is an area I am less experienced in and less interested in. I still involved myself in reviewing the code and made architecture and design choices myself.
+I made use of various coding agents to aid in the development of this project. This usage was mainly in the frontend as that is an area I am less experienced in. I still involved myself in reviewing the code and made architecture and design choices myself.

@@ -105,11 +105,11 @@ Add typed settings with the following behavior:
 | `BACKGROUND_JOBS_ENABLED`    | `true`                  | `false`              | Enables Redis/arq enqueue operations.                      |
 | `YOUTUBE_OAUTH_ENABLED`      | When configured         | `false`              | Enables Google subscription OAuth.                         |
 | `DEMO_LOGIN_ENABLED`         | `false`                 | `true`               | Enables one-click demo sessions.                           |
-| `YOUTUBE_DAILY_QUOTA_BUDGET` | Configurable safe value | Small curated budget | Stops optional work before the project quota is exhausted. |
+| `YOUTUBE_DAILY_QUOTA_BUDGET` | Configurable safe value | Unused               | Stops optional full-mode work before quota is exhausted.   |
 | `DEMO_USER_EMAIL`            | Unset                   | Required             | Identifies the seeded shared demo user.                    |
 | `DEMO_MAINTENANCE_SECRET`    | Unset                   | Required             | Protects daily demo maintenance.                           |
 
-Make `REDIS_URL` required only when background jobs are enabled. Google OAuth client settings are optional, but attempting to enable OAuth without them must fail startup validation. A YouTube API key remains required for full live synchronization; demo startup may use an existing seeded database without a key, but its maintenance refresh must report a disabled/failed sync rather than deleting data.
+Make `REDIS_URL` required only when background jobs are enabled. Google OAuth client settings are optional, but attempting to enable OAuth without them must fail startup validation. A YouTube API key remains required for full live synchronization. Demo mode never requires or uses a key: its maintenance path creates videos directly from public channel RSS metadata and reports per-feed failures without deleting the last durable data.
 
 Outside local development, reject the placeholder `AUTH_SECRET`, wildcard CORS, insecure OAuth transport, malformed origins, and secrets shorter than the documented minimum. Remove the OAuth client behavior that sets `OAUTHLIB_INSECURE_TRANSPORT` globally; allow insecure redirect URIs only under an explicit local-development flag.
 
@@ -198,6 +198,9 @@ All database writes must remain idempotent. Video IDs, channel IDs, source playl
 - Validate feed shape defensively; a missing `yt_videoid`, link, or entries collection must produce a classified error rather than an attribute exception.
 - Continue using RSS to detect likely changes before spending Data API quota.
 - Batch `videos.list` and `channels.list` calls up to their supported batch sizes.
+
+The Vercel demo is stricter than the full synchronization path: it builds recent video records directly
+from RSS and must never instantiate the YouTube Data API client or fall back to quota-metered endpoints.
 
 Add daily external API usage accounting with date, operation, estimated units, call count, and outcome. Increment it through one instrumented YouTube client wrapper so service code cannot bypass accounting. Stop optional API work when `YOUTUBE_DAILY_QUOTA_BUDGET` is reached. Expose only aggregate, non-secret quota status to authenticated users.
 
@@ -486,7 +489,7 @@ Add a secret-protected daily maintenance endpoint invoked by Vercel cron. It mus
 
 1. Authenticate the cron secret and reject normal users.
 2. Create a `demo_maintenance` sync run.
-3. Attempt a bounded refresh of only the curated channels within the demo quota budget.
+3. Attempt a bounded RSS-only refresh of the curated channels without constructing or calling the YouTube Data API client.
 4. Reset watched/favorite/category/playlist state to the seed definition transactionally.
 5. Preserve the last good videos if YouTube is unavailable.
 6. Clean expired auth refresh sessions.
@@ -543,7 +546,7 @@ Rewrite the root README in this order:
 
 Document these explicitly in the README or linked architecture decision records:
 
-- RSS-first change detection reduces quota use; the Data API fills metadata gaps.
+- RSS-first change detection reduces quota use in full mode; the Data API fills metadata gaps there, while the Vercel demo remains RSS-only.
 - PostgreSQL is the durable application cache and source of truth.
 - Content is currently duplicated per owner, which favors isolation and straightforward deletion but costs storage and repeated refresh work.
 - Google OAuth tokens are discarded after subscription discovery to minimize sensitive data retention; CSV is the privacy-friendly fallback.

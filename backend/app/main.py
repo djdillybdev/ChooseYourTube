@@ -20,6 +20,7 @@ from app.routers import (
     auth_session,
     channels,
     demo_auth,
+    demo_maintenance,
     folders,
     health,
     playlists,
@@ -98,7 +99,9 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
     application.include_router(subscription_imports.router)
     if app_settings.APP_MODE == "full":
         application.include_router(
-            fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
+            fastapi_users.get_auth_router(auth_backend),
+            prefix="/auth/jwt",
+            tags=["auth"],
         )
     if app_settings.REGISTRATION_ENABLED:
         application.include_router(
@@ -109,6 +112,8 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
     application.include_router(accounts.router)
     if app_settings.APP_MODE == "demo" and app_settings.DEMO_LOGIN_ENABLED:
         application.include_router(demo_auth.router)
+    if app_settings.APP_MODE == "demo":
+        application.include_router(demo_maintenance.router)
     application.include_router(auth_session.router)
 
     @application.exception_handler(ApplicationError)
@@ -139,7 +144,9 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
         )
 
     @application.exception_handler(Exception)
-    async def unexpected_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    async def unexpected_error_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
         logger.exception("unhandled_request_error")
         return _error_response(
             request,

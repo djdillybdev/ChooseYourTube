@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 # Heavily inspired by https://praciano.com.br/fastapi-and-async-sqlalchemy-20-with-pytest-done-right.html
 
@@ -54,8 +55,19 @@ class DatabaseSessionManager:
             await session.close()
 
 
+def engine_kwargs_for_runtime() -> dict[str, Any]:
+    """Use Neon/PgBouncer as the only pool in ephemeral serverless functions."""
+    kwargs: dict[str, Any] = {"echo": settings.echo_sql}
+    if settings.DATABASE_POOL_MODE == "serverless":
+        kwargs["poolclass"] = NullPool
+    else:
+        kwargs["pool_pre_ping"] = True
+        kwargs["pool_recycle"] = 300
+    return kwargs
+
+
 sessionmanager = DatabaseSessionManager(
-    settings.DATABASE_URL, {"echo": settings.echo_sql}
+    settings.DATABASE_URL, engine_kwargs_for_runtime()
 )
 
 
