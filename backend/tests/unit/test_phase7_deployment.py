@@ -28,12 +28,12 @@ def test_persistent_database_mode_checks_and_recycles_connections(monkeypatch) -
     assert "poolclass" not in kwargs
 
 
-def test_vercel_configuration_has_bounded_daily_maintenance() -> None:
+def test_vercel_configuration_has_daily_maintenance() -> None:
     backend_root = Path(__file__).resolve().parents[2]
     configured = json.loads((backend_root / "vercel.json").read_text())
 
     assert configured["regions"] == ["fra1"]
-    assert configured["functions"]["app/index.py"]["maxDuration"] == 300
+    assert "functions" not in configured
     assert configured["crons"] == [
         {"path": "/internal/demo/maintenance", "schedule": "0 4 * * *"}
     ]

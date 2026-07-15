@@ -29,19 +29,19 @@ jobs:
       DATABASE_URL: ${{ secrets.NEON_DIRECT_DATABASE_URL }}
       ALEMBIC_DATABASE_URL: ${{ secrets.NEON_DIRECT_DATABASE_URL }}
       AUTH_SECRET: migration-only-secret-not-used-by-runtime-2026
-      DEMO_USER_EMAIL: migration@example.invalid
+      DEMO_USER_EMAIL: migration@example.com
       DEMO_MAINTENANCE_SECRET: migration-only-maintenance-secret-2026
       ENABLE_STARTUP_SCHEMA_CHECK: "false"
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v8
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
       - run: uv sync --frozen --no-dev
       - name: Report current revision
-        run: uv run alembic current
+        run: uv run --no-sync alembic current
       - name: Upgrade to head
-        run: uv run alembic upgrade head
+        run: uv run --no-sync alembic upgrade head
       - name: Verify migration head
-        run: uv run alembic current --check-heads
+        run: uv run --no-sync alembic current --check-heads
