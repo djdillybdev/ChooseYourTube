@@ -78,11 +78,21 @@ strings for each branch. Runtime URLs must use the async driver and the pooled h
 postgresql+asyncpg://USER:PASSWORD@ENDPOINT-pooler.REGION.aws.neon.tech/DATABASE?ssl=require
 ```
 
+Do not paste Neon's generic `postgresql://` connection string into the Vercel backend unchanged.
+That URL selects the synchronous `psycopg2` driver and the Python function will fail during import.
+For `DATABASE_URL`, preserve the encoded username, password, pooled hostname, and database name;
+change the scheme to `postgresql+asyncpg://` and use the asyncpg-compatible `?ssl=require` query.
+If a Neon-Vercel integration also manages environment variables, verify that it is not overwriting the
+manually configured `DATABASE_URL` with a generic connection string.
+
 Migrations, `pg_dump`, and restore use the direct hostname and a sync driver:
 
 ```text
 postgresql+psycopg2://USER:PASSWORD@ENDPOINT.REGION.aws.neon.tech/DATABASE?sslmode=require
 ```
+
+Keep the direct URL only in the GitHub `NEON_DIRECT_DATABASE_URL` environment secret. Do not set it as
+the Vercel backend's `DATABASE_URL` or `ALEMBIC_DATABASE_URL`.
 
 Never expose either URL to the frontend project.
 

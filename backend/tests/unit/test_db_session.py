@@ -47,6 +47,45 @@ class TestDatabaseSessionManagerInit:
                     "sqlite+aiosqlite:///:memory:",
                 )
 
+    def test_init_accepts_postgresql_async_driver(self):
+        """Test that an async PostgreSQL runtime URL reaches engine creation."""
+        database_url = "postgresql+asyncpg://user:pass@localhost/database"
+
+        with patch("app.db.session.create_async_engine") as mock_create_engine:
+            with patch("app.db.session.async_sessionmaker"):
+                DatabaseSessionManager(database_url)
+
+        mock_create_engine.assert_called_once_with(database_url)
+
+    @pytest.mark.parametrize(
+        "database_url",
+        [
+            "postgresql://user:super-secret@localhost/database",
+            "postgresql+psycopg2://user:super-secret@localhost/database",
+        ],
+    )
+    def test_init_rejects_sync_postgresql_driver_without_exposing_credentials(
+        self, database_url: str
+    ):
+        """Test that runtime URLs fail safely before creating an async engine."""
+        with patch("app.db.session.create_async_engine") as mock_create_engine:
+            with pytest.raises(ValueError, match=r"postgresql\+asyncpg://") as exc_info:
+                DatabaseSessionManager(database_url)
+
+        mock_create_engine.assert_not_called()
+        assert "super-secret" not in str(exc_info.value)
+
+    def test_init_rejects_malformed_url_without_exposing_credentials(self):
+        """Test that URL parsing failures do not echo the configured value."""
+        database_url = "not-a-driver://user:super-secret@localhost/database"
+
+        with pytest.raises(
+            ValueError, match="supported async SQLAlchemy driver"
+        ) as exc_info:
+            DatabaseSessionManager(database_url)
+
+        assert "super-secret" not in str(exc_info.value)
+
 
 @pytest.mark.asyncio
 class TestDatabaseSessionManagerClose:

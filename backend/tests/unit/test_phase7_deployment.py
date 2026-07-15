@@ -12,6 +12,22 @@ from app.db import session
 from app.index import app
 
 
+def _production_demo_environment(database_url: str) -> dict[str, str]:
+    env = os.environ.copy()
+    env.update(
+        {
+            "APP_ENV": "production",
+            "APP_MODE": "demo",
+            "DATABASE_URL": database_url,
+            "AUTH_SECRET": "migration-only-secret-not-used-by-runtime-2026",
+            "DEMO_USER_EMAIL": "migration@example.com",
+            "DEMO_MAINTENANCE_SECRET": "migration-only-maintenance-secret-2026",
+            "ENABLE_STARTUP_SCHEMA_CHECK": "false",
+        }
+    )
+    return env
+
+
 def test_vercel_entrypoint_exports_fastapi_application() -> None:
     assert app.title == "ChooseYourTube API"
 
@@ -45,19 +61,8 @@ def test_vercel_configuration_has_daily_maintenance() -> None:
 def test_migration_model_import_accepts_sync_database_url() -> None:
     backend_root = Path(__file__).resolve().parents[2]
     sync_database_url = "postgresql+psycopg2://user:pass@localhost/database"
-    env = os.environ.copy()
-    env.update(
-        {
-            "APP_ENV": "production",
-            "APP_MODE": "demo",
-            "DATABASE_URL": sync_database_url,
-            "ALEMBIC_DATABASE_URL": sync_database_url,
-            "AUTH_SECRET": "migration-only-secret-not-used-by-runtime-2026",
-            "DEMO_USER_EMAIL": "migration@example.com",
-            "DEMO_MAINTENANCE_SECRET": "migration-only-maintenance-secret-2026",
-            "ENABLE_STARTUP_SCHEMA_CHECK": "false",
-        }
-    )
+    env = _production_demo_environment(sync_database_url)
+    env["ALEMBIC_DATABASE_URL"] = sync_database_url
 
     result = subprocess.run(
         [
@@ -73,6 +78,48 @@ def test_migration_model_import_accepts_sync_database_url() -> None:
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_vercel_entrypoint_import_accepts_async_runtime_database_url() -> None:
+    backend_root = Path(__file__).resolve().parents[2]
+    env = _production_demo_environment(
+        "postgresql+asyncpg://user:pass@localhost/database?ssl=require"
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from app.index import app; assert app.title == 'ChooseYourTube API'",
+        ],
+        cwd=backend_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_vercel_entrypoint_import_rejects_sync_runtime_url_safely() -> None:
+    backend_root = Path(__file__).resolve().parents[2]
+    env = _production_demo_environment(
+        "postgresql://user:super-secret@localhost/database"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", "from app.index import app"],
+        cwd=backend_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "use postgresql+asyncpg:// for PostgreSQL" in result.stderr
+    assert "super-secret" not in result.stderr
 
 
 def test_migration_workflow_uses_supported_head_verifier() -> None:
