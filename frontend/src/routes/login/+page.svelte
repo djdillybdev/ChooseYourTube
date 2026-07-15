@@ -67,7 +67,7 @@
 			<h1 class="card-title text-2xl">
 				{data.metadata?.mode === 'demo' ? 'Explore ChooseYourTube' : 'Log in'}
 			</h1>
-			<p class="text-sm text-base-content/70">
+			<p class="text-sm text-base-content/90">
 				{data.metadata?.mode === 'demo'
 					? 'Enter the shared recruiter demo without credentials. Changes reset daily.'
 					: 'Access your ChooseYourTube account.'}
@@ -129,7 +129,7 @@
 				</form>
 
 				{#if data.metadata?.features.registration !== false}
-					<p class="mt-3 text-sm text-base-content/70">
+					<p class="mt-3 text-sm text-base-content/90">
 						Need an account?
 						<a class="link link-primary" href={resolve('/register')}>Create one</a>
 					</p>

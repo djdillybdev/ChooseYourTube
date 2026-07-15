@@ -94,3 +94,57 @@ async def test_migration_drift_makes_readiness_fail(monkeypatch) -> None:
 
     assert response.status_code == 503
     assert b'"migrations":{"status":"incompatible","required":true}' in response.body
+
+
+@pytest.mark.asyncio
+async def test_readiness_reports_database_and_migration_failures(monkeypatch) -> None:
+    unavailable = AsyncMock()
+    unavailable.execute.side_effect = RuntimeError("database offline")
+    response = await health.readiness(unavailable)
+    assert response.status_code == 503
+    assert b'"database":{"status":"unavailable","required":true}' in response.body
+
+    migration_failure = AsyncMock()
+    migration_failure.execute.side_effect = [MagicMock(), RuntimeError("no version table")]
+    monkeypatch.setattr(health.settings, "BACKGROUND_JOBS_ENABLED", False)
+    response = await health.readiness(migration_failure)
+    assert response.status_code == 503
+    assert b'"migrations":{"status":"incompatible","required":true}' in response.body
+
+
+@pytest.mark.asyncio
+async def test_full_mode_readiness_requires_redis_and_worker(monkeypatch) -> None:
+    session = AsyncMock()
+    migration_result = MagicMock()
+    migration_result.fetchall.return_value = [("head-revision",)]
+    session.execute.side_effect = [MagicMock(), migration_result]
+    monkeypatch.setattr(health, "_migration_heads", lambda: {"head-revision"})
+    monkeypatch.setattr(health.settings, "BACKGROUND_JOBS_ENABLED", True)
+
+    redis = AsyncMock()
+    redis.get.return_value = b'{"worker":"worker-1"}'
+    monkeypatch.setattr(health.arq, "create_pool", AsyncMock(return_value=redis))
+    response = await health.readiness(session)
+    assert response.status_code == 200
+    assert b'"worker":{"status":"ok","required":true}' in response.body
+    redis.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_full_mode_readiness_rejects_missing_worker_and_redis_failure(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(health.settings, "BACKGROUND_JOBS_ENABLED", True)
+    redis = AsyncMock()
+    redis.get.return_value = None
+    monkeypatch.setattr(health.arq, "create_pool", AsyncMock(return_value=redis))
+    checks, ready = await health._background_checks()
+    assert ready is False
+    assert checks["worker"]["status"] == "stale_or_missing"
+
+    monkeypatch.setattr(
+        health.arq, "create_pool", AsyncMock(side_effect=ConnectionError("redis offline"))
+    )
+    checks, ready = await health._background_checks()
+    assert ready is False
+    assert checks["redis"]["status"] == "unavailable"

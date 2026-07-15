@@ -154,12 +154,12 @@
 					</li>
 
 					<!-- Folders Section -->
-					<li class="mt-4 menu-title">
+					<li class="mt-4 menu-title text-base-content/90">
 						<span>Folders</span>
 					</li>
 
 					{#if rootFolders.length === 0}
-						<li class="text-sm text-base-content/60">
+						<li class="text-sm text-base-content/90">
 							<span>No folders yet</span>
 						</li>
 					{:else}
@@ -189,12 +189,12 @@
 					</li>
 
 					<!-- Channels Section -->
-					<li class="mt-4 menu-title">
+					<li class="mt-4 menu-title text-base-content/90">
 						<span>Channels</span>
 					</li>
 
 					{#if unfolderedChannels.length === 0}
-						<li class="text-sm text-base-content/60">
+						<li class="text-sm text-base-content/90">
 							<span>No channels yet</span>
 						</li>
 					{:else}

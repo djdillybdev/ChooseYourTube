@@ -115,9 +115,9 @@
 			<!-- Channel Info -->
 			<div class="min-w-0 flex-1">
 				<h1 class="mb-1 text-3xl font-bold">{data.channel.title}</h1>
-				<p class="mb-2 text-base-content/60">@{data.channel.handle}</p>
+				<p class="mb-2 text-base-content/90">@{data.channel.handle}</p>
 
-				<div class="flex items-center gap-4 text-sm text-base-content/60">
+				<div class="flex items-center gap-4 text-sm text-base-content/90">
 					<span>{data.total} videos</span>
 					{#if data.channel.last_updated}
 						<span>Updated {formatRelativeDate(data.channel.last_updated)}</span>

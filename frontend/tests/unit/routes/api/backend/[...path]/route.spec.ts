@@ -97,12 +97,12 @@ describe('backend proxy route', () => {
 			'/channels',
 			expect.objectContaining({
 				method: 'POST',
-				body: expect.any(ArrayBuffer),
+				body: expect.any(Blob),
 				headers: { 'Content-Type': 'application/json' }
 			})
 		);
-		const forwarded = backendFetchFromEventMock.mock.calls[0][2].body as ArrayBuffer;
-		expect(new TextDecoder().decode(forwarded)).toBe(JSON.stringify({ handle: '@abc' }));
+		const forwarded = backendFetchFromEventMock.mock.calls[0][2].body as Blob;
+		expect(await forwarded.text()).toBe(JSON.stringify({ handle: '@abc' }));
 	});
 
 	it('allows imports and preserves multipart bytes and boundary', async () => {
@@ -125,9 +125,11 @@ describe('backend proxy route', () => {
 			'/imports/subscriptions/csv',
 			expect.objectContaining({
 				headers: { 'Content-Type': 'multipart/form-data; boundary=boundary' },
-				body: expect.any(ArrayBuffer)
+				body: expect.any(Blob)
 			})
 		);
+		const forwarded = backendFetchFromEventMock.mock.calls[0][2].body as Blob;
+		expect(await forwarded.text()).toBe('--boundary\r\nCSV data\r\n--boundary--');
 	});
 
 	it('retries once on 401 after successful refresh', async () => {

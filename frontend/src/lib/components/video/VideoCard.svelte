@@ -80,10 +80,12 @@
 	class:opacity-60={video.is_watched}
 	onmouseenter={() => (isHovered = true)}
 	onmouseleave={() => (isHovered = false)}
-	onclick={() => void handlePlay()}
-	role="button"
-	tabindex="0"
-	onkeydown={(e) => e.key === 'Enter' && void handlePlay()}
+	onfocusin={() => (isHovered = true)}
+	onfocusout={(event) => {
+		if (!event.currentTarget.contains(event.relatedTarget as Node | null)) isHovered = false;
+	}}
+	role="group"
+	aria-label={video.title}
 >
 	<div class="card-body p-4">
 		<div class="flex gap-4">
@@ -155,14 +157,14 @@
 				<!-- Title and metadata -->
 				<div>
 					<h3 class="line-clamp-2 leading-tight font-semibold">{video.title}</h3>
-					<p class="mt-1 text-sm text-base-content/60">
+					<p class="mt-1 text-sm text-base-content/90">
 						{#if channelMap}
 							{getChannelTitle(video.channel_id, channelMap)}
 						{:else}
 							Channel ID: {video.channel_id}
 						{/if}
 					</p>
-					<p class="text-xs text-base-content/40">
+					<p class="text-xs text-base-content/90">
 						{formatRelativeDate(video.published_at)}
 						{#if video.is_short}
 							<span class="ml-2 badge badge-sm">Short</span>

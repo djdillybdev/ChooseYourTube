@@ -38,6 +38,7 @@
 </script>
 
 <svelte:head>
+	<title>ChooseYourTube</title>
 	<link rel="icon" href={favicon} />
 	<meta
 		name="description"

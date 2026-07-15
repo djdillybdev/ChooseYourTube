@@ -40,7 +40,7 @@
 <div class="container mx-auto max-w-4xl p-6">
 	<div class="mb-6">
 		<h1 class="text-2xl font-bold">Inbox</h1>
-		<p class="text-sm text-base-content/60">
+		<p class="text-sm text-base-content/90">
 			{data.total}
 			{data.total === 1 ? 'video' : 'videos'}
 		</p>

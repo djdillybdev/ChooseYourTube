@@ -33,5 +33,5 @@
 		{/if}
 	</div>
 {:else if !compact}
-	<span class="text-xs text-base-content/60">Not synchronized yet</span>
+	<span class="text-xs text-base-content/90">Not synchronized yet</span>
 {/if}

@@ -1,0 +1,47 @@
+name: Production database migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type MIGRATE to confirm the production schema upgrade
+        required: true
+        type: string
+
+concurrency:
+  group: production-database-migration
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    if: inputs.confirmation == 'MIGRATE'
+    environment: production
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      APP_ENV: production
+      APP_MODE: demo
+      DATABASE_URL: ${{ secrets.NEON_DIRECT_DATABASE_URL }}
+      ALEMBIC_DATABASE_URL: ${{ secrets.NEON_DIRECT_DATABASE_URL }}
+      AUTH_SECRET: migration-only-secret-not-used-by-runtime-2026
+      DEMO_USER_EMAIL: migration@example.invalid
+      DEMO_MAINTENANCE_SECRET: migration-only-maintenance-secret-2026
+      ENABLE_STARTUP_SCHEMA_CHECK: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --frozen --no-dev
+      - name: Report current revision
+        run: uv run alembic current
+      - name: Upgrade to head
+        run: uv run alembic upgrade head
+      - name: Verify migration head
+        run: uv run alembic current --check-heads

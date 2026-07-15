@@ -33,6 +33,11 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _as_utc(value: datetime) -> datetime:
+    """Normalize timestamps returned by dialects that drop timezone metadata."""
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+
 def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
@@ -161,7 +166,7 @@ async def session_refresh(
             detail={"code": "SESSION_REVOKED"},
         )
 
-    if refresh_session.expires_at <= now:
+    if _as_utc(refresh_session.expires_at) <= now:
         refresh_session.revoked_at = now
         refresh_session.last_used_at = now
         await db_session.commit()

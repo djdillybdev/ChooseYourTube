@@ -337,7 +337,7 @@
 
 	<div class="flex items-center gap-2">
 		{#if currentUser}
-			<span class="text-sm text-base-content/70">{currentUser.email}</span>
+			<span class="text-sm text-base-content/90">{currentUser.email}</span>
 		{/if}
 		<button class="btn btn-ghost btn-sm" aria-label="Logout" onclick={handleLogout}>
 			Logout

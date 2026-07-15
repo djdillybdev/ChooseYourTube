@@ -1,0 +1,51 @@
+services:
+  postgres:
+    ports: []
+    volumes:
+      - e2e_postgres_data:/var/lib/postgresql/data
+
+  redis:
+    ports: []
+    volumes:
+      - e2e_redis_data:/data
+
+  backend:
+    environment:
+      APP_ENV: test
+      ENABLE_STARTUP_SCHEMA_CHECK: "true"
+      AUTH_SECRET: e2e-auth-secret-with-at-least-thirty-two-characters
+      YOUTUBE_API_KEY: e2e-fixture-key
+
+  worker:
+    environment:
+      APP_ENV: test
+      AUTH_SECRET: e2e-auth-secret-with-at-least-thirty-two-characters
+      YOUTUBE_API_KEY: e2e-fixture-key
+
+  frontend:
+    ports:
+      - "5173:5173"
+
+  seed-e2e:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: test
+      APP_MODE: full
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/chooseyourtube
+      REDIS_URL: redis://redis:6379/0
+      API_ORIGIN: http://localhost:5173
+      YOUTUBE_API_KEY: e2e-fixture-key
+      AUTH_SECRET: e2e-auth-secret-with-at-least-thirty-two-characters
+      ENABLE_STARTUP_SCHEMA_CHECK: "false"
+    command: ["python", "-m", "scripts.seed_e2e"]
+    restart: "no"
+
+volumes:
+  e2e_postgres_data:
+  e2e_redis_data:

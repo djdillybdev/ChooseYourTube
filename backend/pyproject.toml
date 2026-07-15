@@ -51,8 +51,10 @@ addopts = [
     "--strict-markers",
     "--tb=short",
     "--cov=app",
+    "--cov-branch",
     "--cov-report=term-missing:skip-covered",
     "--cov-report=html",
+    "--cov-report=json:coverage.json",
 ]
 markers = [
     "unit: Pure unit tests without external dependencies",

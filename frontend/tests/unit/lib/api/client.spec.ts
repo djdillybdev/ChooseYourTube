@@ -14,6 +14,18 @@ describe('APIClient', () => {
 		delete (globalThis as { window?: unknown }).window;
 	});
 
+	it('normalizes endpoint trailing slashes before SvelteKit routing', async () => {
+		const fetcher = vi.fn().mockResolvedValue(HttpResponse.json({ items: [] }));
+		const client = new APIClient('http://api.test', fetcher);
+
+		await client.get('/channels/');
+
+		expect(fetcher).toHaveBeenCalledWith(
+			'http://api.test/channels',
+			expect.objectContaining({ method: 'GET' })
+		);
+	});
+
 	it('retries on server errors and eventually succeeds', async () => {
 		let attempts = 0;
 		server.use(

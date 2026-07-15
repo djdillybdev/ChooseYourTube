@@ -26,7 +26,9 @@ async function proxy(event: RequestEvent, method: string) {
 
 	const query = event.url.search || '';
 	const body =
-		method === 'GET' || method === 'DELETE' ? undefined : await event.request.arrayBuffer();
+		method === 'GET' || method === 'DELETE'
+			? undefined
+			: new Blob([await event.request.arrayBuffer()]);
 	const contentType = event.request.headers.get('content-type');
 
 	let response = await backendFetchFromEvent(event, `/${rawPath}${query}`, {

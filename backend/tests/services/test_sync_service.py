@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.db.crud import crud_sync_run
 from app.db.models.channel import Channel
@@ -165,3 +167,127 @@ async def test_quota_totals_aggregate_all_outcomes(db_session):
     )
     await db_session.commit()
     assert await crud_sync_run.quota_totals(db_session, today) == (4, 4)
+
+
+@pytest.mark.asyncio
+async def test_unscoped_maintenance_run_is_created(db_session):
+    run, created = await sync_service.create_or_get_active_run(
+        db_session, owner_id="owner", kind=SyncRunKind.DEMO_MAINTENANCE
+    )
+    assert created is True
+    assert run.channel_id is None
+    assert run.subscription_import_id is None
+
+
+@pytest.mark.asyncio
+async def test_enqueue_supports_defer_deduplication_and_queue_failure(
+    db_session, channel, mock_arq_redis
+):
+    deferred = await sync_service.enqueue_run(
+        db_session,
+        mock_arq_redis,
+        owner_id=channel.owner_id,
+        channel_id=channel.id,
+        kind=SyncRunKind.CHANNEL_REFRESH,
+        defer_seconds=42,
+    )
+    mock_arq_redis.enqueue_job.assert_awaited_once_with(
+        "execute_sync_run", str(deferred.id), _job_id=str(deferred.id), _defer_by=42
+    )
+    mock_arq_redis.enqueue_job.reset_mock()
+    duplicate = await sync_service.enqueue_run(
+        db_session,
+        mock_arq_redis,
+        owner_id=channel.owner_id,
+        channel_id=channel.id,
+        kind=SyncRunKind.CHANNEL_REFRESH,
+    )
+    assert duplicate.id == deferred.id
+    mock_arq_redis.enqueue_job.assert_not_awaited()
+
+    deferred.status = SyncRunStatus.SUCCEEDED.value
+    await db_session.commit()
+    mock_arq_redis.enqueue_job.side_effect = ConnectionError("queue offline")
+    with pytest.raises(sync_service.ApplicationError) as error:
+        await sync_service.enqueue_run(
+            db_session,
+            mock_arq_redis,
+            owner_id=channel.owner_id,
+            channel_id=channel.id,
+            kind=SyncRunKind.PLAYLIST_SYNC,
+        )
+    assert error.value.code == "QUEUE_UNAVAILABLE"
+    failed = await crud_sync_run.get_active_sync_run(
+        db_session,
+        owner_id=channel.owner_id,
+        channel_id=channel.id,
+        subscription_import_id=None,
+        kind=SyncRunKind.PLAYLIST_SYNC.value,
+    )
+    assert failed is None
+
+
+@pytest.mark.asyncio
+async def test_integrity_race_returns_winner_or_reraises():
+    existing = MagicMock()
+    db = AsyncMock()
+    db.add = MagicMock()
+    db.commit.side_effect = IntegrityError("insert", {}, RuntimeError("duplicate"))
+    with patch(
+        "app.services.sync_service.crud_sync_run.get_active_sync_run",
+        new=AsyncMock(side_effect=[None, existing]),
+    ):
+        run, created = await sync_service.create_or_get_active_run(
+            db,
+            owner_id="owner",
+            channel_id="channel",
+            kind=SyncRunKind.CHANNEL_REFRESH,
+        )
+    assert (run, created) == (existing, False)
+    db.rollback.assert_awaited_once()
+
+    db.commit.side_effect = IntegrityError("insert", {}, RuntimeError("duplicate"))
+    with (
+        patch(
+            "app.services.sync_service.crud_sync_run.get_active_sync_run",
+            new=AsyncMock(side_effect=[None, None]),
+        ),
+        pytest.raises(IntegrityError),
+    ):
+        await sync_service.create_or_get_active_run(
+            db,
+            owner_id="owner",
+            channel_id="channel",
+            kind=SyncRunKind.CHANNEL_REFRESH,
+        )
+
+    db.commit.side_effect = IntegrityError("insert", {}, RuntimeError("duplicate"))
+    with pytest.raises(IntegrityError):
+        await sync_service.create_or_get_active_run(
+            db, owner_id="owner", kind=SyncRunKind.DEMO_MAINTENANCE
+        )
+
+
+@pytest.mark.asyncio
+async def test_owned_lookup_and_retry_success(db_session, channel, mock_arq_redis):
+    with pytest.raises(sync_service.ApplicationError) as missing:
+        await sync_service.get_owned_run(db_session, uuid.uuid4(), "owner-1")
+    assert missing.value.code == "NOT_FOUND"
+
+    previous = SyncRun(
+        owner_id=channel.owner_id,
+        channel_id=channel.id,
+        kind=SyncRunKind.CHANNEL_REFRESH.value,
+        status=SyncRunStatus.FAILED.value,
+        error_code="RSS_FETCH_FAILED",
+    )
+    db_session.add(previous)
+    await db_session.commit()
+    retried = await sync_service.retry_run(
+        db_session,
+        mock_arq_redis,
+        sync_run_id=previous.id,
+        owner_id=channel.owner_id,
+    )
+    assert retried.status == SyncRunStatus.QUEUED.value
+    mock_arq_redis.enqueue_job.assert_awaited_once()

@@ -1,10 +1,11 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
 
 from app.db.models.channel import Channel
-from app.services.video_service import _fetch_rss_bytes
+from app.core.errors import ApplicationError
+from app.services.video_service import RSS_MAX_BYTES, _fetch_rss_bytes, _rss_video_ids
 
 
 @pytest.fixture
@@ -51,3 +52,91 @@ async def test_rss_304_is_successful_no_change(channel):
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     with patch("app.services.video_service.httpx.AsyncClient", return_value=client):
         assert await _fetch_rss_bytes(channel) is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("status", "code", "retryable"),
+    [(404, "RSS_REQUEST_REJECTED", False), (429, "RSS_FETCH_FAILED", True), (503, "RSS_FETCH_FAILED", True)],
+)
+async def test_rss_classifies_http_failures(channel, status, code, retryable):
+    client = httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda request: httpx.Response(status, request=request))
+    )
+    with (
+        patch("app.services.video_service.httpx.AsyncClient", return_value=client),
+        pytest.raises(ApplicationError) as error,
+    ):
+        await _fetch_rss_bytes(channel)
+    assert error.value.code == code
+    assert error.value.retryable is retryable
+
+
+@pytest.mark.asyncio
+async def test_rss_timeout_is_retryable(channel):
+    async def timeout(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("slow feed", request=request)
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(timeout))
+    with (
+        patch("app.services.video_service.httpx.AsyncClient", return_value=client),
+        pytest.raises(ApplicationError) as error,
+    ):
+        await _fetch_rss_bytes(channel)
+    assert error.value.code == "RSS_FETCH_FAILED"
+    assert error.value.retryable is True
+
+
+@pytest.mark.asyncio
+async def test_rss_rejects_oversized_response(channel):
+    client = httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200, request=request, content=b"x" * (RSS_MAX_BYTES + 1)
+            )
+        )
+    )
+    with (
+        patch("app.services.video_service.httpx.AsyncClient", return_value=client),
+        pytest.raises(ApplicationError) as error,
+    ):
+        await _fetch_rss_bytes(channel)
+    assert error.value.code == "RSS_RESPONSE_TOO_LARGE"
+
+
+@pytest.mark.asyncio
+async def test_rss_rejects_missing_entries_and_malformed_only_entries(channel):
+    with (
+        patch("app.services.video_service._fetch_rss_bytes", new=AsyncMock(return_value=b"feed")),
+        patch("app.services.video_service.feedparser.parse", return_value={}),
+        pytest.raises(ApplicationError) as missing,
+    ):
+        await _rss_video_ids(channel)
+    assert missing.value.code == "RSS_MALFORMED"
+
+    with (
+        patch("app.services.video_service._fetch_rss_bytes", new=AsyncMock(return_value=b"feed")),
+        patch("app.services.video_service.feedparser.parse", return_value={"entries": [{"title": "missing id"}]}),
+        pytest.raises(ApplicationError) as malformed,
+    ):
+        await _rss_video_ids(channel)
+    assert malformed.value.code == "RSS_MALFORMED"
+
+
+@pytest.mark.asyncio
+async def test_rss_deduplicates_videos_skips_shorts_and_counts_bad_entries(channel):
+    parsed = {
+        "entries": [
+            {"yt_videoid": "video-1", "link": "https://youtube.com/watch?v=video-1"},
+            {"yt_videoid": "video-1", "link": "https://youtube.com/watch?v=video-1"},
+            {"yt_videoid": "short-1", "link": "https://youtube.com/shorts/short-1"},
+            {"link": "https://youtube.com/watch?v=missing"},
+        ]
+    }
+    with (
+        patch("app.services.video_service._fetch_rss_bytes", new=AsyncMock(return_value=b"feed")),
+        patch("app.services.video_service.feedparser.parse", return_value=parsed),
+    ):
+        video_ids, malformed = await _rss_video_ids(channel)
+    assert video_ids == ["video-1"]
+    assert malformed == 1

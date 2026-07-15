@@ -109,8 +109,8 @@
 		{/if}
 
 		<!-- Page-size selector (always visible when there are results) -->
-		<div class="flex items-center gap-2 text-sm">
-			<span class="text-base-content/60">Per page:</span>
+		<label class="flex items-center gap-2 text-sm">
+			<span class="text-base-content/90">Per page:</span>
 			<select
 				class="select-bordered select select-sm"
 				value={pageSize}
@@ -120,6 +120,6 @@
 					<option value={size}>{size}</option>
 				{/each}
 			</select>
-		</div>
+		</label>
 	</nav>
 {/if}

@@ -14,6 +14,7 @@ const channel = {
 	latest_sync: null,
 	tag_ids: []
 };
+let channels = [channel];
 const video = {
 	id: 'phase3video',
 	channel_id: channel.id,
@@ -216,16 +217,30 @@ createServer(async (request, response) => {
 		response.writeHead(204);
 		return response.end();
 	}
-	if (path === '/channels')
+	if (path === '/channels' && request.method === 'POST') {
+		const body = await readBody(request);
+		const addedChannel = {
+			...channel,
+			id: 'UC_added_channel',
+			title: 'Added Channel',
+			handle: String(body.handle).replace(/^@/, ''),
+			folder_id: body.folder_id ?? null
+		};
+		channels = [...channels.filter((item) => item.id !== addedChannel.id), addedChannel];
+		return send(response, 201, addedChannel);
+	}
+	if (path === '/channels' && request.method === 'GET')
 		return send(response, 200, {
-			total: 1,
-			items: [channel],
+			total: channels.length,
+			items: channels,
 			limit: 50,
 			offset: 0,
 			has_more: false
 		});
-	if (path === `/channels/${channel.id}` && request.method === 'GET')
-		return send(response, 200, channel);
+	if (path.startsWith('/channels/') && request.method === 'GET') {
+		const requestedChannel = channels.find((item) => path === `/channels/${item.id}`);
+		if (requestedChannel) return send(response, 200, requestedChannel);
+	}
 	if (path === '/videos')
 		return send(response, 200, { total: 1, items: [video], limit: 24, offset: 0, has_more: false });
 	if (path === `/videos/${video.id}`) return send(response, 200, video);
