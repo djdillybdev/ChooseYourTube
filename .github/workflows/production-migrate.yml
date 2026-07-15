@@ -44,4 +44,4 @@ jobs:
       - name: Upgrade to head
         run: uv run --no-sync alembic upgrade head
       - name: Verify migration head
-        run: uv run --no-sync alembic current --check-heads
+        run: uv run --no-sync python scripts/verify_migration_head.py

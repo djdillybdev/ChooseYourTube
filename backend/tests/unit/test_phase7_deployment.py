@@ -73,3 +73,13 @@ def test_migration_model_import_accepts_sync_database_url() -> None:
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_migration_workflow_uses_supported_head_verifier() -> None:
+    repository_root = Path(__file__).resolve().parents[3]
+    workflow = (
+        repository_root / ".github" / "workflows" / "production-migrate.yml"
+    ).read_text()
+
+    assert "python scripts/verify_migration_head.py" in workflow
+    assert "--check-heads" not in workflow
