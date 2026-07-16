@@ -11,23 +11,96 @@ from app.auth.models import RefreshSession
 from app.db.models.channel import Channel
 from app.db.models.folder import Folder
 from app.db.models.playlist import Playlist
+from app.db.models.subscription_import import (
+    SubscriptionImport,
+    SubscriptionImportCandidate,
+)
 from app.db.models.tag import Tag
 from app.db.models.video import Video
 from app.services import demo_service
 
 
+EXPECTED_CHANNELS = {
+    "UCsXVk37bltHxD1rDPwtNM8Q": "kurzgesagt",
+    "UCq8ZAAsI89IoJ-fn1gYpO3g": "nightshift_kurzgesagt",
+    "UCzR-rom72PHN9Zg7RML9EbA": "eons",
+    "UCsBjURrPoezykLs9EqgamOA": "Fireship",
+    "UC4eYXhJI4-7wSWc8UNRwD4A": "nprmusic",
+    "UC7_gcs09iThXybpVgjHZ_7g": "pbsspacetime",
+    "UCKy1dAqELo0zrOtPkf0eTMw": "IGN",
+}
+
+
+def test_demo_catalog_is_a_complete_real_rss_snapshot():
+    catalog = demo_service.load_demo_seed()
+
+    assert catalog["version"] == 2
+    assert {
+        channel["id"]: channel["handle"] for channel in catalog["channels"]
+    } == EXPECTED_CHANNELS
+
+    videos = [video for channel in catalog["channels"] for video in channel["videos"]]
+    video_ids = {video["id"] for video in videos}
+    assert len(videos) == 42
+    assert len(video_ids) == 42
+    assert all(len(channel["videos"]) == 6 for channel in catalog["channels"])
+    assert all(not video["id"].startswith("cyt") for video in videos)
+    assert all(
+        {
+            "id",
+            "title",
+            "description",
+            "thumbnail_url",
+            "published_at",
+            "duration_seconds",
+            "is_short",
+            "source_url",
+            "yt_tags",
+        }
+        <= video.keys()
+        for video in videos
+    )
+
+    referenced_ids = set(catalog["video_tag_ids"])
+    referenced_ids.update(catalog["watched_ids"])
+    referenced_ids.update(catalog["favorite_ids"])
+    referenced_ids.update(catalog["watch_later_ids"])
+    for playlist in catalog["playlists"]:
+        referenced_ids.update(playlist["video_ids"])
+    assert referenced_ids <= video_ids
+
+
 @pytest.mark.asyncio
 async def test_seed_demo_is_idempotent_and_restores_mutable_state(db_session):
     owner_id = await demo_service.seed_demo(db_session, email="demo@example.com")
+    catalog = demo_service.load_demo_seed()
+    favorite_id = catalog["favorite_ids"][0]
 
     video = await db_session.scalar(
-        select(Video).where(Video.owner_id == owner_id, Video.id == "pLqjQ55tz-U")
+        select(Video).where(Video.owner_id == owner_id, Video.id == favorite_id)
     )
     assert video is not None
     video.is_favorited = False
     db_session.add(
         Folder(
             id="user-folder", owner_id=owner_id, name="Recruiter change", position=99
+        )
+    )
+    db_session.add(
+        Channel(
+            owner_id=owner_id,
+            id="UC-retired-demo-channel",
+            title="Retired demo channel",
+            handle="retired-demo-channel",
+            uploads_playlist_id="UU-retired-demo-channel",
+        )
+    )
+    db_session.add(
+        Video(
+            owner_id=owner_id,
+            id="retiredVid1",
+            channel_id="UC-retired-demo-channel",
+            title="Retired demo video",
         )
     )
     await db_session.commit()
@@ -41,19 +114,25 @@ async def test_seed_demo_is_idempotent_and_restores_mutable_state(db_session):
             .select_from(Channel)
             .where(Channel.owner_id == owner_id)
         )
-        == 4
+        == 7
     )
     assert (
         await db_session.scalar(
             select(func.count()).select_from(Video).where(Video.owner_id == owner_id)
         )
-        == 24
+        == 42
     )
     assert (
         await db_session.scalar(
             select(func.count()).select_from(Tag).where(Tag.owner_id == owner_id)
         )
-        == 3
+        == 5
+    )
+    assert (
+        await db_session.scalar(
+            select(func.count()).select_from(Folder).where(Folder.owner_id == owner_id)
+        )
+        == 4
     )
     assert (
         await db_session.scalar(
@@ -64,31 +143,98 @@ async def test_seed_demo_is_idempotent_and_restores_mutable_state(db_session):
         == 3
     )
     assert await db_session.get(Folder, "user-folder") is None
+    assert (
+        await db_session.scalar(
+            select(Channel).where(
+                Channel.owner_id == owner_id,
+                Channel.id == "UC-retired-demo-channel",
+            )
+        )
+        is None
+    )
     restored = await db_session.scalar(
-        select(Video).where(Video.owner_id == owner_id, Video.id == "pLqjQ55tz-U")
+        select(Video).where(Video.owner_id == owner_id, Video.id == favorite_id)
     )
     assert restored is not None and restored.is_favorited is True
+
+    imported = await db_session.get(SubscriptionImport, demo_service.IMPORT_ID)
+    assert imported is not None
+    assert imported.candidate_count == 7
+    assert imported.new_count == 7
+    assert imported.selected_count == 7
+    assert imported.imported_count == 7
+    candidates = list(
+        await db_session.scalars(
+            select(SubscriptionImportCandidate)
+            .where(SubscriptionImportCandidate.import_id == demo_service.IMPORT_ID)
+            .order_by(SubscriptionImportCandidate.source_index)
+        )
+    )
+    assert [candidate.channel_id for candidate in candidates] == list(EXPECTED_CHANNELS)
 
 
 @pytest.mark.asyncio
 async def test_daily_reset_preserves_last_refreshed_video_metadata(db_session):
     owner_id = await demo_service.seed_demo(db_session, email="demo@example.com")
+    catalog = demo_service.load_demo_seed()
+    favorite_id = catalog["favorite_ids"][0]
+    channel_id = catalog["channels"][0]["id"]
     video = await db_session.scalar(
-        select(Video).where(Video.owner_id == owner_id, Video.id == "h6fcK_fRYaI")
+        select(Video).where(Video.owner_id == owner_id, Video.id == favorite_id)
     )
     assert video is not None
     video.title = "Metadata from the last successful RSS refresh"
     video.is_favorited = False
+    db_session.add(
+        Video(
+            owner_id=owner_id,
+            id="rssAddedVid",
+            channel_id=channel_id,
+            title="A video discovered after the pinned snapshot",
+        )
+    )
+    db_session.add(
+        Channel(
+            owner_id=owner_id,
+            id="UC-uncatalogued-channel",
+            title="Uncatalogued channel",
+            handle="uncatalogued-channel",
+            uploads_playlist_id="UU-uncatalogued-channel",
+        )
+    )
+    db_session.add(
+        Video(
+            owner_id=owner_id,
+            id="uncatalogued",
+            channel_id="UC-uncatalogued-channel",
+            title="This content should be removed",
+        )
+    )
     await db_session.commit()
 
     await demo_service.reset_demo_state(db_session, owner_id=owner_id)
 
     refreshed = await db_session.scalar(
-        select(Video).where(Video.owner_id == owner_id, Video.id == "h6fcK_fRYaI")
+        select(Video).where(Video.owner_id == owner_id, Video.id == favorite_id)
     )
     assert refreshed is not None
     assert refreshed.title == "Metadata from the last successful RSS refresh"
     assert refreshed.is_favorited is True
+    assert (
+        await db_session.scalar(
+            select(Video).where(Video.owner_id == owner_id, Video.id == "rssAddedVid")
+        )
+        is not None
+    )
+    assert (
+        await db_session.scalar(
+            select(Channel).where(
+                Channel.owner_id == owner_id,
+                Channel.id == "UC-uncatalogued-channel",
+            )
+        )
+        is None
+    )
 
 
 @pytest.mark.asyncio

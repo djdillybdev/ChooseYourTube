@@ -41,7 +41,7 @@ MAINTENANCE_TIMEOUT_SECONDS = 180
 
 
 def load_demo_seed() -> dict[str, Any]:
-    resource = files("app.demo").joinpath("seed_v1.json")
+    resource = files("app.demo").joinpath("seed_v2.json")
     return json.loads(resource.read_text(encoding="utf-8"))
 
 
@@ -89,7 +89,7 @@ async def _upsert_content(
     replace_existing: bool,
 ) -> None:
     snapshot_at = datetime.fromisoformat(catalog["snapshot_at"])
-    for channel_index, definition in enumerate(catalog["channels"]):
+    for definition in catalog["channels"]:
         channel = await db.scalar(
             select(Channel).where(
                 Channel.owner_id == owner_id, Channel.id == definition["id"]
@@ -104,11 +104,12 @@ async def _upsert_content(
             channel.handle = definition["handle"]
             channel.description = definition["description"]
             channel.uploads_playlist_id = "UU" + definition["id"][2:]
-            channel.thumbnail_url = (
-                f"https://i.ytimg.com/vi/{definition['videos'][0][0]}/hqdefault.jpg"
+            channel.thumbnail_url = definition.get(
+                "thumbnail_url", definition["videos"][0]["thumbnail_url"]
             )
             channel.last_updated = snapshot_at
-        for video_index, (video_id, title, duration) in enumerate(definition["videos"]):
+        for video_definition in definition["videos"]:
+            video_id = video_definition["id"]
             video = await db.scalar(
                 select(Video).where(Video.owner_id == owner_id, Video.id == video_id)
             )
@@ -118,15 +119,61 @@ async def _upsert_content(
                 db.add(video)
             if video_created or replace_existing:
                 video.channel_id = channel.id
-                video.title = title
-                video.description = f"Curated demo snapshot from {channel.title}."
-                video.thumbnail_url = f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
-                video.duration_seconds = duration
-                video.is_short = duration <= 60
-                video.published_at = snapshot_at - timedelta(
-                    days=channel_index * 12 + video_index * 3
+                video.title = video_definition["title"]
+                video.description = video_definition["description"]
+                video.thumbnail_url = video_definition["thumbnail_url"]
+                video.duration_seconds = video_definition["duration_seconds"]
+                video.is_short = video_definition["is_short"]
+                video.published_at = datetime.fromisoformat(
+                    video_definition["published_at"]
                 )
-                video.yt_tags = [definition["handle"], "demo"]
+                video.yt_tags = video_definition["yt_tags"]
+    await db.flush()
+
+
+async def _replace_catalog_content(db: AsyncSession, owner_id: str) -> None:
+    """Remove every channel/video so an explicit seed is an exact replacement."""
+    await db.execute(
+        delete(playlist_videos).where(playlist_videos.c.owner_id == owner_id)
+    )
+    await db.execute(delete(channel_tags).where(channel_tags.c.owner_id == owner_id))
+    await db.execute(delete(video_tags).where(video_tags.c.owner_id == owner_id))
+    await db.execute(
+        update(Channel).where(Channel.owner_id == owner_id).values(folder_id=None)
+    )
+    await db.execute(
+        delete(SyncRun).where(
+            SyncRun.owner_id == owner_id, SyncRun.channel_id.is_not(None)
+        )
+    )
+    await db.execute(delete(Video).where(Video.owner_id == owner_id))
+    await db.execute(delete(Channel).where(Channel.owner_id == owner_id))
+    await db.flush()
+
+
+async def _remove_uncatalogued_channels(
+    db: AsyncSession, catalog: dict[str, Any], owner_id: str
+) -> None:
+    """Keep RSS-discovered videos, but only for channels in the demo catalog."""
+    channel_ids = [definition["id"] for definition in catalog["channels"]]
+    await db.execute(
+        delete(SyncRun).where(
+            SyncRun.owner_id == owner_id,
+            SyncRun.channel_id.not_in(channel_ids),
+        )
+    )
+    await db.execute(
+        delete(Video).where(
+            Video.owner_id == owner_id,
+            Video.channel_id.not_in(channel_ids),
+        )
+    )
+    await db.execute(
+        delete(Channel).where(
+            Channel.owner_id == owner_id,
+            Channel.id.not_in(channel_ids),
+        )
+    )
     await db.flush()
 
 
@@ -249,7 +296,7 @@ async def _ensure_portfolio_history(
                 owner_id=owner_id,
                 kind="channel_refresh",
                 status="failed",
-                channel_id="UC9-y-6csu5WGm29I7JiwpnA",
+                channel_id="UCsBjURrPoezykLs9EqgamOA",
                 attempt_count=1,
                 error_code="UPSTREAM_TIMEOUT",
                 error_message="A channel feed temporarily timed out; a later refresh recovered.",
@@ -266,7 +313,7 @@ async def _ensure_portfolio_history(
                 owner_id=owner_id,
                 kind="channel_refresh",
                 status="succeeded",
-                channel_id="UC9-y-6csu5WGm29I7JiwpnA",
+                channel_id="UCsBjURrPoezykLs9EqgamOA",
                 attempt_count=1,
                 items_discovered=6,
                 items_updated=6,
@@ -282,10 +329,10 @@ async def _ensure_portfolio_history(
             owner_id=owner_id,
             source="youtube_takeout_csv",
             status="succeeded",
-            candidate_count=4,
-            new_count=4,
-            selected_count=4,
-            imported_count=4,
+            candidate_count=7,
+            new_count=7,
+            selected_count=7,
+            imported_count=7,
             created_at=now - timedelta(days=7),
             ready_at=now - timedelta(days=7),
             queued_at=now - timedelta(days=7),
@@ -293,25 +340,41 @@ async def _ensure_portfolio_history(
             finished_at=now - timedelta(days=7),
         )
         db.add(imported)
-        await db.flush()
-        for index, title in enumerate(
-            ("Computerphile", "Kurzgesagt", "The Futur", "Great Art Explained")
-        ):
-            db.add(
-                SubscriptionImportCandidate(
-                    import_id=IMPORT_ID,
-                    owner_id=owner_id,
-                    channel_title=title,
-                    state="imported",
-                    source_index=index,
-                )
+    else:
+        imported.status = "succeeded"
+        imported.candidate_count = 7
+        imported.new_count = 7
+        imported.existing_count = 0
+        imported.invalid_count = 0
+        imported.selected_count = 7
+        imported.imported_count = 7
+        imported.failed_count = 0
+    await db.flush()
+    await db.execute(
+        delete(SubscriptionImportCandidate).where(
+            SubscriptionImportCandidate.owner_id == owner_id,
+            SubscriptionImportCandidate.import_id == IMPORT_ID,
+        )
+    )
+    for index, definition in enumerate(catalog["channels"]):
+        db.add(
+            SubscriptionImportCandidate(
+                import_id=IMPORT_ID,
+                owner_id=owner_id,
+                channel_id=definition["id"],
+                channel_title=definition["title"],
+                channel_url=f"https://www.youtube.com/@{definition['handle']}",
+                state="imported",
+                source_index=index,
             )
+        )
 
 
 async def seed_demo(db: AsyncSession, *, email: str) -> str:
     catalog = load_demo_seed()
     user = await _ensure_demo_user(db, catalog, email)
     owner_id = str(user.id)
+    await _replace_catalog_content(db, owner_id)
     await _upsert_content(db, catalog, owner_id, replace_existing=True)
     await _reset_mutable_state(db, catalog, owner_id)
     await _ensure_portfolio_history(db, catalog, owner_id)
@@ -321,6 +384,7 @@ async def seed_demo(db: AsyncSession, *, email: str) -> str:
 
 async def reset_demo_state(db: AsyncSession, *, owner_id: str) -> None:
     catalog = load_demo_seed()
+    await _remove_uncatalogued_channels(db, catalog, owner_id)
     await _upsert_content(db, catalog, owner_id, replace_existing=False)
     await _reset_mutable_state(db, catalog, owner_id)
     await _ensure_portfolio_history(db, catalog, owner_id)

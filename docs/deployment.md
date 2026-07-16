@@ -170,12 +170,16 @@ same-origin through SvelteKit's `/api/backend/*` proxy.
      https://<backend-alias>.vercel.app/internal/demo/maintenance
    ```
 
-Daily maintenance has a deterministic per-day run ID, refreshes only the four catalog channels for at
-most 180 seconds, restores mutable state, and removes expired sessions. `partial` means reset succeeded
-but one or more RSS feeds could not be refreshed; `failed` means canonical reset failed. RSS provides
-recent video titles, descriptions, publication dates, and thumbnails but not full channel history or
-duration/tag metadata. The deterministic seed supplies those richer demo examples and remains usable
-when feeds are unavailable.
+The v2 seed pins six real RSS entries for each of these seven channels: Kurzgesagt, Nightshift, PBS
+Eons, Fireship, NPR Music, PBS Space Time, and IGN. It also supplies deterministic folders, tags,
+favorites, watched state, Watch Later entries, custom playlists, and a representative import history.
+Video durations remain unknown because YouTube RSS does not provide them.
+
+Daily maintenance has a deterministic per-day run ID, refreshes only those seven catalog channels for
+at most 180 seconds, restores mutable state, removes channels outside the catalog, and removes expired
+sessions. Videos discovered later by RSS are retained when mutable state resets. `partial` means reset
+succeeded but one or more RSS feeds could not be refreshed; `failed` means canonical reset failed. The
+pinned snapshot remains usable when feeds are unavailable.
 
 ### Rollback and monitoring
 
@@ -186,4 +190,6 @@ instant rollback does not roll back cron configuration, so verify the active cro
 During the initial release, monitor Vercel function duration/invocations, Neon pooled connections and
 storage, RSS failure rates, `/health/ready`, and maintenance `sync_runs`. Logs should contain
 request/sync IDs but never tokens, secrets, database URLs, or upstream response bodies. To reseed, rerun
-`scripts/seed_demo.py`; take a Neon export before manual production repairs.
+`scripts/seed_demo.py`; take a Neon export before manual production repairs. Deploying a new seed file
+does not change existing production rows by itself: run the trusted-workstation seed command once after
+promoting the backend, then run `scripts/smoke_demo.py` to verify the exact seven-channel catalog.
