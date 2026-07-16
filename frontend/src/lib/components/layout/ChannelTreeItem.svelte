@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import type { ChannelOut } from '$lib/types/api';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
+	import { openEditChannel } from '$lib/stores/modalState.svelte';
 
 	interface Props {
 		channel: ChannelOut;
@@ -10,10 +11,10 @@
 
 	let { channel, depth = 0 }: Props = $props();
 
-	const isActive = $derived($page.params.id === channel.id.toString());
+	const isActive = $derived(page.params.id === channel.id.toString());
 </script>
 
-<li>
+<li class="group">
 	<div class="channel-item flex items-center" style="padding-left: {depth * 1}rem">
 		<!-- Spacer to align with folders that have chevrons -->
 		<span class="mr-1 w-4"></span>
@@ -55,5 +56,16 @@
 
 			<span class="text-sm">{channel.title}</span>
 		</a>
+		<button
+			class="btn pointer-events-none btn-square opacity-0 btn-ghost transition-opacity btn-xs group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
+			onclick={() => openEditChannel(channel)}
+			aria-label={`Edit ${channel.title}`}
+		>
+			<svg viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4">
+				<path
+					d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM11.25 18.75a.75.75 0 111.5 0 .75.75 0 01-1.5 0z"
+				/>
+			</svg>
+		</button>
 	</div>
 </li>

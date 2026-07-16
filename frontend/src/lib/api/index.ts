@@ -2,6 +2,7 @@ import { apiClient, APIClient } from './client';
 import { VideosAPI } from './videos';
 import { ChannelsAPI } from './channels';
 import { FoldersAPI } from './folders';
+import { CategoriesAPI } from './categories';
 import { TagsAPI } from './tags';
 import { PlaylistsAPI } from './playlists';
 import { AuthAPI, authApi } from './auth';
@@ -15,6 +16,7 @@ interface API {
 	videos: VideosAPI;
 	channels: ChannelsAPI;
 	folders: FoldersAPI;
+	categories: CategoriesAPI;
 	tags: TagsAPI;
 	playlists: PlaylistsAPI;
 	auth: AuthAPI;
@@ -32,6 +34,7 @@ function createAPI(client: APIClient): API {
 		videos: new VideosAPI(client),
 		channels: new ChannelsAPI(client),
 		folders: new FoldersAPI(client),
+		categories: new CategoriesAPI(client),
 		tags: new TagsAPI(client),
 		playlists: new PlaylistsAPI(client),
 		auth: authApi,

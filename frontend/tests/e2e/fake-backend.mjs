@@ -15,6 +15,7 @@ const channel = {
 	tag_ids: []
 };
 let channels = [channel];
+let categories = [];
 const video = {
 	id: 'phase3video',
 	channel_id: channel.id,
@@ -145,6 +146,107 @@ createServer(async (request, response) => {
 			is_verified: true
 		});
 	if (path === '/folders/tree') return send(response, 200, []);
+	if (path === '/app/bootstrap')
+		return send(response, 200, {
+			current_user: {
+				id: 'user-1',
+				email: 'portfolio@example.com',
+				is_active: true,
+				is_superuser: false,
+				is_verified: true
+			},
+			folders: [],
+			channels,
+			tags,
+			watch_later: {
+				id: 'watch-later-e2e',
+				name: 'Watch Later',
+				description: null,
+				thumbnail_url: null,
+				is_system: true,
+				system_key: 'watch_later',
+				source_type: 'manual',
+				source_channel_id: null,
+				source_youtube_playlist_id: null,
+				source_is_active: true,
+				source_last_synced_at: null,
+				current_position: null,
+				total_videos: watchLaterIds.length,
+				created_at: '2026-07-14T10:00:00Z',
+				video_ids: watchLaterIds
+			},
+			runtime: {
+				name: 'ChooseYourTube',
+				version: '0.1.0',
+				mode: 'full',
+				features: {
+					registration: true,
+					background_jobs: true,
+					youtube_oauth: false,
+					demo_login: false,
+					subscription_imports: true
+				}
+			}
+		});
+	if (path === '/categories' && request.method === 'GET') return send(response, 200, categories);
+	if (path === '/categories' && request.method === 'POST') {
+		const body = await readBody(request);
+		const category = {
+			id: `category-${categories.length + 1}`,
+			name: String(body.name).trim(),
+			created_at: '2026-07-14T10:00:00Z',
+			channel_ids: []
+		};
+		categories = [...categories, category];
+		return send(response, 201, category);
+	}
+	const categoryMatch = path.match(/^\/categories\/(category-\d+)$/);
+	if (categoryMatch && request.method === 'GET') {
+		const category = categories.find((item) => item.id === categoryMatch[1]);
+		return category ? send(response, 200, category) : send(response, 404, {});
+	}
+	if (categoryMatch && request.method === 'PATCH') {
+		const body = await readBody(request);
+		categories = categories.map((item) =>
+			item.id === categoryMatch[1] ? { ...item, name: String(body.name).trim() } : item
+		);
+		return send(
+			response,
+			200,
+			categories.find((item) => item.id === categoryMatch[1])
+		);
+	}
+	if (categoryMatch && request.method === 'DELETE') {
+		categories = categories.filter((item) => item.id !== categoryMatch[1]);
+		response.writeHead(204);
+		return response.end();
+	}
+	const categoryChannelsMatch = path.match(/^\/categories\/(category-\d+)\/channels$/);
+	if (categoryChannelsMatch && request.method === 'PUT') {
+		const body = await readBody(request);
+		categories = categories.map((item) =>
+			item.id === categoryChannelsMatch[1] ? { ...item, channel_ids: body.channel_ids } : item
+		);
+		return send(
+			response,
+			200,
+			categories.find((item) => item.id === categoryChannelsMatch[1])
+		);
+	}
+	const channelCategoriesMatch = path.match(/^\/categories\/channels\/(.+)$/);
+	if (channelCategoriesMatch && request.method === 'PUT') {
+		const body = await readBody(request);
+		categories = categories.map((item) => ({
+			...item,
+			channel_ids: body.category_ids.includes(item.id)
+				? [...new Set([...item.channel_ids, channelCategoriesMatch[1]])]
+				: item.channel_ids.filter((id) => id !== channelCategoriesMatch[1])
+		}));
+		return send(response, 200, {
+			channel_id: channelCategoriesMatch[1],
+			category_ids: body.category_ids
+		});
+	}
 	if (path === '/imports/subscriptions/csv' && request.method === 'POST') {
 		importStatus = 'ready';
 		candidateState = 'new';

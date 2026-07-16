@@ -1,31 +1,40 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { uiState, toggleSidebar, closeMobileSidebar } from '$lib/stores/uiState.svelte';
-	import type { FolderOut, ChannelOut } from '$lib/types/api';
-	import FolderTree from './FolderTree.svelte';
-	import { openAddChannel, openCreateFolder, openEditChannel } from '$lib/stores/modalState.svelte';
+	import type { CategoryOut, ChannelOut } from '$lib/types/api';
+	import CategoryTree from './CategoryTree.svelte';
+	import { openAddChannel, openCreateCategory } from '$lib/stores/modalState.svelte';
 	import { afterNavigate } from '$app/navigation';
 
 	interface Props {
-		folders?: FolderOut[];
-		unfolderedChannels?: ChannelOut[];
+		categories?: CategoryOut[];
+		uncategorizedChannels?: ChannelOut[];
 		channels?: ChannelOut[];
 		backgroundJobsEnabled?: boolean;
 		demoMode?: boolean;
 	}
 
 	let {
-		folders = [],
-		unfolderedChannels = [],
+		categories = [],
+		uncategorizedChannels = [],
 		channels = [],
 		backgroundJobsEnabled = true,
 		demoMode = false
 	}: Props = $props();
 
-	// Filter to only root folders (FolderTree handles children recursively)
-	const rootFolders = $derived(folders.filter((f) => f.parent_id === null));
-
-	const allChannels = $derived(channels);
+	const orderedCategories = $derived(
+		[...categories].sort((left, right) => left.name.localeCompare(right.name))
+	);
+	const channelById = $derived(new Map(channels.map((channel) => [channel.id, channel])));
+	function channelsFor(category: CategoryOut): ChannelOut[] {
+		return (category.channel_ids ?? [])
+			.map((id) => channelById.get(id))
+			.filter((channel): channel is ChannelOut => channel !== undefined)
+			.sort((left, right) => left.title.localeCompare(right.title));
+	}
+	const orderedUncategorized = $derived(
+		[...uncategorizedChannels].sort((left, right) => left.title.localeCompare(right.title))
+	);
 	afterNavigate(closeMobileSidebar);
 	let closeButton = $state<HTMLButtonElement>();
 	$effect(() => {
@@ -135,7 +144,7 @@
 						</a>
 					</li>
 
-					<!-- Folders Section -->
+					<!-- Settings -->
 					<li>
 						<a href={resolve('/settings')} class="flex items-center gap-2">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5">
@@ -153,26 +162,25 @@
 						</a>
 					</li>
 
-					<!-- Folders Section -->
+					<!-- Categories Section -->
 					<li class="mt-4 menu-title text-base-content/90">
-						<span>Folders</span>
+						<span>Categories</span>
 					</li>
 
-					{#if rootFolders.length === 0}
+					{#if orderedCategories.length === 0}
 						<li class="text-sm text-base-content/90">
-							<span>No folders yet</span>
+							<span>No categories yet</span>
 						</li>
 					{:else}
-						{#each rootFolders as folder (folder.id)}
-							<FolderTree {folder} {allChannels} />
+						{#each orderedCategories as category (category.id)}
+							<CategoryTree {category} channels={channelsFor(category)} />
 						{/each}
 					{/if}
 
-					<!-- Add Folder Button -->
 					<li class="mt-2">
 						<button
 							class="btn w-full justify-start gap-2 btn-ghost btn-sm"
-							onclick={openCreateFolder}
+							onclick={openCreateCategory}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -184,80 +192,11 @@
 							>
 								<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
 							</svg>
-							<span>New Folder</span>
+							<span>New Category</span>
 						</button>
 					</li>
 
-					<!-- Channels Section -->
-					<li class="mt-4 menu-title text-base-content/90">
-						<span>Channels</span>
-					</li>
-
-					{#if unfolderedChannels.length === 0}
-						<li class="text-sm text-base-content/90">
-							<span>No channels yet</span>
-						</li>
-					{:else}
-						{#each unfolderedChannels as channel (channel.id)}
-							<li class="group">
-								<div class="channel-item flex items-center">
-									<a
-										href={resolve('/channels/[id]', { id: channel.id })}
-										class="flex flex-1 items-center gap-2"
-									>
-										{#if channel.thumbnail_url}
-											<img
-												src={channel.thumbnail_url}
-												alt={channel.title}
-												class="h-5 w-5 shrink-0 rounded-full object-cover"
-											/>
-										{:else}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="h-5 w-5"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
-												/>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
-												/>
-											</svg>
-										{/if}
-										<span>{channel.title}</span>
-									</a>
-
-									<button
-										class="btn pointer-events-none btn-square opacity-0 btn-ghost transition-opacity btn-xs group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
-										onclick={(e) => {
-											e.stopPropagation();
-											openEditChannel(channel);
-										}}
-										aria-label="Edit channel"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 24 24"
-											fill="currentColor"
-											class="h-4 w-4"
-										>
-											<path
-												d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM11.25 18.75a.75.75 0 111.5 0 .75.75 0 01-1.5 0z"
-											/>
-										</svg>
-									</button>
-								</div>
-							</li>
-						{/each}
-					{/if}
+					<CategoryTree label="Uncategorized" channels={orderedUncategorized} />
 				</ul>
 			</nav>
 

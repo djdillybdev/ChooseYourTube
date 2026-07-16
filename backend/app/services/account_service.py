@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import RefreshSession, User
 from app.db.models.channel import Channel
+from app.db.models.category import Category
 from app.db.models.folder import Folder
 from app.db.models.playlist import Playlist
 from app.db.models.subscription_import import SubscriptionImport
@@ -26,6 +27,7 @@ async def delete_account_data(
     # Playlists can reference channels, so they must be removed first.
     await db_session.execute(delete(Playlist).where(Playlist.owner_id == owner_id))
     await db_session.execute(delete(Tag).where(Tag.owner_id == owner_id))
+    await db_session.execute(delete(Category).where(Category.owner_id == owner_id))
     # Channel deletion cascades videos and their association rows.
     await db_session.execute(delete(Channel).where(Channel.owner_id == owner_id))
     # Break self-references for SQLite as well as PostgreSQL before bulk deletion.

@@ -20,11 +20,16 @@ function makeChannel(overrides: Partial<ChannelOut>): ChannelOut {
 	};
 }
 
+async function expand(name: string) {
+	const button = screen.getByRole('button', { name: new RegExp(`(expand|collapse) ${name}`, 'i') });
+	if (button.getAttribute('aria-label')?.startsWith('Expand')) await button.click();
+}
+
 describe('Sidebar', () => {
 	it('shows channel thumbnail for unfoldered channels and keeps fallback icon when missing', async () => {
 		render(Sidebar, {
-			folders: [],
-			unfolderedChannels: [
+			categories: [],
+			uncategorizedChannels: [
 				makeChannel({
 					id: 'ch-thumb',
 					title: 'Thumb Channel',
@@ -34,6 +39,7 @@ describe('Sidebar', () => {
 			],
 			channels: []
 		});
+		await expand('uncategorized');
 
 		const thumbnail = screen.getByAltText('Thumb Channel');
 		expect(thumbnail).toHaveAttribute('src', 'https://img.example/thumb.jpg');
@@ -46,22 +52,42 @@ describe('Sidebar', () => {
 
 	it('renders edit channel action without requiring mouse hover', async () => {
 		render(Sidebar, {
-			folders: [],
-			unfolderedChannels: [makeChannel({ id: 'ch-edit', title: 'Editable Channel' })],
+			categories: [],
+			uncategorizedChannels: [makeChannel({ id: 'ch-edit', title: 'Editable Channel' })],
 			channels: []
 		});
+		await expand('uncategorized');
 
-		expect(screen.getByRole('button', { name: /edit channel/i })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: /edit editable channel/i })).toBeInTheDocument();
 	});
 
 	it('renders playlists navigation link below inbox', async () => {
 		render(Sidebar, {
-			folders: [],
-			unfolderedChannels: [],
+			categories: [],
+			uncategorizedChannels: [],
 			channels: []
 		});
 
 		expect(screen.getByRole('link', { name: /inbox/i })).toBeInTheDocument();
 		expect(screen.getByRole('link', { name: /playlists/i })).toHaveAttribute('href', '/playlists');
+	});
+
+	it('shows a channel in every assigned category and only zero-category channels as uncategorized', async () => {
+		const shared = makeChannel({ id: 'shared', title: 'Shared Channel' });
+		const loose = makeChannel({ id: 'loose', title: 'Loose Channel' });
+		render(Sidebar, {
+			categories: [
+				{ id: 'games', name: 'Games', created_at: '2026-01-01T00:00:00Z', channel_ids: ['shared'] },
+				{ id: 'tech', name: 'Tech', created_at: '2026-01-01T00:00:00Z', channel_ids: ['shared'] }
+			],
+			uncategorizedChannels: [loose],
+			channels: [shared, loose]
+		});
+
+		await expand('games');
+		await expand('tech');
+		await expand('uncategorized');
+		expect(screen.getAllByText('Shared Channel')).toHaveLength(2);
+		expect(screen.getAllByText('Loose Channel')).toHaveLength(1);
 	});
 });

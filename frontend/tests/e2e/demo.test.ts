@@ -92,12 +92,40 @@ test('a channel can be added and browsed', async ({ page, context }) => {
 	await page.getByRole('button', { name: 'Add Channel', exact: true }).click();
 	await page.getByLabel('Channel Handle or URL').fill('@added');
 	await page.getByRole('dialog').getByRole('button', { name: 'Add Channel', exact: true }).click();
+	await page.getByRole('button', { name: 'Expand Uncategorized' }).click();
 
 	const channelLink = page.getByRole('link', { name: 'Added Channel', exact: true });
 	await expect(channelLink).toBeVisible();
 	await channelLink.click();
 	await expect(page).toHaveURL(/\/channels\/UC_added_channel/);
 	await expect(page.getByRole('heading', { name: 'Added Channel', exact: true })).toBeVisible();
+});
+
+test('categories can be created, populated, renamed, and deleted', async ({ page, context }) => {
+	await authenticate(context);
+	await page.goto('/inbox');
+
+	await page.getByRole('button', { name: 'New Category' }).click();
+	await page.getByLabel('Category Name').fill('Games');
+	await page.getByRole('dialog').getByRole('button', { name: 'Create Category' }).click();
+	await page.getByRole('link', { name: 'Games' }).click();
+	await expect(page.getByRole('heading', { name: 'Games' })).toBeVisible();
+
+	await page.getByRole('button', { name: 'Edit category' }).click();
+	const dialog = page.getByRole('dialog');
+	await dialog.getByLabel('Category Name').fill('Gaming');
+	await dialog.getByLabel('Portfolio Channel').check();
+	await dialog.getByRole('button', { name: 'Save' }).click();
+	await expect(page.getByRole('heading', { name: 'Gaming' })).toBeVisible();
+	await expect(
+		page.locator('main').getByRole('link', { name: /Portfolio Channel/ }).first()
+	).toBeVisible();
+
+	await page.getByRole('button', { name: 'Edit category' }).click();
+	await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+	const confirmation = page.getByRole('dialog', { name: 'Delete category?' });
+	await confirmation.getByRole('button', { name: 'Delete category' }).click();
+	await expect(page).toHaveURL(/\/inbox$/);
 });
 
 test('tags can be created, renamed, and deleted in organization settings', async ({

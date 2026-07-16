@@ -51,7 +51,18 @@ describe('root layout load', () => {
 			watch_later: { id: 'watch-later', video_ids: [] },
 			runtime: { name: 'ChooseYourTube', version: '0.1.0', mode: 'demo', features: {} }
 		};
-		const fetchMock = vi.fn().mockResolvedValue(Response.json(payload));
+		const categories = [
+			{
+				id: 'category-1',
+				name: 'News',
+				created_at: '2026-01-01T00:00:00Z',
+				channel_ids: ['channel-2']
+			}
+		];
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce(Response.json(payload))
+			.mockResolvedValueOnce(Response.json(categories));
 
 		const result = await load({
 			depends: vi.fn(),
@@ -63,7 +74,8 @@ describe('root layout load', () => {
 		expect(result).toMatchObject({
 			currentUser: payload.current_user,
 			channels: payload.channels,
-			unfolderedChannels: [payload.channels[0]],
+			categories,
+			uncategorizedChannels: [payload.channels[0]],
 			watchLater: payload.watch_later
 		});
 	});

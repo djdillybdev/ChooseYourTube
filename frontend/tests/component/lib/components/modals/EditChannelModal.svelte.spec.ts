@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import EditChannelModal from '../../../../../src/lib/components/modals/EditChannelModal.svelte';
-import type { ChannelOut, FolderOut } from '../../../../../src/lib/types/api';
+import type { CategoryOut, ChannelOut } from '../../../../../src/lib/types/api';
 
 beforeAll(() => {
 	if (!HTMLDialogElement.prototype.showModal) {
@@ -26,46 +26,48 @@ function makeChannel(overrides: Partial<ChannelOut>): ChannelOut {
 	};
 }
 
-function makeFolder(overrides: Partial<FolderOut>): FolderOut {
+function makeCategory(overrides: Partial<CategoryOut>): CategoryOut {
 	return {
-		id: 'folder-a',
-		name: 'Folder A',
-		parent_id: null,
-		position: 0,
-		children: [],
+		id: 'category-a',
+		name: 'Category A',
+		created_at: '2026-01-01T00:00:00Z',
+		channel_ids: [],
 		...overrides
 	};
 }
 
 describe('EditChannelModal', () => {
 	it('resets local form state when channel prop changes', async () => {
-		const folders = [
-			makeFolder({ id: 'folder-a' }),
-			makeFolder({ id: 'folder-b', name: 'Folder B' })
+		const categories = [
+			makeCategory({ id: 'category-a', channel_ids: ['ch-1', 'ch-2'] }),
+			makeCategory({ id: 'category-b', name: 'Category B', channel_ids: [] })
 		];
 		const first = makeChannel({ id: 'ch-1', is_favorited: false, folder_id: 'folder-a' });
 		const second = makeChannel({ id: 'ch-2', is_favorited: false, folder_id: 'folder-a' });
 
 		const { rerender } = render(EditChannelModal, {
 			channel: first,
-			folders,
+			categories,
 			onClose: vi.fn()
 		});
 
-		const favoriteToggle = screen.getByRole('checkbox', { hidden: true }) as HTMLInputElement;
-		const folderSelect = screen.getByLabelText('Folder') as HTMLSelectElement;
+		const favoriteToggle = screen.getAllByRole('checkbox', { hidden: true })[0] as HTMLInputElement;
+		const categoryA = screen.getByLabelText('Category A') as HTMLInputElement;
+		const categoryB = screen.getByLabelText('Category B') as HTMLInputElement;
 
 		expect(favoriteToggle.checked).toBe(false);
-		expect(folderSelect.value).toBe('folder-a');
+		expect(categoryA.checked).toBe(true);
+		expect(categoryB.checked).toBe(false);
 
 		await fireEvent.click(favoriteToggle);
-		await fireEvent.change(folderSelect, { target: { value: 'folder-b' } });
+		await fireEvent.click(categoryB);
 		expect(favoriteToggle.checked).toBe(true);
-		expect(folderSelect.value).toBe('folder-b');
+		expect(categoryB.checked).toBe(true);
 
-		await rerender({ channel: second, folders, onClose: vi.fn() });
+		await rerender({ channel: second, categories, onClose: vi.fn() });
 
 		expect(favoriteToggle.checked).toBe(false);
-		expect(folderSelect.value).toBe('folder-a');
+		expect(categoryA.checked).toBe(true);
+		expect(categoryB.checked).toBe(false);
 	});
 });

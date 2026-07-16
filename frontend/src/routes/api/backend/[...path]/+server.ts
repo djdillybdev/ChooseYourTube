@@ -5,6 +5,7 @@ const ALLOWED_PREFIXES = [
 	'videos',
 	'channels',
 	'folders',
+	'categories',
 	'tags',
 	'playlists',
 	'sync-runs',
@@ -12,7 +13,14 @@ const ALLOWED_PREFIXES = [
 	'users/me'
 ];
 
-const TRAILING_SLASH_COLLECTIONS = new Set(['videos', 'channels', 'folders', 'tags', 'playlists']);
+const TRAILING_SLASH_COLLECTIONS = new Set([
+	'videos',
+	'channels',
+	'folders',
+	'categories',
+	'tags',
+	'playlists'
+]);
 
 export const trailingSlash = 'ignore';
 

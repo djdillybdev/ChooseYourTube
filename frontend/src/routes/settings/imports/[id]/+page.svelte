@@ -11,12 +11,10 @@
 		data: PageData;
 	}
 	let { data }: Props = $props();
-	let folderId = $state('');
 	const selectedTags = new SvelteSet<string>();
 	let initialized = false;
 	$effect(() => {
 		if (!initialized) {
-			folderId = data.detail.import.destination_folder_id ?? '';
 			for (const tagId of data.detail.import.destination_tag_ids) selectedTags.add(tagId);
 			initialized = true;
 		}
@@ -72,7 +70,7 @@
 		error = null;
 		try {
 			run = await api.imports.commit(data.detail.import.id, {
-				folder_id: folderId || null,
+				folder_id: null,
 				tag_ids: [...selectedTags],
 				selected_candidate_ids: retryFailed ? undefined : null
 			});
@@ -195,16 +193,7 @@
 	{#if data.detail.import.status === 'ready'}
 		<section class="mt-6 rounded-box bg-base-100 p-5 shadow-sm">
 			<h3 class="mb-4 font-semibold">Organize new channels</h3>
-			<div class="grid gap-4 md:grid-cols-2">
-				<label class="form-control">
-					<span class="label-text mb-1">Folder (optional)</span>
-					<select class="select-bordered select" bind:value={folderId}>
-						<option value="">No folder</option>
-						{#each data.folders as folder (folder.id)}<option value={folder.id}
-								>{folder.name}</option
-							>{/each}
-					</select>
-				</label>
+			<div>
 				<fieldset>
 					<legend class="label-text mb-2">Tags (optional)</legend>
 					<div class="flex flex-wrap gap-2">

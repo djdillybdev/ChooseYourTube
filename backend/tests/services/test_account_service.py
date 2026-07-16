@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 
 from app.auth.models import RefreshSession, User
 from app.db.models.folder import Folder
+from app.db.models.category import Category
 from app.db.models.playlist import Playlist
 from app.db.models.sync_run import SyncRun
 from app.db.models.tag import Tag
@@ -24,10 +25,22 @@ async def test_delete_account_removes_owned_graph_and_preserves_other_user(db_se
     db_session.add_all(
         [
             Folder(id="delete-folder", owner_id=owner_id, name="Delete"),
+            Category(
+                id="delete-category",
+                owner_id=owner_id,
+                name="Delete",
+                normalized_name="delete",
+            ),
             Playlist(id="delete-playlist", owner_id=owner_id, name="Delete"),
             Tag(id="delete-tag", owner_id=owner_id, name="delete"),
             SyncRun(owner_id=owner_id, kind="demo_maintenance"),
             Folder(id="keep-folder", owner_id=other_id, name="Keep"),
+            Category(
+                id="keep-category",
+                owner_id=other_id,
+                name="Keep",
+                normalized_name="keep",
+            ),
             RefreshSession(
                 user_id=user.id,
                 session_id=uuid.uuid4(),
@@ -54,4 +67,10 @@ async def test_delete_account_removes_owned_graph_and_preserves_other_user(db_se
     ) == 0
     assert await db_session.scalar(
         select(func.count(Folder.id)).where(Folder.owner_id == other_id)
+    ) == 1
+    assert await db_session.scalar(
+        select(func.count(Category.id)).where(Category.owner_id == owner_id)
+    ) == 0
+    assert await db_session.scalar(
+        select(func.count(Category.id)).where(Category.owner_id == other_id)
     ) == 1

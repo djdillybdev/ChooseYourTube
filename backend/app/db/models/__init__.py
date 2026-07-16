@@ -1,6 +1,7 @@
 from .channel import Channel
 from .video import Video
 from .folder import Folder
+from .category import Category
 from .tag import Tag
 from .playlist import Playlist
 from .sync_run import SyncRun, YouTubeAPIUsage
@@ -16,6 +17,7 @@ __all__ = [
     "Channel",
     "Video",
     "Folder",
+    "Category",
     "Tag",
     "Playlist",
     "SyncRun",

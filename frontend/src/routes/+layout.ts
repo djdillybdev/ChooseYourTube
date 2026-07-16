@@ -1,4 +1,12 @@
-import type { FolderOut, ChannelOut, TagOut, UserRead, PlaylistDetailOut } from '$lib/types/api';
+import type {
+	CategoryOut,
+	FolderOut,
+	ChannelOut,
+	TagOut,
+	UserRead,
+	PlaylistDetailOut
+} from '$lib/types/api';
+import { APIError, createScopedAPI } from '$lib/api';
 import { error, redirect } from '@sveltejs/kit';
 import type { LayoutLoad } from './$types';
 import type { RuntimeMetadata } from '$lib/types/runtime';
@@ -26,7 +34,8 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 			isPublicAuthRoute: true,
 			currentUser: null,
 			folders: [] as FolderOut[],
-			unfolderedChannels: [] as ChannelOut[],
+			categories: [] as CategoryOut[],
+			uncategorizedChannels: [] as ChannelOut[],
 			channels: [] as ChannelOut[],
 			tags: [] as TagOut[],
 			watchLater: null as PlaylistDetailOut | null,
@@ -35,6 +44,7 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 	}
 
 	depends('app:folders');
+	depends('app:categories');
 	depends('app:channels');
 	depends('app:tags');
 	depends('app:user');
@@ -57,13 +67,30 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 		watch_later: PlaylistDetailOut;
 		runtime: RuntimeMetadata;
 	};
-	const unfolderedChannels = bootstrap.channels.filter((channel) => channel.folder_id === null);
+	let categories: CategoryOut[];
+	try {
+		categories = await createScopedAPI(fetch).categories.list();
+	} catch (cause) {
+		if (cause instanceof APIError && cause.status === 401) {
+			await fetch('/api/auth/logout', { method: 'POST' });
+			throw redirect(307, `/login?next=${encodeURIComponent(url.pathname + url.search)}`);
+		}
+		console.error('Failed to load categories', cause);
+		throw error(503, 'ChooseYourTube could not load your library. Please retry.');
+	}
+	const categorizedChannelIds = new Set(
+		categories.flatMap((category) => category.channel_ids ?? [])
+	);
+	const uncategorizedChannels = bootstrap.channels.filter(
+		(channel) => !categorizedChannelIds.has(channel.id)
+	);
 
 	return {
 		isPublicAuthRoute: false,
 		currentUser: bootstrap.current_user,
 		folders: bootstrap.folders,
-		unfolderedChannels,
+		categories,
+		uncategorizedChannels,
 		channels: bootstrap.channels,
 		tags: bootstrap.tags,
 		watchLater: bootstrap.watch_later,

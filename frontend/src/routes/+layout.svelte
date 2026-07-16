@@ -7,11 +7,13 @@
 	import { modalState, closeModal } from '$lib/stores/modalState.svelte';
 	import AddChannelModal from '$lib/components/modals/AddChannelModal.svelte';
 	import CreateFolderModal from '$lib/components/modals/CreateFolderModal.svelte';
+	import CreateCategoryModal from '$lib/components/modals/CreateCategoryModal.svelte';
 	import EditChannelModal from '$lib/components/modals/EditChannelModal.svelte';
 	import EditFolderModal from '$lib/components/modals/EditFolderModal.svelte';
+	import EditCategoryModal from '$lib/components/modals/EditCategoryModal.svelte';
 	import SaveVideoModal from '$lib/components/modals/SaveVideoModal.svelte';
 	import type { Snippet } from 'svelte';
-	import type { FolderOut } from '$lib/types/api';
+	import type { CategoryOut, FolderOut } from '$lib/types/api';
 	import type { RuntimeMetadata } from '$lib/types/runtime';
 	import { provideWatchLater } from '$lib/stores/watchLater.svelte';
 	import DemoBanner from '$lib/components/layout/DemoBanner.svelte';
@@ -24,7 +26,8 @@
 			isPublicAuthRoute?: boolean;
 			currentUser: UserRead | null;
 			folders: FolderOut[];
-			unfolderedChannels: ChannelOut[];
+			categories: CategoryOut[];
+			uncategorizedChannels: ChannelOut[];
 			channels: ChannelOut[];
 			tags: TagOut[];
 			watchLater: PlaylistDetailOut | null;
@@ -55,8 +58,8 @@
 	</div>
 	<div class="app-shell flex h-screen overflow-hidden">
 		<Sidebar
-			folders={data.folders}
-			unfolderedChannels={data.unfolderedChannels}
+			categories={data.categories}
+			uncategorizedChannels={data.uncategorizedChannels}
 			channels={data.channels}
 			backgroundJobsEnabled={data.runtime.features.background_jobs}
 			demoMode={data.runtime.mode === 'demo'}
@@ -76,7 +79,10 @@
 
 	<!-- Modals - rendered outside app-shell to escape overflow:hidden -->
 	{#if modalState.current.type === 'addChannel'}
-		<AddChannelModal folders={data.folders} onClose={closeModal} />
+		<AddChannelModal categories={data.categories} onClose={closeModal} />
+	{/if}
+	{#if modalState.current.type === 'createCategory'}
+		<CreateCategoryModal onClose={closeModal} />
 	{/if}
 	{#if modalState.current.type === 'createFolder'}
 		<CreateFolderModal folders={data.folders} onClose={closeModal} />
@@ -84,10 +90,17 @@
 	{#if modalState.current.type === 'editChannel'}
 		<EditChannelModal
 			channel={modalState.current.channel}
-			folders={data.folders}
+			categories={data.categories}
 			tags={data.tags}
 			onClose={closeModal}
 			demoMode={data.runtime.mode === 'demo'}
+		/>
+	{/if}
+	{#if modalState.current.type === 'editCategory'}
+		<EditCategoryModal
+			category={modalState.current.category}
+			channels={data.channels}
+			onClose={closeModal}
 		/>
 	{/if}
 	{#if modalState.current.type === 'editFolder'}

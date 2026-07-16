@@ -140,6 +140,77 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/categories/': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** List Categories */
+		get: operations['list_categories_categories__get'];
+		put?: never;
+		/** Create Category */
+		post: operations['create_category_categories__post'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/categories/channels/{channel_id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Replace Channel Categories */
+		put: operations['replace_channel_categories_categories_channels__channel_id__put'];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/categories/{category_id}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get Category */
+		get: operations['get_category_categories__category_id__get'];
+		put?: never;
+		post?: never;
+		/** Delete Category */
+		delete: operations['delete_category_categories__category_id__delete'];
+		options?: never;
+		head?: never;
+		/** Update Category */
+		patch: operations['update_category_categories__category_id__patch'];
+		trace?: never;
+	};
+	'/categories/{category_id}/channels': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Replace Category Channels */
+		put: operations['replace_category_channels_categories__category_id__channels_put'];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/channels/': {
 		parameters: {
 			query?: never;
@@ -1014,6 +1085,47 @@ export interface components {
 			candidate_ids: string[];
 			/** Selected */
 			selected: boolean;
+		};
+		/** CategoryChannelsUpdate */
+		CategoryChannelsUpdate: {
+			/** Channel Ids */
+			channel_ids?: string[];
+		};
+		/** CategoryCreate */
+		CategoryCreate: {
+			/** Name */
+			name: string;
+		};
+		/** CategoryOut */
+		CategoryOut: {
+			/** Channel Ids */
+			channel_ids?: string[];
+			/**
+			 * Created At
+			 * Format: date-time
+			 */
+			created_at: string;
+			/** Id */
+			id: string;
+			/** Name */
+			name: string;
+		};
+		/** CategoryUpdate */
+		CategoryUpdate: {
+			/** Name */
+			name: string;
+		};
+		/** ChannelCategoriesOut */
+		ChannelCategoriesOut: {
+			/** Category Ids */
+			category_ids: string[];
+			/** Channel Id */
+			channel_id: string;
+		};
+		/** ChannelCategoriesUpdate */
+		ChannelCategoriesUpdate: {
+			/** Category Ids */
+			category_ids?: string[];
 		};
 		/**
 		 * ChannelCreate
@@ -2510,6 +2622,611 @@ export interface operations {
 				};
 				content: {
 					'application/json': unknown;
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	list_categories_categories__get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CategoryOut'][];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	create_category_categories__post: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CategoryCreate'];
+			};
+		};
+		responses: {
+			/** @description Successful Response */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CategoryOut'];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	replace_channel_categories_categories_channels__channel_id__put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['ChannelCategoriesUpdate'];
+			};
+		};
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['ChannelCategoriesOut'];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	get_category_categories__category_id__get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				category_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CategoryOut'];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	delete_category_categories__category_id__delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				category_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	update_category_categories__category_id__patch: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				category_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CategoryUpdate'];
+			};
+		};
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CategoryOut'];
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	replace_category_channels_categories__category_id__channels_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				category_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				'application/json': components['schemas']['CategoryChannelsUpdate'];
+			};
+		};
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['CategoryOut'];
 				};
 			};
 			/** @description Safe API error */

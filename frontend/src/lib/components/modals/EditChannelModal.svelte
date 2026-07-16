@@ -1,21 +1,21 @@
 <script lang="ts">
 	import { api } from '$lib/api';
-	import type { ChannelOut, FolderOut, TagOut } from '$lib/types/api';
+	import type { CategoryOut, ChannelOut, TagOut } from '$lib/types/api';
 	import { invalidate } from '$app/navigation';
 	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
 
 	interface Props {
 		channel: ChannelOut;
-		folders: FolderOut[];
+		categories: CategoryOut[];
 		tags?: TagOut[];
 		onClose: () => void;
 		demoMode?: boolean;
 	}
 
-	let { channel, folders, tags = [], onClose, demoMode = false }: Props = $props();
+	let { channel, categories, tags = [], onClose, demoMode = false }: Props = $props();
 
 	let isFavorited = $state(false);
-	let selectedFolder = $state<string | null>(null);
+	let selectedCategoryIds = $state<string[]>([]);
 	let selectedTagIds = $state<string[]>([]);
 	let syncedChannelId = $state<string | null>(null);
 	let isSubmitting = $state(false);
@@ -26,7 +26,9 @@
 	$effect(() => {
 		if (channel.id !== syncedChannelId) {
 			isFavorited = channel.is_favorited;
-			selectedFolder = channel.folder_id;
+			selectedCategoryIds = categories
+				.filter((category) => (category.channel_ids ?? []).includes(channel.id))
+				.map((category) => category.id);
 			selectedTagIds = [...channel.tag_ids];
 			syncedChannelId = channel.id;
 		}
@@ -36,16 +38,6 @@
 		dialogElement?.showModal();
 	});
 
-	/** Flatten the nested folder tree for the <select> */
-	function flattenFolders(list: FolderOut[], acc: FolderOut[] = []): FolderOut[] {
-		for (const f of list) {
-			acc.push(f);
-			if (f.children?.length) flattenFolders(f.children, acc);
-		}
-		return acc;
-	}
-	let flatFolders = $derived(flattenFolders(folders));
-
 	async function handleSave(e: Event) {
 		e.preventDefault();
 		isSubmitting = true;
@@ -53,10 +45,10 @@
 		try {
 			await api.channels.update(channel.id, {
 				is_favorited: isFavorited,
-				folder_id: selectedFolder,
 				tag_ids: selectedTagIds
 			});
-			await invalidate('app:channels');
+			await api.categories.setForChannel(channel.id, { category_ids: selectedCategoryIds });
+			await Promise.all([invalidate('app:channels'), invalidate('app:categories')]);
 			onClose();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to update channel';
@@ -71,7 +63,7 @@
 		try {
 			await api.channels.delete(channel.id);
 			await invalidate('app:channels');
-			await invalidate('app:folders');
+			await invalidate('app:categories');
 			onClose();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to delete channel';
@@ -134,22 +126,29 @@
 				/>
 			</div>
 
-			<!-- Folder select -->
 			<div class="form-control">
-				<label class="label" for="edit-ch-folder">
-					<span class="label-text">Folder</span>
-				</label>
-				<select
-					id="edit-ch-folder"
-					bind:value={selectedFolder}
-					disabled={isSubmitting}
-					class="select-bordered select w-full"
-				>
-					<option value={null}>No folder</option>
-					{#each flatFolders as f (f.id)}
-						<option value={f.id}>{f.name}</option>
-					{/each}
-				</select>
+				<span class="label-text mb-2">Categories</span>
+				{#if categories.length === 0}
+					<p class="text-sm text-base-content/60">Create a category from the sidebar first.</p>
+				{:else}
+					<div class="flex flex-wrap gap-2">
+						{#each categories as category (category.id)}
+							<label class="label cursor-pointer gap-2 rounded border border-base-300 px-2 py-1">
+								<input
+									type="checkbox"
+									class="checkbox checkbox-xs"
+									checked={selectedCategoryIds.includes(category.id)}
+									onchange={(event) => {
+										selectedCategoryIds = event.currentTarget.checked
+											? [...new Set([...selectedCategoryIds, category.id])]
+											: selectedCategoryIds.filter((id) => id !== category.id);
+									}}
+								/>
+								<span class="label-text">{category.name}</span>
+							</label>
+						{/each}
+					</div>
+				{/if}
 			</div>
 
 			<div class="form-control">

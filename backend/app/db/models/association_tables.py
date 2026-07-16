@@ -52,6 +52,33 @@ channel_tags = Table(
     ),
 )
 
+# Many-to-many association table for Channel ↔ Category
+channel_categories = Table(
+    "channel_categories",
+    Base.metadata,
+    Column("owner_id", String(36), primary_key=True, nullable=False),
+    Column("channel_id", String(32), primary_key=True),
+    Column("category_id", String(36), primary_key=True),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    ),
+    ForeignKeyConstraint(
+        ["owner_id", "channel_id"],
+        ["channels.owner_id", "channels.id"],
+        ondelete="CASCADE",
+        name="fk_channel_categories_channel",
+    ),
+    ForeignKeyConstraint(
+        ["owner_id", "category_id"],
+        ["categories.owner_id", "categories.id"],
+        ondelete="CASCADE",
+        name="fk_channel_categories_category",
+    ),
+)
+
 # Many-to-many association table for Video ↔ Tag
 video_tags = Table(
     "video_tags",

@@ -1,19 +1,20 @@
 <script lang="ts">
 	import { api } from '$lib/api';
-	import type { FolderOut } from '$lib/types/api';
+	import type { CategoryOut } from '$lib/types/api';
 	import { invalidate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
 	interface Props {
-		folders: FolderOut[];
+		categories: CategoryOut[];
 		onClose: () => void;
 		onSuccess?: () => void;
 	}
 
-	let { folders, onClose, onSuccess }: Props = $props();
+	let { categories, onClose, onSuccess }: Props = $props();
 
 	let handle = $state('');
-	let selectedFolderId = $state<string | undefined>(undefined);
+	let selectedCategoryIds = $state<string[]>([]);
+	let createdChannelId = $state<string | null>(null);
 	let isSubmitting = $state(false);
 	let error = $state<string | null>(null);
 
@@ -32,18 +33,29 @@
 		error = null;
 
 		try {
-			await api.channels.create({
-				handle: handle.trim(),
-				folder_id: selectedFolderId
-			});
+			const channel = createdChannelId
+				? null
+				: await api.channels.create({
+						handle: handle.trim()
+					});
+			const channelId = createdChannelId ?? channel?.id;
+			if (!channelId) throw new Error('The channel was created without an ID.');
+			createdChannelId = channelId;
+			if (selectedCategoryIds.length > 0) {
+				await api.categories.setForChannel(channelId, { category_ids: selectedCategoryIds });
+			}
 
-			// Invalidate to refresh channels list
-			await invalidate('app:channels');
+			await Promise.all([invalidate('app:channels'), invalidate('app:categories')]);
 
 			onSuccess?.();
 			onClose();
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to add channel';
+			error =
+				createdChannelId && selectedCategoryIds.length > 0
+					? 'The channel was added, but its categories could not be assigned. Retry to finish.'
+					: err instanceof Error
+						? err.message
+						: 'Failed to add channel';
 			console.error('Failed to add channel:', err);
 		} finally {
 			isSubmitting = false;
@@ -85,23 +97,30 @@
 				/>
 			</div>
 
-			<!-- Folder selection (optional) -->
-			<div class="form-control">
-				<label class="label" for="folder-select">
-					<span class="label-text">Folder (optional)</span>
-				</label>
-				<select
-					id="folder-select"
-					bind:value={selectedFolderId}
-					disabled={isSubmitting}
-					class="select-bordered select w-full"
-				>
-					<option value={undefined}>No folder</option>
-					{#each folders as folder (folder.id)}
-						<option value={folder.id}>{folder.name}</option>
-					{/each}
-				</select>
-			</div>
+			<fieldset>
+				<legend class="label-text mb-2">Categories (optional)</legend>
+				{#if categories.length === 0}
+					<p class="text-sm text-base-content/60">You can categorize this channel later.</p>
+				{:else}
+					<div class="flex flex-wrap gap-2">
+						{#each categories as category (category.id)}
+							<label class="label cursor-pointer gap-2 rounded border border-base-300 px-2 py-1">
+								<input
+									type="checkbox"
+									class="checkbox checkbox-xs"
+									checked={selectedCategoryIds.includes(category.id)}
+									onchange={(event) => {
+										selectedCategoryIds = event.currentTarget.checked
+											? [...new Set([...selectedCategoryIds, category.id])]
+											: selectedCategoryIds.filter((id) => id !== category.id);
+									}}
+								/>
+								<span>{category.name}</span>
+							</label>
+						{/each}
+					</div>
+				{/if}
+			</fieldset>
 
 			<!-- Error message -->
 			{#if error}
@@ -133,7 +152,7 @@
 						<span class="loading loading-sm loading-spinner"></span>
 						Adding...
 					{:else}
-						Add Channel
+						{createdChannelId ? 'Retry Category Assignment' : 'Add Channel'}
 					{/if}
 				</button>
 			</div>

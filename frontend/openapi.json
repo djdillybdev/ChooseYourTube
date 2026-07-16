@@ -179,6 +179,103 @@
 				"title": "CandidateSelectionUpdate",
 				"type": "object"
 			},
+			"CategoryChannelsUpdate": {
+				"properties": {
+					"channel_ids": {
+						"items": {
+							"type": "string"
+						},
+						"title": "Channel Ids",
+						"type": "array"
+					}
+				},
+				"title": "CategoryChannelsUpdate",
+				"type": "object"
+			},
+			"CategoryCreate": {
+				"properties": {
+					"name": {
+						"maxLength": 255,
+						"minLength": 1,
+						"title": "Name",
+						"type": "string"
+					}
+				},
+				"required": ["name"],
+				"title": "CategoryCreate",
+				"type": "object"
+			},
+			"CategoryOut": {
+				"properties": {
+					"channel_ids": {
+						"items": {
+							"type": "string"
+						},
+						"title": "Channel Ids",
+						"type": "array"
+					},
+					"created_at": {
+						"format": "date-time",
+						"title": "Created At",
+						"type": "string"
+					},
+					"id": {
+						"title": "Id",
+						"type": "string"
+					},
+					"name": {
+						"title": "Name",
+						"type": "string"
+					}
+				},
+				"required": ["id", "name", "created_at"],
+				"title": "CategoryOut",
+				"type": "object"
+			},
+			"CategoryUpdate": {
+				"properties": {
+					"name": {
+						"maxLength": 255,
+						"minLength": 1,
+						"title": "Name",
+						"type": "string"
+					}
+				},
+				"required": ["name"],
+				"title": "CategoryUpdate",
+				"type": "object"
+			},
+			"ChannelCategoriesOut": {
+				"properties": {
+					"category_ids": {
+						"items": {
+							"type": "string"
+						},
+						"title": "Category Ids",
+						"type": "array"
+					},
+					"channel_id": {
+						"title": "Channel Id",
+						"type": "string"
+					}
+				},
+				"required": ["channel_id", "category_ids"],
+				"title": "ChannelCategoriesOut",
+				"type": "object"
+			},
+			"ChannelCategoriesUpdate": {
+				"properties": {
+					"category_ids": {
+						"items": {
+							"type": "string"
+						},
+						"title": "Category Ids",
+						"type": "array"
+					}
+				},
+				"title": "ChannelCategoriesUpdate",
+				"type": "object"
+			},
 			"ChannelCreate": {
 				"description": "Schema for adding a new channel. The user provides the handle\nand optionally which folder to place it in.",
 				"properties": {
@@ -3114,6 +3211,750 @@
 				},
 				"summary": "Session Refresh",
 				"tags": ["auth"]
+			}
+		},
+		"/categories/": {
+			"get": {
+				"operationId": "list_categories_categories__get",
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/CategoryOut"
+									},
+									"title": "Response List Categories Categories  Get",
+									"type": "array"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "List Categories",
+				"tags": ["Categories"]
+			},
+			"post": {
+				"operationId": "create_category_categories__post",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CategoryCreate"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"201": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CategoryOut"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Create Category",
+				"tags": ["Categories"]
+			}
+		},
+		"/categories/channels/{channel_id}": {
+			"put": {
+				"operationId": "replace_channel_categories_categories_channels__channel_id__put",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "channel_id",
+						"required": true,
+						"schema": {
+							"title": "Channel Id",
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ChannelCategoriesUpdate"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ChannelCategoriesOut"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Replace Channel Categories",
+				"tags": ["Categories"]
+			}
+		},
+		"/categories/{category_id}": {
+			"delete": {
+				"operationId": "delete_category_categories__category_id__delete",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "category_id",
+						"required": true,
+						"schema": {
+							"title": "Category Id",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Delete Category",
+				"tags": ["Categories"]
+			},
+			"get": {
+				"operationId": "get_category_categories__category_id__get",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "category_id",
+						"required": true,
+						"schema": {
+							"title": "Category Id",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CategoryOut"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Get Category",
+				"tags": ["Categories"]
+			},
+			"patch": {
+				"operationId": "update_category_categories__category_id__patch",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "category_id",
+						"required": true,
+						"schema": {
+							"title": "Category Id",
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CategoryUpdate"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CategoryOut"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Update Category",
+				"tags": ["Categories"]
+			}
+		},
+		"/categories/{category_id}/channels": {
+			"put": {
+				"operationId": "replace_category_channels_categories__category_id__channels_put",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "category_id",
+						"required": true,
+						"schema": {
+							"title": "Category Id",
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CategoryChannelsUpdate"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CategoryOut"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Replace Category Channels",
+				"tags": ["Categories"]
 			}
 		},
 		"/channels/": {

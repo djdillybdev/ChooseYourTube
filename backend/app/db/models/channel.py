@@ -14,11 +14,12 @@ from sqlalchemy import (
 )
 from datetime import datetime, timezone
 from ..base import Base
-from .association_tables import channel_tags
+from .association_tables import channel_categories, channel_tags
 from .video import Video
 
 if TYPE_CHECKING:
     from .folder import Folder
+    from .category import Category
     from .sync_run import SyncRun
     from .tag import Tag
 
@@ -81,6 +82,14 @@ class Channel(Base):
         secondary=channel_tags,
         primaryjoin="and_(Channel.owner_id == channel_tags.c.owner_id, Channel.id == channel_tags.c.channel_id)",
         secondaryjoin="and_(Tag.owner_id == channel_tags.c.owner_id, Tag.id == channel_tags.c.tag_id)",
+        back_populates="channels",
+        lazy="selectin",
+    )
+
+    categories: Mapped[list["Category"]] = relationship(
+        secondary=channel_categories,
+        primaryjoin="and_(Channel.owner_id == channel_categories.c.owner_id, Channel.id == channel_categories.c.channel_id)",
+        secondaryjoin="and_(Category.owner_id == channel_categories.c.owner_id, Category.id == channel_categories.c.category_id)",
         back_populates="channels",
         lazy="selectin",
     )
