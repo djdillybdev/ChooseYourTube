@@ -65,7 +65,7 @@
 		{refreshError}
 		{isRefreshing}
 		canRefresh={data.runtime.features.background_jobs}
-		refreshDisabledReason="Live refresh is disabled in the recruiter demo."
+		refreshDisabledReason="Live refresh is disabled in the demo."
 		refreshLabel="Refresh playlists"
 		onEdit={() => openEditChannel(data.channel)}
 		onRefresh={handleRefresh}

@@ -3,7 +3,7 @@
 ChooseYourTube supports two deployments from the same branch:
 
 - a full Docker installation with PostgreSQL, Redis, API, worker, and SvelteKit;
-- a shared recruiter demo with separate SvelteKit and FastAPI Vercel projects and Neon.
+- a shared demo with separate SvelteKit and FastAPI Vercel projects and Neon.
 
 The demo is intentionally not the full worker architecture. Vercel Hobby invokes maintenance once
 per day and may run it at any point during the configured UTC hour. The durable Neon snapshot remains
@@ -56,15 +56,15 @@ To remove containers but preserve data, run `make down`. The following is a dest
 docker compose --env-file .env down --volumes
 ```
 
-## Vercel and Neon recruiter demo
+## Vercel and Neon demo
 
-The recruiter demo currently uses a Neon project in AWS US East (Northern Virginia). Keep both
+The demo currently uses a Neon project in AWS US East (Northern Virginia). Keep both
 Vercel function projects in Washington, D.C. (`iad1`) so database traffic stays in-region:
 
-| Project | Root directory | Framework/runtime |
-| --- | --- | --- |
-| `chooseyourtube-api` | `backend/` | FastAPI / Python 3.12 |
-| `chooseyourtube-demo` | `frontend/` | SvelteKit |
+| Project               | Root directory | Framework/runtime     |
+| --------------------- | -------------- | --------------------- |
+| `chooseyourtube-api`  | `backend/`     | FastAPI / Python 3.12 |
+| `chooseyourtube-demo` | `frontend/`    | SvelteKit             |
 
 The backend is configured in `backend/vercel.json` for `iad1` and the
 daily `0 4 * * *` UTC maintenance request. The frontend selects `adapter-vercel` automatically when

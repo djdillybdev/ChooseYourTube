@@ -28,7 +28,7 @@ def _ensure_imports_enabled(*, oauth: bool = False) -> None:
     if settings.APP_MODE == "demo" or not settings.BACKGROUND_JOBS_ENABLED:
         raise ApplicationError(
             "FEATURE_DISABLED_IN_DEMO",
-            "Subscription imports are disabled in the shared recruiter demo.",
+            "Subscription imports are disabled in the shared demo.",
             403,
         )
     if oauth and not settings.YOUTUBE_OAUTH_ENABLED:
@@ -92,13 +92,13 @@ async def youtube_oauth_callback(
 ):
     if not state:
         return RedirectResponse(
-            _frontend_redirect(
-                "/settings/imports", oauth_error="OAUTH_STATE_INVALID"
-            ),
+            _frontend_redirect("/settings/imports", oauth_error="OAUTH_STATE_INVALID"),
             status_code=303,
         )
     try:
-        record = await subscription_import_service.consume_oauth_state(db_session, state)
+        record = await subscription_import_service.consume_oauth_state(
+            db_session, state
+        )
     except ApplicationError as exc:
         return RedirectResponse(
             _frontend_redirect("/settings/imports", oauth_error=exc.code),

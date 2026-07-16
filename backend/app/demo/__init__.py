@@ -1,1 +1,1 @@
-"""Deterministic recruiter-demo data and maintenance helpers."""
+"""Deterministic demo data and maintenance helpers."""

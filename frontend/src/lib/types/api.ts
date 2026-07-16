@@ -114,7 +114,7 @@ export interface SyncRunFilters extends Record<string, unknown> {
 const KNOWN_MESSAGES: Record<string, string> = {
 	FEATURE_DISABLED: 'This feature is not available in the current application mode.',
 	FEATURE_DISABLED_IN_DEMO:
-		'Live refresh is disabled in the recruiter demo. Its sample data is maintained daily.',
+		'Live refresh is disabled in the demo. Its sample data is maintained daily.',
 	YOUTUBE_QUOTA_EXHAUSTED:
 		'YouTube refresh is paused because the daily API quota has been reached.',
 	QUEUE_UNAVAILABLE: 'Synchronization is temporarily unavailable. Please try again shortly.',

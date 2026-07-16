@@ -25,7 +25,7 @@ def _require_background_jobs() -> None:
     if not settings.BACKGROUND_JOBS_ENABLED:
         raise ApplicationError(
             "FEATURE_DISABLED_IN_DEMO",
-            "External refresh is disabled in the recruiter demo; data is maintained daily.",
+            "External refresh is disabled in the demo; data is maintained daily.",
             403,
         )
 

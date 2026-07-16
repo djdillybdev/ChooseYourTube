@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the deployed recruiter demo through its public HTTP surface."""
+"""Exercise the deployed demo through its public HTTP surface."""
 
 from __future__ import annotations
 

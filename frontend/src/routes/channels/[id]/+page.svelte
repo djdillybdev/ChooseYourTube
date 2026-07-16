@@ -100,7 +100,7 @@
 		{refreshError}
 		{isRefreshing}
 		canRefresh={data.runtime.features.background_jobs}
-		refreshDisabledReason="Live refresh is disabled in the recruiter demo; data is maintained daily."
+		refreshDisabledReason="Live refresh is disabled in the demo; data is maintained daily."
 		showFavorite
 		onEdit={() => openEditChannel(data.channel)}
 		onRefresh={handleRefresh}

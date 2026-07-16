@@ -1,4 +1,4 @@
-"""Idempotently seed or restore the configured recruiter demo account."""
+"""Idempotently seed or restore the configured demo account."""
 
 from __future__ import annotations
 

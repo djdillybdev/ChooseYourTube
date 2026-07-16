@@ -17,6 +17,6 @@ def require_demo_safe(operation: DemoOperation) -> None:
         return
     raise ApplicationError(
         "FEATURE_DISABLED_IN_DEMO",
-        "This operation is disabled in the shared recruiter demo.",
+        "This operation is disabled in the shared demo.",
         403,
     )

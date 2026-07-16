@@ -66,7 +66,7 @@
 			</h1>
 			<p class="text-sm text-base-content/90">
 				{data.metadata?.mode === 'demo'
-					? 'Enter the shared recruiter demo without credentials. Changes reset daily.'
+					? 'Enter the shared demo without credentials. Changes reset daily.'
 					: 'Access your ChooseYourTube account.'}
 			</p>
 

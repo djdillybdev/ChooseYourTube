@@ -82,9 +82,7 @@ async def test_seed_demo_is_idempotent_and_restores_mutable_state(db_session):
     assert video is not None
     video.is_favorited = False
     db_session.add(
-        Folder(
-            id="user-folder", owner_id=owner_id, name="Recruiter change", position=99
-        )
+        Folder(id="user-folder", owner_id=owner_id, name="Change", position=99)
     )
     db_session.add(
         Channel(

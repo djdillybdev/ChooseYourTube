@@ -6,7 +6,7 @@ ChooseYourTube is a self-hostable YouTube feed reader that lets users follow sel
 
 The v1.0 release has two supported runtime configurations built from the same `main` branch:
 
-1. **Hosted recruiter demo:** SvelteKit and FastAPI run on Vercel and use a hosted Neon PostgreSQL database. A recruiter enters a seeded shared account using a one-click demo button. Quota-sensitive operations are disabled, and mutable demo state is reset daily.
+1. **Hosted demo:** SvelteKit and FastAPI run on Vercel and use a hosted Neon PostgreSQL database. A recruiter enters a seeded shared account using a one-click demo button. Quota-sensitive operations are disabled, and mutable demo state is reset daily.
 2. **Full self-hosted application:** Docker Compose runs SvelteKit, FastAPI, PostgreSQL, Redis, Alembic migrations, and arq workers. It supports user accounts, hourly refreshes, Google OAuth and CSV subscription imports, and a user-supplied YouTube API key.
 
 The release is complete when a recruiter can understand the project from GitHub, open a working demo without credentials, exercise its principal workflows, and see clear evidence of production-oriented engineering. A self-hoster must also be able to start the complete application using the documented Docker workflow.
@@ -80,7 +80,7 @@ Implement the release in the following order. Each phase should land as one or m
 4. Add the shared subscription-import pipeline, followed by CSV and OAuth sources.
 5. Polish authentication, demo behavior, error handling, responsive UX, and accessibility.
 6. Expand automated testing and add GitHub Actions.
-7. Produce Docker release artifacts and the Vercel recruiter demo.
+7. Produce Docker release artifacts and the Vercel demo.
 8. Complete portfolio documentation, screenshots, video, and the `v1.0.0` release.
 
 Synchronization is deliberately before import because imports need the same durable job state, idempotency, progress reporting, and failure model. The demo deployment comes after core behavior and CI so it deploys the release candidate rather than becoming a parallel development target.
@@ -98,16 +98,16 @@ Synchronization is deliberately before import because imports need the same dura
 
 Add typed settings with the following behavior:
 
-| Setting                      | Full mode default       | Demo mode default    | Purpose                                                    |
-| ---------------------------- | ----------------------- | -------------------- | ---------------------------------------------------------- |
-| `APP_MODE`                   | `full`                  | `demo`               | Selects supported runtime behavior.                        |
-| `REGISTRATION_ENABLED`       | `true`                  | `false`              | Enables public account registration.                       |
-| `BACKGROUND_JOBS_ENABLED`    | `true`                  | `false`              | Enables Redis/arq enqueue operations.                      |
-| `YOUTUBE_OAUTH_ENABLED`      | When configured         | `false`              | Enables Google subscription OAuth.                         |
-| `DEMO_LOGIN_ENABLED`         | `false`                 | `true`               | Enables one-click demo sessions.                           |
-| `YOUTUBE_DAILY_QUOTA_BUDGET` | Configurable safe value | Unused               | Stops optional full-mode work before quota is exhausted.   |
-| `DEMO_USER_EMAIL`            | Unset                   | Required             | Identifies the seeded shared demo user.                    |
-| `DEMO_MAINTENANCE_SECRET`    | Unset                   | Required             | Protects daily demo maintenance.                           |
+| Setting                      | Full mode default       | Demo mode default | Purpose                                                  |
+| ---------------------------- | ----------------------- | ----------------- | -------------------------------------------------------- |
+| `APP_MODE`                   | `full`                  | `demo`            | Selects supported runtime behavior.                      |
+| `REGISTRATION_ENABLED`       | `true`                  | `false`           | Enables public account registration.                     |
+| `BACKGROUND_JOBS_ENABLED`    | `true`                  | `false`           | Enables Redis/arq enqueue operations.                    |
+| `YOUTUBE_OAUTH_ENABLED`      | When configured         | `false`           | Enables Google subscription OAuth.                       |
+| `DEMO_LOGIN_ENABLED`         | `false`                 | `true`            | Enables one-click demo sessions.                         |
+| `YOUTUBE_DAILY_QUOTA_BUDGET` | Configurable safe value | Unused            | Stops optional full-mode work before quota is exhausted. |
+| `DEMO_USER_EMAIL`            | Unset                   | Required          | Identifies the seeded shared demo user.                  |
+| `DEMO_MAINTENANCE_SECRET`    | Unset                   | Required          | Protects daily demo maintenance.                         |
 
 Make `REDIS_URL` required only when background jobs are enabled. Google OAuth client settings are optional, but attempting to enable OAuth without them must fail startup validation. A YouTube API key remains required for full live synchronization. Demo mode never requires or uses a key: its maintenance path creates videos directly from public channel RSS metadata and reports per-feed failures without deleting the last durable data.
 
@@ -639,7 +639,7 @@ The release must meet all of the following:
 ## 14. Fixed assumptions and intentional trade-offs
 
 - Keep SvelteKit and FastAPI; do not rewrite the frontend in Next.js.
-- Vercel is the safe recruiter demo, while Docker is the complete reference product.
+- Vercel is the safe demo, while Docker is the complete reference product.
 - Maintain one source branch and use configuration rather than a demo branch.
 - Use Neon for hosted PostgreSQL; Redis remains required only by full Docker mode.
 - Hosted registration, import, channel mutation, and manual external refresh are disabled to protect shared state and YouTube quota.

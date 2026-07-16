@@ -42,7 +42,7 @@ The redirect URI must match Google Cloud exactly. OAuth credentials are used onl
 YOUTUBE_API_KEY=your-key make quickstart
 ```
 
-See [deployment and release operations](docs/deployment.md) for the Vercel/Neon recruiter demo,
+See [deployment and release operations](docs/deployment.md) for the Vercel/Neon demo,
 release images, upgrades, backup, restore, and rollback.
 
 ## Services

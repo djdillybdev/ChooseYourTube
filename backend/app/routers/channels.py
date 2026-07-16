@@ -1,6 +1,11 @@
 from fastapi import APIRouter, status, Query, HTTPException
 from ..dependencies import DBSessionDep, YouTubeAPIDep, ArqDep, CurrentUserDep
-from ..schemas.channel import ChannelCreate, ChannelCreateResult, ChannelOut, ChannelUpdate
+from ..schemas.channel import (
+    ChannelCreate,
+    ChannelCreateResult,
+    ChannelOut,
+    ChannelUpdate,
+)
 from ..schemas.playlist import ChannelPlaylistOut
 from ..schemas.base import PaginatedResponse
 from ..services import channel_service, channel_playlist_service, sync_service
@@ -127,7 +132,7 @@ async def refresh_channel(
     if not settings.BACKGROUND_JOBS_ENABLED:
         raise ApplicationError(
             "FEATURE_DISABLED_IN_DEMO",
-            "External refresh is disabled in the recruiter demo; data is maintained daily.",
+            "External refresh is disabled in the demo; data is maintained daily.",
             403,
         )
     await channel_service.get_channel_by_id(
@@ -183,7 +188,7 @@ async def refresh_channel_playlists(
     if not settings.BACKGROUND_JOBS_ENABLED:
         raise ApplicationError(
             "FEATURE_DISABLED_IN_DEMO",
-            "External refresh is disabled in the recruiter demo; data is maintained daily.",
+            "External refresh is disabled in the demo; data is maintained daily.",
             403,
         )
     run = await sync_service.enqueue_run(

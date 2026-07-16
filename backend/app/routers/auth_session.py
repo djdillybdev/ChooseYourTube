@@ -97,11 +97,15 @@ async def _create_refresh_session(
     return row, token
 
 
-async def _revoke_session_chain(db_session: AsyncSession, session_id: uuid.UUID) -> None:
+async def _revoke_session_chain(
+    db_session: AsyncSession, session_id: uuid.UUID
+) -> None:
     now = _utcnow()
     await db_session.execute(
         update(RefreshSession)
-        .where(RefreshSession.session_id == session_id, RefreshSession.revoked_at.is_(None))
+        .where(
+            RefreshSession.session_id == session_id, RefreshSession.revoked_at.is_(None)
+        )
         .values(revoked_at=now, last_used_at=now)
     )
 
@@ -116,7 +120,7 @@ async def session_login(
     if settings.APP_MODE == "demo":
         raise ApplicationError(
             "FEATURE_DISABLED_IN_DEMO",
-            "Password login is disabled in the shared recruiter demo.",
+            "Password login is disabled in the shared demo.",
             403,
         )
     credentials = OAuth2PasswordRequestForm(
@@ -158,7 +162,10 @@ async def session_refresh(
         )
 
     now = _utcnow()
-    if refresh_session.revoked_at is not None or refresh_session.replaced_by_id is not None:
+    if (
+        refresh_session.revoked_at is not None
+        or refresh_session.replaced_by_id is not None
+    ):
         await _revoke_session_chain(db_session, refresh_session.session_id)
         await db_session.commit()
         raise HTTPException(

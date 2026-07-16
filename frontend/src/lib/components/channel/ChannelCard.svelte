@@ -138,9 +138,7 @@
 					onclick={() => void handleRefresh()}
 					disabled={isRefreshing || !backgroundJobsEnabled}
 					aria-label={`Refresh ${channel.title}`}
-					title={backgroundJobsEnabled
-						? 'Refresh channel'
-						: 'Live refresh is disabled in the recruiter demo'}
+					title={backgroundJobsEnabled ? 'Refresh channel' : 'Live refresh is disabled in the demo'}
 				>
 					{#if isRefreshing}
 						<span class="loading loading-sm loading-spinner"></span>

@@ -2,6 +2,6 @@
 	class="bg-warning px-4 py-2 text-center text-sm font-medium text-warning-content"
 	role="status"
 >
-	Shared recruiter demo: organization and viewing changes reset daily. External imports and
-	refreshes are disabled.
+	Shared demo: organization and viewing changes reset daily. External imports and refreshes are
+	disabled.
 </div>

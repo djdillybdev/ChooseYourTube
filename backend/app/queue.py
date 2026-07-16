@@ -14,7 +14,7 @@ async def get_arq_redis():
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
                 "code": "FEATURE_DISABLED_IN_DEMO",
-                "message": "External refresh is disabled in the recruiter demo; data is maintained daily.",
+                "message": "External refresh is disabled in the demo; data is maintained daily.",
                 "retryable": False,
             },
         )
