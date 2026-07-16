@@ -1,35 +1,17 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { authApi } from '$lib/api/auth';
+	import { tick } from 'svelte';
 
-	let email = $state('');
-	let password = $state('');
-	let confirmPassword = $state('');
+	type RegisterForm = {
+		email?: string;
+		message?: string;
+		fieldErrors?: { email?: string; password?: string; confirmPassword?: string };
+	};
+
+	let { form }: { form?: RegisterForm } = $props();
 	let isSubmitting = $state(false);
-	let errorMessage = $state<string | null>(null);
-
-	async function handleSubmit(event: SubmitEvent) {
-		event.preventDefault();
-		errorMessage = null;
-
-		if (password !== confirmPassword) {
-			errorMessage = 'Passwords do not match';
-			return;
-		}
-
-		isSubmitting = true;
-		try {
-			const result = await authApi.register(email.trim(), password);
-			if (!result.ok) {
-				errorMessage = result.error ?? 'REGISTER_FAILED';
-				return;
-			}
-			goto(resolve('/login?registered=1' as '/login'), { replaceState: true });
-		} finally {
-			isSubmitting = false;
-		}
-	}
+	let errorSummary = $state<HTMLDivElement>();
 </script>
 
 <svelte:head>
@@ -43,45 +25,81 @@
 			<h1 class="card-title text-2xl">Create account</h1>
 			<p class="text-sm text-base-content/70">Register a new ChooseYourTube user.</p>
 
-			{#if errorMessage}
-				<div class="mt-2 alert alert-error">
-					<span>{errorMessage}</span>
+			{#if form?.message}
+				<div class="mt-2 alert alert-error" role="alert" tabindex="-1" bind:this={errorSummary}>
+					<span>{form.message}</span>
 				</div>
 			{/if}
 
-			<form class="mt-4 space-y-4" onsubmit={handleSubmit}>
+			<form
+				class="mt-4 space-y-4"
+				method="POST"
+				use:enhance={() => {
+					isSubmitting = true;
+					return async ({ update, result }) => {
+						await update();
+						isSubmitting = false;
+						if (result.type === 'failure') {
+							await tick();
+							errorSummary?.focus();
+						}
+					};
+				}}
+			>
 				<label class="form-control w-full">
 					<span class="label-text">Email</span>
 					<input
+						name="email"
 						type="email"
 						class="input-bordered input w-full"
-						bind:value={email}
+						value={form?.email ?? ''}
 						required
 						autocomplete="email"
+						aria-invalid={form?.fieldErrors?.email ? 'true' : undefined}
+						aria-describedby={form?.fieldErrors?.email ? 'register-email-error' : undefined}
 					/>
 				</label>
+				{#if form?.fieldErrors?.email}
+					<p id="register-email-error" class="text-sm text-error">{form.fieldErrors.email}</p>
+				{/if}
 
 				<label class="form-control w-full">
 					<span class="label-text">Password</span>
 					<input
+						name="password"
 						type="password"
 						class="input-bordered input w-full"
-						bind:value={password}
 						required
 						autocomplete="new-password"
+						aria-invalid={form?.fieldErrors?.password ? 'true' : undefined}
+						aria-describedby={form?.fieldErrors?.password ? 'register-password-error' : undefined}
 					/>
 				</label>
+				{#if form?.fieldErrors?.password}
+					<p id="register-password-error" class="text-sm text-error">
+						{form.fieldErrors.password}
+					</p>
+				{/if}
 
 				<label class="form-control w-full">
 					<span class="label-text">Confirm password</span>
 					<input
+						name="confirmPassword"
 						type="password"
 						class="input-bordered input w-full"
-						bind:value={confirmPassword}
 						required
 						autocomplete="new-password"
+						aria-invalid={form?.fieldErrors?.confirmPassword ? 'true' : undefined}
+						aria-describedby={form?.fieldErrors?.confirmPassword
+							? 'register-confirm-error'
+							: undefined}
 					/>
 				</label>
+				{#if form?.fieldErrors?.confirmPassword}
+					<p id="register-confirm-error" class="text-sm text-error">
+						{form.fieldErrors.confirmPassword}
+					</p>
+				{/if}
 
 				<button class="btn w-full btn-primary" type="submit" disabled={isSubmitting}>
 					{isSubmitting ? 'Creating account...' : 'Create account'}

@@ -83,7 +83,7 @@
 	<section class="rounded-box border border-base-300 bg-base-100 p-5">
 		<div class="mb-4">
 			<h2 class="text-xl font-semibold">Tags</h2>
-			<p class="text-sm text-base-content/60">Tags organize channels and videos across folders.</p>
+			<p class="text-sm text-base-content">Tags organize channels and videos across folders.</p>
 		</div>
 
 		<form class="mb-5 flex max-w-xl gap-2" onsubmit={createTag}>
@@ -104,7 +104,7 @@
 		{#if error}<div class="mb-4 alert alert-error" role="alert">{error}</div>{/if}
 
 		{#if data.tags.length === 0}
-			<div class="rounded-box bg-base-200 p-8 text-center text-base-content/60">
+			<div class="rounded-box bg-base-200 p-8 text-center text-base-content">
 				No tags yet. Create one to categorize channels and videos.
 			</div>
 		{:else}

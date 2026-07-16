@@ -1,12 +1,10 @@
-/**
- * View mode options
- */
-export type ViewMode = 'feed' | 'tv';
+export type VideoDisplayMode = 'list' | 'grid' | 'compact';
 
-/**
- * Feed layout density options
- */
-export type FeedLayout = 'compact' | 'comfortable' | 'list';
+const videoDisplayModes: VideoDisplayMode[] = ['list', 'grid', 'compact'];
+
+export function isVideoDisplayMode(value: unknown): value is VideoDisplayMode {
+	return videoDisplayModes.includes(value as VideoDisplayMode);
+}
 
 /**
  * UI state interface
@@ -15,10 +13,8 @@ interface UIState {
 	sidebarCollapsed: boolean;
 	mobileSidebarOpen: boolean;
 	sidebarWidth: number;
-	viewMode: ViewMode;
-	feedLayout: FeedLayout;
-	tvGridColumns: number;
 	pageSize: number;
+	videoDisplayMode: VideoDisplayMode;
 }
 
 /**
@@ -28,10 +24,8 @@ const defaultState: UIState = {
 	sidebarCollapsed: false,
 	mobileSidebarOpen: false,
 	sidebarWidth: 280,
-	viewMode: 'feed',
-	feedLayout: 'comfortable',
-	tvGridColumns: 4,
-	pageSize: 24
+	pageSize: 24,
+	videoDisplayMode: 'list'
 };
 
 /**
@@ -42,7 +36,16 @@ function loadState(): UIState {
 
 	try {
 		const stored = localStorage.getItem('cyt:ui');
-		return stored ? { ...defaultState, ...JSON.parse(stored) } : defaultState;
+		const parsed = stored ? (JSON.parse(stored) as Partial<UIState>) : {};
+		return {
+			sidebarCollapsed: parsed.sidebarCollapsed ?? defaultState.sidebarCollapsed,
+			mobileSidebarOpen: false,
+			sidebarWidth: parsed.sidebarWidth ?? defaultState.sidebarWidth,
+			pageSize: parsed.pageSize ?? defaultState.pageSize,
+			videoDisplayMode: isVideoDisplayMode(parsed.videoDisplayMode)
+				? parsed.videoDisplayMode
+				: defaultState.videoDisplayMode
+		};
 	} catch {
 		return defaultState;
 	}
@@ -117,36 +120,6 @@ export function setSidebarWidth(width: number) {
 }
 
 /**
- * Set view mode
- */
-export function setViewMode(mode: ViewMode) {
-	uiState.update((state) => ({
-		...state,
-		viewMode: mode
-	}));
-}
-
-/**
- * Set feed layout density
- */
-export function setFeedLayout(layout: FeedLayout) {
-	uiState.update((state) => ({
-		...state,
-		feedLayout: layout
-	}));
-}
-
-/**
- * Set TV grid column count
- */
-export function setTVGridColumns(columns: number) {
-	uiState.update((state) => ({
-		...state,
-		tvGridColumns: Math.max(2, Math.min(6, columns))
-	}));
-}
-
-/**
  * Set page size for paginated views
  */
 export function setPageSize(size: number) {
@@ -154,5 +127,15 @@ export function setPageSize(size: number) {
 	uiState.update((state) => ({
 		...state,
 		pageSize: allowed.includes(size) ? size : 24
+	}));
+}
+
+/**
+ * Set the global video-list display preference.
+ */
+export function setVideoDisplayMode(mode: VideoDisplayMode) {
+	uiState.update((state) => ({
+		...state,
+		videoDisplayMode: mode
 	}));
 }

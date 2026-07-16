@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
-const API = 'http://127.0.0.1:8000';
+const API = process.env.FULL_E2E_API_URL ?? 'http://127.0.0.1:8000';
 const PASSWORD = 'Phase6-password-2026!';
 
 async function session(request: import('@playwright/test').APIRequestContext, email: string) {
@@ -28,20 +28,22 @@ test('full-mode login, inbox, persistent state, and logout', async ({ page }) =>
 	await page.getByLabel('Password').fill(PASSWORD);
 	await page.getByRole('button', { name: 'Log in' }).click();
 	await expect(page).toHaveURL(/\/inbox/);
+	await page.getByText('Filters', { exact: true }).click();
+	await page.getByLabel('Length').selectOption('all');
 	await expect(page.getByText('Phase 6 portfolio video 1')).toBeVisible();
 	await expectAccessible(page);
 
-	const firstVideo = page.getByRole('group', { name: 'Phase 6 portfolio video 1' });
+	const firstVideo = page.getByRole('article', { name: 'Phase 6 portfolio video 1' });
 	await firstVideo.getByRole('button', { name: 'Remove from Watch Later' }).click();
 	await expect(firstVideo.getByRole('button', { name: 'Save to Watch Later' })).toBeVisible();
 	await page.reload();
 	await expect(
 		page
-			.getByRole('group', { name: 'Phase 6 portfolio video 1' })
+			.getByRole('article', { name: 'Phase 6 portfolio video 1' })
 			.getByRole('button', { name: 'Save to Watch Later' })
 	).toBeVisible();
 
-	await page.getByRole('button', { name: 'Logout' }).click();
+	await page.getByRole('button', { name: 'Log out' }).click();
 	await expect(page).toHaveURL(/\/login/);
 });
 

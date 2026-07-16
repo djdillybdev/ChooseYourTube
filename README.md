@@ -75,6 +75,9 @@ release images, upgrades, backup, restore, and rollback.
   - `make health`
   - `make backup`
   - `CONFIRM=RESTORE BACKUP_FILE=... make restore`
+- `cd frontend && pnpm test:e2e:full` runs an isolated seeded stack on ports 5175 and 8002 so it
+  can coexist with `make up`. Override those ports with `E2E_FRONTEND_HOST_PORT` and
+  `E2E_BACKEND_HOST_PORT` when necessary.
 - Reset database/redis volumes with `docker compose --env-file .env down -v`.
 
 ## AI Usage

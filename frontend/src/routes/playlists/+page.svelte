@@ -6,6 +6,7 @@
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import PaginationControls from '$lib/components/ui/PaginationControls.svelte';
 	import { api } from '$lib/api';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 
 	interface Props {
 		data: PageData;
@@ -49,17 +50,15 @@
 	<title>Playlists - ChooseYourTube</title>
 </svelte:head>
 
-<div class="container mx-auto max-w-7xl p-6">
-	<div class="mb-6 flex items-start justify-between gap-4">
-		<div>
-			<h1 class="text-2xl font-bold">Playlists</h1>
-			<p class="text-sm text-base-content/60">
-				{data.total}
-				{data.total === 1 ? 'playlist' : 'playlists'}
-			</p>
-		</div>
+<div class="container mx-auto max-w-7xl px-4 py-6 sm:px-6">
+	{#snippet playlistActions()}
 		<button class="btn btn-ghost btn-sm" onclick={refreshPlaylists}>Refresh</button>
-	</div>
+	{/snippet}
+	<PageHeader
+		title="Playlists"
+		description={`${data.total} ${data.total === 1 ? 'playlist' : 'playlists'}`}
+		actions={playlistActions}
+	/>
 
 	<div class="mb-6 rounded-box border border-base-300 bg-base-100 p-4">
 		<h2 class="mb-3 text-lg font-semibold">Create Playlist</h2>

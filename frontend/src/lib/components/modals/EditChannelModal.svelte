@@ -3,6 +3,7 @@
 	import type { CategoryOut, ChannelOut, TagOut } from '$lib/types/api';
 	import { invalidate } from '$app/navigation';
 	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
+	import DialogShell from '$lib/components/ui/DialogShell.svelte';
 
 	interface Props {
 		channel: ChannelOut;
@@ -20,7 +21,6 @@
 	let syncedChannelId = $state<string | null>(null);
 	let isSubmitting = $state(false);
 	let error = $state<string | null>(null);
-	let dialogElement: HTMLDialogElement;
 	let confirmingDelete = $state(false);
 
 	$effect(() => {
@@ -32,10 +32,6 @@
 			selectedTagIds = [...channel.tag_ids];
 			syncedChannelId = channel.id;
 		}
-	});
-
-	$effect(() => {
-		dialogElement?.showModal();
 	});
 
 	async function handleSave(e: Event) {
@@ -73,156 +69,144 @@
 	}
 </script>
 
-<dialog
-	bind:this={dialogElement}
-	class="modal-open modal"
-	oncancel={(event) => {
-		event.preventDefault();
-		if (!isSubmitting) onClose();
-	}}
->
-	<div class="modal-box">
-		<!-- Channel identity (read-only header) -->
-		<div class="mb-4 flex items-center gap-3">
-			{#if channel.thumbnail_url}
-				<img
-					src={channel.thumbnail_url}
-					alt={channel.title}
-					class="h-12 w-12 rounded-full object-cover"
-				/>
-			{:else}
-				<div class="flex h-12 w-12 items-center justify-center rounded-full bg-base-300">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.5"
-						class="h-6 w-6 text-base-content/40"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
-						/>
-					</svg>
-				</div>
-			{/if}
-			<div>
-				<h3 class="text-lg font-bold">{channel.title}</h3>
-				<p class="text-sm text-base-content/60">@{channel.handle}</p>
+<DialogShell id="edit-channel-dialog" titleId="edit-channel-title" busy={isSubmitting} {onClose}>
+	<!-- Channel identity (read-only header) -->
+	<div class="mb-4 flex items-center gap-3">
+		{#if channel.thumbnail_url}
+			<img
+				src={channel.thumbnail_url}
+				alt={channel.title}
+				class="h-12 w-12 rounded-full object-cover"
+			/>
+		{:else}
+			<div class="flex h-12 w-12 items-center justify-center rounded-full bg-base-300">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.5"
+					class="h-6 w-6 text-base-content/40"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
+					/>
+				</svg>
 			</div>
+		{/if}
+		<div>
+			<h2 id="edit-channel-title" class="text-lg font-bold">{channel.title}</h2>
+			<p class="text-sm text-base-content/80">@{channel.handle}</p>
+		</div>
+	</div>
+
+	<form onsubmit={handleSave} class="space-y-4">
+		<!-- Favorite toggle -->
+		<div class="flex items-center justify-between">
+			<label class="label-text" for="edit-channel-favorite">Favorite</label>
+			<input
+				id="edit-channel-favorite"
+				data-dialog-initial-focus
+				type="checkbox"
+				class="toggle toggle-primary"
+				bind:checked={isFavorited}
+				disabled={isSubmitting}
+			/>
 		</div>
 
-		<form onsubmit={handleSave} class="space-y-4">
-			<!-- Favorite toggle -->
-			<div class="flex items-center justify-between">
-				<span class="label-text">Favorite</span>
-				<input
-					type="checkbox"
-					class="toggle toggle-primary"
-					bind:checked={isFavorited}
-					disabled={isSubmitting}
-				/>
-			</div>
-
-			<div class="form-control">
-				<span class="label-text mb-2">Categories</span>
-				{#if categories.length === 0}
-					<p class="text-sm text-base-content/60">Create a category from the sidebar first.</p>
-				{:else}
-					<div class="flex flex-wrap gap-2">
-						{#each categories as category (category.id)}
-							<label class="label cursor-pointer gap-2 rounded border border-base-300 px-2 py-1">
-								<input
-									type="checkbox"
-									class="checkbox checkbox-xs"
-									checked={selectedCategoryIds.includes(category.id)}
-									onchange={(event) => {
-										selectedCategoryIds = event.currentTarget.checked
-											? [...new Set([...selectedCategoryIds, category.id])]
-											: selectedCategoryIds.filter((id) => id !== category.id);
-									}}
-								/>
-								<span class="label-text">{category.name}</span>
-							</label>
-						{/each}
-					</div>
-				{/if}
-			</div>
-
-			<div class="form-control">
-				<span class="label-text mb-2">Tags</span>
-				{#if tags.length === 0}
-					<p class="text-sm text-base-content/60">
-						Create tags in Settings to categorize channels.
-					</p>
-				{:else}
-					<div class="flex flex-wrap gap-2">
-						{#each tags as tag (tag.id)}
-							<label class="label cursor-pointer gap-2 rounded border border-base-300 px-2 py-1">
-								<input
-									type="checkbox"
-									class="checkbox checkbox-xs"
-									checked={selectedTagIds.includes(tag.id)}
-									onchange={(event) => {
-										selectedTagIds = event.currentTarget.checked
-											? [...new Set([...selectedTagIds, tag.id])]
-											: selectedTagIds.filter((id) => id !== tag.id);
-									}}
-								/>
-								<span class="label-text">{tag.name}</span>
-							</label>
-						{/each}
-					</div>
-				{/if}
-			</div>
-
-			<!-- Error -->
-			{#if error}
-				<div class="alert alert-error">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-6 w-6 shrink-0 stroke-current"
-						fill="none"
-						viewBox="0 0 24 24"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-						/>
-					</svg>
-					<span>{error}</span>
+		<fieldset class="form-control">
+			<legend class="label-text mb-2">Categories</legend>
+			{#if categories.length === 0}
+				<p class="text-sm text-base-content/60">Create a category from the sidebar first.</p>
+			{:else}
+				<div class="flex flex-wrap gap-2">
+					{#each categories as category (category.id)}
+						<label class="label cursor-pointer gap-2 rounded border border-base-300 px-2 py-1">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-xs"
+								checked={selectedCategoryIds.includes(category.id)}
+								onchange={(event) => {
+									selectedCategoryIds = event.currentTarget.checked
+										? [...new Set([...selectedCategoryIds, category.id])]
+										: selectedCategoryIds.filter((id) => id !== category.id);
+								}}
+							/>
+							<span class="label-text">{category.name}</span>
+						</label>
+					{/each}
 				</div>
 			{/if}
+		</fieldset>
 
-			<!-- Actions -->
-			<div class="modal-action">
-				{#if !demoMode}<button
-						type="button"
-						class="btn text-error btn-ghost btn-sm"
-						onclick={() => (confirmingDelete = true)}
-						disabled={isSubmitting}
-					>
-						Delete
-					</button>{/if}
-				<div class="flex-1"></div>
-				<button type="button" class="btn btn-ghost" onclick={onClose} disabled={isSubmitting}
-					>Cancel</button
+		<fieldset class="form-control">
+			<legend class="label-text mb-2">Tags</legend>
+			{#if tags.length === 0}
+				<p class="text-sm text-base-content/60">Create tags in Settings to categorize channels.</p>
+			{:else}
+				<div class="flex flex-wrap gap-2">
+					{#each tags as tag (tag.id)}
+						<label class="label cursor-pointer gap-2 rounded border border-base-300 px-2 py-1">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-xs"
+								checked={selectedTagIds.includes(tag.id)}
+								onchange={(event) => {
+									selectedTagIds = event.currentTarget.checked
+										? [...new Set([...selectedTagIds, tag.id])]
+										: selectedTagIds.filter((id) => id !== tag.id);
+								}}
+							/>
+							<span class="label-text">{tag.name}</span>
+						</label>
+					{/each}
+				</div>
+			{/if}
+		</fieldset>
+
+		<!-- Error -->
+		{#if error}
+			<div class="alert alert-error" role="alert">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					class="h-6 w-6 shrink-0 stroke-current"
+					fill="none"
+					viewBox="0 0 24 24"
 				>
-				<button type="submit" class="btn btn-primary" disabled={isSubmitting}>
-					{#if isSubmitting}<span class="loading loading-sm loading-spinner"></span>{/if}
-					Save
-				</button>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+					/>
+				</svg>
+				<span>{error}</span>
 			</div>
-		</form>
-	</div>
-	<form method="dialog" class="modal-backdrop">
-		<button type="button" onclick={onClose} aria-label="Close modal">close</button>
+		{/if}
+
+		<!-- Actions -->
+		<div class="modal-action">
+			{#if !demoMode}<button
+					type="button"
+					class="btn text-error btn-ghost btn-sm"
+					onclick={() => (confirmingDelete = true)}
+					disabled={isSubmitting}
+				>
+					Delete
+				</button>{/if}
+			<div class="flex-1"></div>
+			<button type="button" class="btn btn-ghost" onclick={onClose} disabled={isSubmitting}
+				>Cancel</button
+			>
+			<button type="submit" class="btn btn-primary" disabled={isSubmitting}>
+				{#if isSubmitting}<span class="loading loading-sm loading-spinner"></span>{/if}
+				Save
+			</button>
+		</div>
 	</form>
-</dialog>
+</DialogShell>
 
 {#if confirmingDelete}
 	<ConfirmDialog

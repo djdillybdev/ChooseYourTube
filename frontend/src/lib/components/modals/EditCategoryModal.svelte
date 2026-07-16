@@ -6,6 +6,7 @@
 	import type { CategoryOut, ChannelOut } from '$lib/types/api';
 	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
 	import CategoryIconPicker from '$lib/components/ui/CategoryIconPicker.svelte';
+	import DialogShell from '$lib/components/ui/DialogShell.svelte';
 
 	interface Props {
 		category: CategoryOut;
@@ -21,7 +22,6 @@
 	let isSubmitting = $state(false);
 	let confirmingDelete = $state(false);
 	let error = $state<string | null>(null);
-	let dialogElement: HTMLDialogElement;
 
 	$effect(() => {
 		if (category.id !== syncedCategoryId) {
@@ -31,7 +31,6 @@
 			syncedCategoryId = category.id;
 		}
 	});
-	$effect(() => dialogElement?.showModal());
 
 	function toggleChannel(id: string, selected: boolean) {
 		selectedChannelIds = selected
@@ -75,77 +74,69 @@
 	}
 </script>
 
-<dialog
-	bind:this={dialogElement}
-	class="modal-open modal"
-	oncancel={(event) => event.preventDefault()}
->
-	<div class="modal-box">
-		<h3 class="text-lg font-bold">Edit Category</h3>
-		<form onsubmit={handleSave} class="mt-4 space-y-4">
-			<label class="form-control" for="edit-category-name">
-				<span class="label-text mb-1">Category Name</span>
-				<input
-					id="edit-category-name"
-					class="input-bordered input"
-					bind:value={name}
-					maxlength="255"
-					disabled={isSubmitting}
-					required
-				/>
-			</label>
-
-			<CategoryIconPicker
-				value={iconKey}
+<DialogShell id="edit-category-dialog" titleId="edit-category-title" busy={isSubmitting} {onClose}>
+	<h2 id="edit-category-title" class="text-lg font-bold">Edit Category</h2>
+	<form onsubmit={handleSave} class="mt-4 space-y-4">
+		<label class="form-control" for="edit-category-name">
+			<span class="label-text mb-1">Category Name</span>
+			<input
+				id="edit-category-name"
+				data-dialog-initial-focus
+				class="input-bordered input"
+				bind:value={name}
+				maxlength="255"
 				disabled={isSubmitting}
-				onChange={(value) => (iconKey = value)}
+				required
 			/>
+		</label>
 
-			<fieldset>
-				<legend class="label-text mb-2">Channels</legend>
-				{#if channels.length === 0}
-					<p class="text-sm text-base-content/60">Add a channel before assigning it here.</p>
-				{:else}
-					<div class="max-h-64 space-y-1 overflow-y-auto rounded border border-base-300 p-2">
-						{#each [...channels].sort( (a, b) => a.title.localeCompare(b.title) ) as channel (channel.id)}
-							<label
-								class="label cursor-pointer justify-start gap-3 rounded px-2 py-1 hover:bg-base-200"
-							>
-								<input
-									type="checkbox"
-									class="checkbox checkbox-sm"
-									checked={selectedChannelIds.includes(channel.id)}
-									onchange={(event) => toggleChannel(channel.id, event.currentTarget.checked)}
-								/>
-								<span>{channel.title}</span>
-							</label>
-						{/each}
-					</div>
-				{/if}
-			</fieldset>
+		<CategoryIconPicker
+			value={iconKey}
+			disabled={isSubmitting}
+			onChange={(value) => (iconKey = value)}
+		/>
 
-			{#if error}<div class="alert alert-error" role="alert">{error}</div>{/if}
-			<div class="modal-action">
-				<button
-					type="button"
-					class="btn text-error btn-ghost btn-sm"
-					onclick={() => (confirmingDelete = true)}
-					disabled={isSubmitting}>Delete</button
-				>
-				<div class="flex-1"></div>
-				<button type="button" class="btn btn-ghost" onclick={onClose} disabled={isSubmitting}
-					>Cancel</button
-				>
-				<button type="submit" class="btn btn-primary" disabled={isSubmitting || !name.trim()}>
-					{isSubmitting ? 'Saving…' : 'Save'}
-				</button>
-			</div>
-		</form>
-	</div>
-	<form method="dialog" class="modal-backdrop">
-		<button type="button" onclick={onClose}>close</button>
+		<fieldset>
+			<legend class="label-text mb-2">Channels</legend>
+			{#if channels.length === 0}
+				<p class="text-sm text-base-content/60">Add a channel before assigning it here.</p>
+			{:else}
+				<div class="max-h-64 space-y-1 overflow-y-auto rounded border border-base-300 p-2">
+					{#each [...channels].sort( (a, b) => a.title.localeCompare(b.title) ) as channel (channel.id)}
+						<label
+							class="label cursor-pointer justify-start gap-3 rounded px-2 py-1 hover:bg-base-200"
+						>
+							<input
+								type="checkbox"
+								class="checkbox checkbox-sm"
+								checked={selectedChannelIds.includes(channel.id)}
+								onchange={(event) => toggleChannel(channel.id, event.currentTarget.checked)}
+							/>
+							<span>{channel.title}</span>
+						</label>
+					{/each}
+				</div>
+			{/if}
+		</fieldset>
+
+		{#if error}<div class="alert alert-error" role="alert">{error}</div>{/if}
+		<div class="modal-action">
+			<button
+				type="button"
+				class="btn text-error btn-ghost btn-sm"
+				onclick={() => (confirmingDelete = true)}
+				disabled={isSubmitting}>Delete</button
+			>
+			<div class="flex-1"></div>
+			<button type="button" class="btn btn-ghost" onclick={onClose} disabled={isSubmitting}
+				>Cancel</button
+			>
+			<button type="submit" class="btn btn-primary" disabled={isSubmitting || !name.trim()}>
+				{isSubmitting ? 'Saving…' : 'Save'}
+			</button>
+		</div>
 	</form>
-</dialog>
+</DialogShell>
 
 {#if confirmingDelete}
 	<ConfirmDialog

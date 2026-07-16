@@ -3,9 +3,10 @@
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import type { PageData } from './$types';
-	import type { SyncRunKind, SyncRunStatus } from '$lib/types/api';
+	import type { SyncRunKind } from '$lib/types/api';
 	import { formatRelativeDate } from '$lib/utils/formatDate';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
+	import StatusBadge from '$lib/components/ui/StatusBadge.svelte';
 
 	interface Props {
 		data: PageData;
@@ -47,13 +48,6 @@
 		playlist_sync: 'Playlist sync',
 		subscription_import: 'Subscription import',
 		demo_maintenance: 'Demo maintenance'
-	};
-	const statusClasses: Record<SyncRunStatus, string> = {
-		queued: 'badge-info',
-		running: 'badge-info',
-		succeeded: 'badge-success',
-		partial: 'badge-warning',
-		failed: 'badge-error'
 	};
 </script>
 
@@ -118,9 +112,7 @@
 				>
 				<tbody
 					>{#each data.runs.items as run (run.id)}<tr>
-							<td>{kindLabels[run.kind]}</td><td
-								><span class="badge badge-sm {statusClasses[run.status]}">{run.status}</span></td
-							>
+							<td>{kindLabels[run.kind]}</td><td><StatusBadge status={run.status} compact /></td>
 							<td
 								>{run.items_created} created · {run.items_updated} updated · {run.items_failed} failed</td
 							>

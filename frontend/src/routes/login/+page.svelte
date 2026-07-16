@@ -1,40 +1,31 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import { authApi } from '$lib/api/auth';
 	import { authState } from '$lib/stores/authState.svelte';
 	import type { PageData } from './$types';
+	import { tick } from 'svelte';
 
-	let { data }: { data: PageData } = $props();
+	type LoginForm = {
+		email?: string;
+		message?: string;
+		fieldErrors?: { email?: string; password?: string };
+	};
 
-	let email = $state('');
-	let password = $state('');
+	let { data, form }: { data: PageData; form?: LoginForm } = $props();
+
 	let isSubmitting = $state(false);
 	let errorMessage = $state<string | null>(null);
+	let errorSummary = $state<HTMLDivElement>();
 
-	const nextPath = $derived(page.url.searchParams.get('next') ?? '/inbox');
+	const nextPath = $derived.by(() => {
+		const candidate = page.url.searchParams.get('next');
+		return candidate?.startsWith('/') && !candidate.startsWith('//') ? candidate : '/inbox';
+	});
 	const registered = $derived(page.url.searchParams.get('registered') === '1');
 	const sessionExpired = $derived(page.url.searchParams.get('reason') === 'session_expired');
-
-	async function handleSubmit(event: SubmitEvent) {
-		event.preventDefault();
-		errorMessage = null;
-		isSubmitting = true;
-
-		try {
-			const result = await authApi.login(email.trim(), password);
-			if (!result.ok) {
-				errorMessage = result.error ?? 'LOGIN_FAILED';
-				return;
-			}
-
-			await authState.initialize();
-			goto(resolve(nextPath as '/inbox'), { replaceState: true });
-		} finally {
-			isSubmitting = false;
-		}
-	}
 
 	async function handleDemoLogin() {
 		errorMessage = null;
@@ -43,10 +34,16 @@
 			const result = await authApi.demoLogin();
 			if (!result.ok) {
 				errorMessage = result.error ?? 'The demo account is temporarily unavailable.';
+				await tick();
+				errorSummary?.focus();
 				return;
 			}
 			await authState.initialize();
 			goto(resolve(nextPath as '/inbox'), { replaceState: true });
+		} catch {
+			errorMessage = 'The demo account is temporarily unavailable. Please try again.';
+			await tick();
+			errorSummary?.focus();
 		} finally {
 			isSubmitting = false;
 		}
@@ -74,7 +71,7 @@
 			</p>
 
 			{#if registered}
-				<div class="mt-2 alert alert-success">
+				<div class="mt-2 alert alert-success" role="status">
 					<span>Account created. You can log in now.</span>
 				</div>
 			{/if}
@@ -84,9 +81,9 @@
 				</div>
 			{/if}
 
-			{#if errorMessage}
-				<div class="mt-2 alert alert-error">
-					<span>{errorMessage}</span>
+			{#if errorMessage || form?.message}
+				<div class="mt-2 alert alert-error" role="alert" tabindex="-1" bind:this={errorSummary}>
+					<span>{errorMessage ?? form?.message}</span>
 				</div>
 			{/if}
 
@@ -100,28 +97,57 @@
 					{isSubmitting ? 'Entering demo…' : 'Try the demo'}
 				</button>
 			{:else}
-				<form class="mt-4 space-y-4" onsubmit={handleSubmit}>
+				<form
+					class="mt-4 space-y-4"
+					method="POST"
+					use:enhance={() => {
+						isSubmitting = true;
+						errorMessage = null;
+						return async ({ update, result }) => {
+							await update();
+							isSubmitting = false;
+							if (result.type === 'failure') {
+								await tick();
+								errorSummary?.focus();
+							}
+						};
+					}}
+				>
+					<input type="hidden" name="next" value={nextPath} />
 					<label class="form-control w-full">
 						<span class="label-text">Email</span>
 						<input
+							name="email"
 							type="email"
 							class="input-bordered input w-full"
-							bind:value={email}
+							value={form?.email ?? ''}
 							required
 							autocomplete="email"
+							aria-invalid={form?.fieldErrors?.email ? 'true' : undefined}
+							aria-describedby={form?.fieldErrors?.email ? 'login-email-error' : undefined}
 						/>
 					</label>
+					{#if form?.fieldErrors?.email}
+						<p id="login-email-error" class="text-sm text-error">{form.fieldErrors.email}</p>
+					{/if}
 
 					<label class="form-control w-full">
 						<span class="label-text">Password</span>
 						<input
+							name="password"
 							type="password"
 							class="input-bordered input w-full"
-							bind:value={password}
 							required
 							autocomplete="current-password"
+							aria-invalid={form?.fieldErrors?.password ? 'true' : undefined}
+							aria-describedby={form?.fieldErrors?.password ? 'login-password-error' : undefined}
 						/>
 					</label>
+					{#if form?.fieldErrors?.password}
+						<p id="login-password-error" class="text-sm text-error">
+							{form.fieldErrors.password}
+						</p>
+					{/if}
 
 					<button class="btn w-full btn-primary" type="submit" disabled={isSubmitting}>
 						{isSubmitting ? 'Logging in...' : 'Log in'}

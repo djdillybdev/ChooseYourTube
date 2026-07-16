@@ -338,6 +338,20 @@
 				"title": "ChannelCreate",
 				"type": "object"
 			},
+			"ChannelCreateResult": {
+				"description": "A followed channel and the durable state of its first synchronization.",
+				"properties": {
+					"channel": {
+						"$ref": "#/components/schemas/ChannelOut"
+					},
+					"initial_sync": {
+						"$ref": "#/components/schemas/SyncRunOut"
+					}
+				},
+				"required": ["channel", "initial_sync"],
+				"title": "ChannelCreateResult",
+				"type": "object"
+			},
 			"ChannelOut": {
 				"description": "Schema for returning a channel from the API.",
 				"properties": {
@@ -4290,7 +4304,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/ChannelOut"
+									"$ref": "#/components/schemas/ChannelCreateResult"
 								}
 							}
 						},

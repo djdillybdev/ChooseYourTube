@@ -125,4 +125,40 @@ describe('Sidebar', () => {
 		).toBeTruthy();
 		expect(screen.getByRole('link', { name: 'Other' }).querySelector('.lucide-list')).toBeTruthy();
 	});
+
+	it('constrains the menu and truncates long category and channel names', async () => {
+		const longCategoryName = 'A category name that is much wider than the sidebar';
+		const longChannelName = 'A channel name that is much wider than the sidebar';
+		render(Sidebar, {
+			categories: [
+				{
+					id: 'long-category',
+					name: longCategoryName,
+					created_at: '2026-01-01T00:00:00Z',
+					channel_ids: ['long-channel']
+				}
+			],
+			uncategorizedChannels: [],
+			channels: [makeChannel({ id: 'long-channel', title: longChannelName })]
+		});
+		await expand(longCategoryName);
+
+		const navigation = screen.getByRole('navigation', { name: 'Primary' });
+		expect(navigation).toHaveClass('min-w-0', 'overflow-x-hidden');
+		expect(navigation.querySelector('.sidebar-menu')).toHaveClass(
+			'w-full',
+			'min-w-0',
+			'max-w-full'
+		);
+
+		const categoryTitle = screen.getByTitle(longCategoryName);
+		const channelTitle = screen.getByTitle(longChannelName);
+		expect(categoryTitle).toHaveClass('min-w-0', 'truncate');
+		expect(categoryTitle).toHaveClass('text-sm');
+		expect(channelTitle).toHaveClass('min-w-0', 'truncate', 'text-sm');
+		expect(categoryTitle.closest('a')).toHaveClass('min-w-0', 'overflow-hidden');
+		expect(channelTitle.closest('a')).toHaveClass('min-w-0', 'overflow-hidden');
+		expect(channelTitle.closest('a')?.querySelector('svg')).toHaveClass('h-5', 'w-5');
+		expect(categoryTitle.closest('.category-row')).not.toHaveClass('bg-base-200/50');
+	});
 });

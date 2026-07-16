@@ -4,6 +4,7 @@ type Schemas = components['schemas'];
 
 export type APIErrorBody = Schemas['APIErrorBody'];
 export type ChannelOut = Schemas['ChannelOut'];
+export type ChannelCreateResult = Schemas['ChannelCreateResult'];
 export type VideoOut = Schemas['VideoOut'];
 export type FolderOut = Schemas['FolderOut'];
 export type CategoryOut = Schemas['CategoryOut'];
@@ -117,6 +118,11 @@ const KNOWN_MESSAGES: Record<string, string> = {
 	YOUTUBE_QUOTA_EXHAUSTED:
 		'YouTube refresh is paused because the daily API quota has been reached.',
 	QUEUE_UNAVAILABLE: 'Synchronization is temporarily unavailable. Please try again shortly.',
+	CHANNEL_ALREADY_FOLLOWED: 'This channel is already in your library.',
+	YOUTUBE_CHANNEL_NOT_FOUND:
+		'That YouTube channel could not be found or is not publicly available.',
+	YOUTUBE_CHANNEL_INVALID: 'YouTube returned incomplete information for this channel.',
+	YOUTUBE_UPSTREAM_ERROR: 'YouTube channel details are temporarily unavailable. Please try again.',
 	UNAUTHENTICATED: 'Please log in to continue.',
 	FORBIDDEN: 'You do not have permission to perform this action.',
 	NOT_FOUND: 'The requested item could not be found.',

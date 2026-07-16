@@ -94,7 +94,7 @@ describe('root layout load', () => {
 			} as any)
 		).rejects.toMatchObject({
 			status: 307,
-			location: '/login?next=%2Finbox%3Fpage%3D2'
+			location: '/login?reason=session_expired&next=%2Finbox%3Fpage%3D2'
 		});
 		expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/auth/logout', { method: 'POST' });
 	});

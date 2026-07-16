@@ -22,6 +22,7 @@ export interface VideoFilterQueryState {
 
 interface ParseVideoFilterQueryOptions {
 	defaultWatched?: boolean | undefined;
+	defaultShort?: boolean | undefined;
 	forcedChannelId?: string;
 }
 
@@ -60,10 +61,23 @@ export function parseVideoFilterQuery(
 ): ParsedVideoFilterQuery {
 	const q = url.searchParams.get('q') || undefined;
 
-	const watchedFromQuery = parseBooleanParam(url.searchParams.get('is_watched'));
-	const is_watched = watchedFromQuery !== undefined ? watchedFromQuery : options.defaultWatched;
+	const watchedParam = url.searchParams.get('is_watched');
+	const watchedFromQuery = parseBooleanParam(watchedParam);
+	const is_watched =
+		watchedParam === 'all'
+			? undefined
+			: watchedFromQuery !== undefined
+				? watchedFromQuery
+				: options.defaultWatched;
 
-	const is_short = parseBooleanParam(url.searchParams.get('is_short'));
+	const shortParam = url.searchParams.get('is_short');
+	const shortFromQuery = parseBooleanParam(shortParam);
+	const is_short =
+		shortParam === 'all'
+			? undefined
+			: shortFromQuery !== undefined
+				? shortFromQuery
+				: (options.defaultShort ?? false);
 
 	const channelFromQuery = url.searchParams.get('channel_id') || undefined;
 	const channel_id = options.forcedChannelId ?? channelFromQuery;

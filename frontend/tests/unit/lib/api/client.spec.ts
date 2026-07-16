@@ -62,6 +62,18 @@ describe('APIClient', () => {
 		expect(attempts).toBe(1);
 	});
 
+	it('does not retry mutations by default', async () => {
+		const fetcher = vi
+			.fn()
+			.mockResolvedValue(HttpResponse.json({ code: 'QUEUE_UNAVAILABLE' }, { status: 503 }));
+		const client = new APIClient('http://api.test', fetcher);
+
+		await expect(client.post('/channels/', { handle: '@example' })).rejects.toBeInstanceOf(
+			APIError
+		);
+		expect(fetcher).toHaveBeenCalledOnce();
+	});
+
 	it('extracts the stable API error contract', async () => {
 		server.use(
 			http.get('http://api.test/channels', () =>

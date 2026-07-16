@@ -109,8 +109,9 @@ class TestChannelsRouter:
 
         assert response.status_code == 201
         data = response.json()
-        assert data["id"] == "UC_new_channel"
-        assert data["handle"] == "newchannel"  # @ stripped
+        assert data["channel"]["id"] == "UC_new_channel"
+        assert data["channel"]["handle"] == "newchannel"  # @ stripped
+        assert data["initial_sync"]["status"] == "queued"
 
         # Verify only initial video fetch is enqueued from the route.
         # Playlist sync is chained by the worker task after ingestion completes.
@@ -153,8 +154,42 @@ class TestChannelsRouter:
 
         assert response.status_code == 201
         data = response.json()
-        assert data["id"] == "UC_new_channel_url"
-        assert data["handle"] == "newchannel"
+        assert data["channel"]["id"] == "UC_new_channel_url"
+        assert data["channel"]["handle"] == "newchannel"
+
+    async def test_create_channel_returns_followed_channel_when_queue_is_unavailable(
+        self, test_client, mock_youtube_api, mock_arq_redis
+    ):
+        mock_arq_redis.enqueue_job.side_effect = ConnectionError("queue offline")
+        youtube_response = {
+            "items": [
+                {
+                    "id": "UC_queue_failure",
+                    "snippet": {"title": "Queued Later", "thumbnails": {}},
+                    "contentDetails": {
+                        "relatedPlaylists": {"uploads": "UU_queue_failure"}
+                    },
+                }
+            ]
+        }
+        with patch("asyncio.to_thread", new_callable=AsyncMock) as mock_to_thread:
+            mock_to_thread.return_value = youtube_response
+            response = test_client.post("/channels/", json={"handle": "@queuedlater"})
+
+        assert response.status_code == 201
+        payload = response.json()
+        assert payload["channel"]["id"] == "UC_queue_failure"
+        assert payload["initial_sync"]["status"] == "failed"
+        assert payload["initial_sync"]["error_code"] == "QUEUE_UNAVAILABLE"
+        assert payload["initial_sync"]["retryable"] is True
+
+    async def test_create_channel_rejects_unsupported_channel_urls(self, test_client):
+        response = test_client.post(
+            "/channels/", json={"handle": "https://example.com/@not-youtube"}
+        )
+
+        assert response.status_code == 422
+        assert response.json()["code"] == "VALIDATION_ERROR"
 
     async def test_create_channel_with_folder(
         self, test_client, mock_youtube_api, db_session
@@ -189,7 +224,7 @@ class TestChannelsRouter:
 
         assert response.status_code == 201
         data = response.json()
-        assert data["folder_id"] == "f1"
+        assert data["channel"]["folder_id"] == "f1"
 
     async def test_update_channel_favorite_status(self, test_client, db_session):
         """Test PATCH /channels/{id} updates channel favorite status."""

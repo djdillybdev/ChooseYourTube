@@ -7,6 +7,7 @@
 	import { createChannelMap, getChannelTitle } from '$lib/utils/channelLookup';
 	import { formatDuration } from '$lib/utils/formatDuration';
 	import type { PageData } from './$types';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 
 	interface Props {
 		data: PageData;
@@ -17,6 +18,7 @@
 	let videos = $state<typeof data.videos>([]);
 	let dragIndex = $state<number | null>(null);
 	let error = $state<string | null>(null);
+	let announcement = $state('');
 
 	$effect(() => {
 		const byId = new Map(data.videos.map((video) => [video.id, video]));
@@ -45,13 +47,8 @@
 		}
 	}
 
-	async function drop(index: number) {
-		if (dragIndex === null || dragIndex === index) {
-			dragIndex = null;
-			return;
-		}
-		const source = dragIndex;
-		dragIndex = null;
+	async function reorder(source: number, index: number) {
+		if (source === index || source < 0 || index < 0 || index >= videos.length) return;
 		const moved = videos[source];
 		if (!moved) return;
 		const previous = videos;
@@ -65,27 +62,34 @@
 				new_position: index
 			});
 			watchLater.sync(updated);
+			announcement = `Moved ${moved.title} to position ${index + 1} of ${videos.length}.`;
 		} catch (cause) {
 			videos = previous;
 			error = cause instanceof Error ? cause.message : 'Could not reorder Watch Later.';
 		}
 	}
+
+	async function drop(index: number) {
+		if (dragIndex === null) return;
+		const source = dragIndex;
+		dragIndex = null;
+		await reorder(source, index);
+	}
 </script>
 
 <svelte:head><title>Watch Later - ChooseYourTube</title></svelte:head>
 
-<div class="container mx-auto max-w-7xl p-6">
-	<div class="mb-6">
-		<h1 class="text-2xl font-bold">Watch Later</h1>
-		<p class="text-sm text-base-content/60">
-			{videos.length} saved {videos.length === 1 ? 'video' : 'videos'}
-		</p>
-	</div>
+<div class="container mx-auto max-w-7xl px-4 py-6 sm:px-6">
+	<PageHeader
+		title="Watch Later"
+		description={`${videos.length} saved ${videos.length === 1 ? 'video' : 'videos'}`}
+	/>
 	{#if error}<div class="mb-4 alert alert-error" role="alert">{error}</div>{/if}
+	<p class="sr-only" aria-live="polite">{announcement}</p>
 	{#if videos.length === 0}
 		<div class="rounded-box border border-base-300 bg-base-100 p-10 text-center">
 			<h2 class="text-lg font-semibold">Nothing saved yet</h2>
-			<p class="mt-1 text-base-content/60">
+			<p class="mt-1 text-base-content">
 				Use the bookmark button on any video card or in the player to save it here.
 			</p>
 			<a href={resolve('/inbox')} class="btn mt-4 btn-sm btn-primary">Browse Inbox</a>
@@ -109,14 +113,30 @@
 						/>{/if}
 					<div class="min-w-0 flex-1">
 						<p class="line-clamp-2 text-sm font-medium">{video.title}</p>
-						<p class="text-xs text-base-content/60">
+						<p class="text-xs text-base-content">
 							{getChannelTitle(video.channel_id, channelMap)}
 						</p>
 					</div>
-					{#if video.duration_seconds}<span class="text-xs text-base-content/60"
+					{#if video.duration_seconds}<span class="text-xs text-base-content"
 							>{formatDuration(video.duration_seconds)}</span
 						>{/if}
 					<button class="btn btn-ghost btn-sm" onclick={() => void play(video.id)}>Play</button>
+					<div class="join" aria-label={`Reorder ${video.title}`}>
+						<button
+							type="button"
+							class="btn join-item btn-square btn-ghost btn-sm"
+							onclick={() => void reorder(index, index - 1)}
+							disabled={index === 0}
+							aria-label={`Move ${video.title} up`}>↑</button
+						>
+						<button
+							type="button"
+							class="btn join-item btn-square btn-ghost btn-sm"
+							onclick={() => void reorder(index, index + 1)}
+							disabled={index === videos.length - 1}
+							aria-label={`Move ${video.title} down`}>↓</button
+						>
+					</div>
 					<button class="btn text-error btn-ghost btn-sm" onclick={() => void remove(video.id)}
 						>Remove</button
 					>

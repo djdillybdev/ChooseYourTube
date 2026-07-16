@@ -1145,6 +1145,14 @@ export interface components {
 			handle: string;
 		};
 		/**
+		 * ChannelCreateResult
+		 * @description A followed channel and the durable state of its first synchronization.
+		 */
+		ChannelCreateResult: {
+			channel: components['schemas']['ChannelOut'];
+			initial_sync: components['schemas']['SyncRunOut'];
+		};
+		/**
 		 * ChannelOut
 		 * @description Schema for returning a channel from the API.
 		 */
@@ -3413,7 +3421,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					'application/json': components['schemas']['ChannelOut'];
+					'application/json': components['schemas']['ChannelCreateResult'];
 				};
 			};
 			/** @description Safe API error */

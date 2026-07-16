@@ -83,7 +83,7 @@ services:
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-60}
     ports:
-      - "8000:8000"
+      - "${BACKEND_HOST_PORT:-8000}:8000"
     init: true
     restart: unless-stopped
     stop_grace_period: 30s
@@ -168,7 +168,7 @@ services:
       API_BASE_URL: http://backend:8000
       VITE_API_BASE_URL: http://backend:8000
     ports:
-      - "5173:5173"
+      - "${FRONTEND_HOST_PORT:-5173}:5173"
     init: true
     restart: unless-stopped
     stop_grace_period: 20s

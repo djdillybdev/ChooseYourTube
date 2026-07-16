@@ -179,9 +179,10 @@ async def create_channel(
             )
         items = response.get("items", [])
         if not items:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Channel with handle '{channel_data.handle}' not found on YouTube.",
+            raise ApplicationError(
+                "YOUTUBE_CHANNEL_NOT_FOUND",
+                "That YouTube channel could not be found or is not publicly available.",
+                404,
             )
     except HTTPException:
         raise
@@ -223,7 +224,11 @@ async def create_channel_from_metadata(
         db_session, owner_id=owner_id, id=channel_id, first=True
     )
     if existing_channel:
-        raise HTTPException(status_code=409, detail="This channel has already been added.")
+        raise ApplicationError(
+            "CHANNEL_ALREADY_FOLLOWED",
+            "This channel is already in your library.",
+            409,
+        )
 
     snippet = yt_channel_data.get("snippet", {})
     content_details = yt_channel_data.get("contentDetails", {})

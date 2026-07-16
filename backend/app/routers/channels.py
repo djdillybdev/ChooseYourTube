@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, Query, HTTPException
 from ..dependencies import DBSessionDep, YouTubeAPIDep, ArqDep, CurrentUserDep
-from ..schemas.channel import ChannelCreate, ChannelOut, ChannelUpdate
+from ..schemas.channel import ChannelCreate, ChannelCreateResult, ChannelOut, ChannelUpdate
 from ..schemas.playlist import ChannelPlaylistOut
 from ..schemas.base import PaginatedResponse
 from ..services import channel_service, channel_playlist_service, sync_service
@@ -59,7 +59,9 @@ async def get_channel_by_id(
     return await channel_service.get_channel_out(channel, db_session, str(user.id))
 
 
-@router.post("/", response_model=ChannelOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", response_model=ChannelCreateResult, status_code=status.HTTP_201_CREATED
+)
 async def create_channel(
     channel_data: ChannelCreate,
     db_session: DBSessionDep,
@@ -79,14 +81,20 @@ async def create_channel(
         owner_id=str(user.id),
     )
 
-    await sync_service.enqueue_run(
+    initial_sync = await sync_service.enqueue_run(
         db_session,
         redis,
         owner_id=str(user.id),
         kind=SyncRunKind.INITIAL_CHANNEL_SYNC,
         channel_id=new_channel.id,
+        raise_on_enqueue_failure=False,
     )
-    return await channel_service.get_channel_out(new_channel, db_session, str(user.id))
+    return ChannelCreateResult(
+        channel=await channel_service.get_channel_out(
+            new_channel, db_session, str(user.id)
+        ),
+        initial_sync=sync_service.to_sync_run_out(initial_sync),
+    )
 
 
 @router.patch("/{channel_id}", response_model=ChannelOut)

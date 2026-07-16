@@ -130,6 +130,7 @@ async def enqueue_run(
     channel_id: str | None = None,
     subscription_import_id: uuid.UUID | None = None,
     defer_seconds: int = 0,
+    raise_on_enqueue_failure: bool = True,
 ) -> SyncRun:
     run, created = await create_or_get_active_run(
         db_session,
@@ -169,12 +170,14 @@ async def enqueue_run(
                 "outcome": "failed",
             },
         )
-        raise ApplicationError(
-            "QUEUE_UNAVAILABLE",
-            "Synchronization is temporarily unavailable.",
-            status_code=503,
-            retryable=True,
-        ) from exc
+        if raise_on_enqueue_failure:
+            raise ApplicationError(
+                "QUEUE_UNAVAILABLE",
+                "Synchronization is temporarily unavailable.",
+                status_code=503,
+                retryable=True,
+            ) from exc
+        return run
     return run
 
 

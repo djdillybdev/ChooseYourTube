@@ -5,7 +5,6 @@
 	import EmptyState from '$lib/components/ui/EmptyState.svelte';
 	import PaginationControls from '$lib/components/ui/PaginationControls.svelte';
 	import SearchBar from '$lib/components/ui/SearchBar.svelte';
-	import { openEditFolder } from '$lib/stores/modalState.svelte';
 	import { createChannelMap } from '$lib/utils/channelLookup';
 
 	interface Props {
@@ -22,7 +21,7 @@
 	<title>{data.folder.name} - ChooseYourTube</title>
 </svelte:head>
 
-<div class="container mx-auto max-w-7xl p-6">
+<div class="container mx-auto max-w-7xl px-4 py-6 sm:px-6">
 	<!-- Folder Header -->
 	<div class="mb-6">
 		<div class="flex items-start justify-between gap-4">
@@ -53,28 +52,6 @@
 					{/if}
 				</p>
 			</div>
-
-			<!-- Right: Edit button -->
-			<button
-				class="btn btn-square btn-ghost btn-sm"
-				onclick={() => openEditFolder(data.folder)}
-				aria-label="Edit folder"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke-width="1.5"
-					stroke="currentColor"
-					class="h-5 w-5"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-					/>
-				</svg>
-			</button>
 		</div>
 	</div>
 

@@ -47,7 +47,7 @@
 <div class="container mx-auto max-w-6xl p-6">
 	<div class="mb-6">
 		<h2 class="text-2xl font-bold">Import YouTube subscriptions</h2>
-		<p class="text-base-content/60">Add channels without removing anything you already follow.</p>
+		<p class="text-base-content">Add channels without removing anything you already follow.</p>
 	</div>
 
 	{#if data.oauthError}
@@ -91,7 +91,7 @@
 				<div class="card-body">
 					<h3 class="card-title">Google Takeout CSV</h3>
 					<p>Upload the subscriptions CSV from your Google Takeout YouTube export.</p>
-					<p class="text-sm text-base-content/60">Maximum 2 MB and 5,000 rows.</p>
+					<p class="text-sm text-base-content">Maximum 2 MB and 5,000 rows.</p>
 					<label class="btn mt-auto btn-primary" class:btn-disabled={uploading}>
 						{uploading ? 'Uploading…' : 'Choose CSV'}
 						<input
@@ -108,7 +108,7 @@
 				<div class="card-body">
 					<h3 class="card-title">Google account</h3>
 					<p>Authorize one-time read-only access to collect your YouTube subscriptions.</p>
-					<p class="text-sm text-base-content/60">Credentials are discarded after discovery.</p>
+					<p class="text-sm text-base-content">Credentials are discarded after discovery.</p>
 					<button
 						class="btn mt-auto btn-primary"
 						disabled={!data.runtime.features.youtube_oauth || authorizing}
@@ -117,7 +117,9 @@
 						{authorizing ? 'Connecting…' : 'Continue with Google'}
 					</button>
 					{#if !data.runtime.features.youtube_oauth}
-						<p class="text-sm text-warning">Google OAuth is not configured on this installation.</p>
+						<p class="text-sm font-medium text-base-content">
+							Google OAuth is not configured on this installation.
+						</p>
 					{/if}
 				</div>
 			</section>

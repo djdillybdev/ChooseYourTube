@@ -17,7 +17,7 @@
 
 <svelte:head><title>{data.category.name} - ChooseYourTube</title></svelte:head>
 
-<div class="container mx-auto max-w-7xl p-6">
+<div class="container mx-auto max-w-7xl px-4 py-6 sm:px-6">
 	<div class="mb-6 flex items-start justify-between gap-4">
 		<div>
 			<div class="mb-2 flex items-center gap-3">

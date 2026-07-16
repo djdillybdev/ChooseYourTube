@@ -17,7 +17,7 @@
 
 <svelte:head><title>Favorites - ChooseYourTube</title></svelte:head>
 
-<div class="container mx-auto max-w-7xl p-6">
+<div class="container mx-auto max-w-7xl px-4 py-6 sm:px-6">
 	<div class="mb-6">
 		<div class="mb-2 flex items-center gap-3">
 			<svg
@@ -36,7 +36,7 @@
 			</svg>
 			<h1 class="text-3xl font-bold">Favorites</h1>
 		</div>
-		<p class="text-base-content/60">
+		<p class="text-base-content">
 			{data.channels.length}
 			{data.channels.length === 1 ? 'channel' : 'channels'}
 			{#if data.total > 0}· {data.total} {data.total === 1 ? 'video' : 'videos'}{/if}

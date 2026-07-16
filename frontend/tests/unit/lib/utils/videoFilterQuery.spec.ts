@@ -12,6 +12,25 @@ describe('parseVideoFilterQuery', () => {
 		expect(result.uiFilters.is_watched).toBe(false);
 	});
 
+	it('keeps an explicit all watched state distinct from the inbox default', () => {
+		const result = parse('http://localhost/inbox?is_watched=all', {
+			defaultWatched: false
+		});
+
+		expect(result.apiFilters.is_watched).toBeUndefined();
+		expect(result.uiFilters.is_watched).toBeUndefined();
+	});
+
+	it('excludes shorts by default and supports an explicit all-lengths state', () => {
+		const defaultResult = parse('http://localhost/inbox');
+		const allResult = parse('http://localhost/inbox?is_short=all');
+
+		expect(defaultResult.apiFilters.is_short).toBe(false);
+		expect(defaultResult.uiFilters.is_short).toBe(false);
+		expect(allResult.apiFilters.is_short).toBeUndefined();
+		expect(allResult.uiFilters.is_short).toBeUndefined();
+	});
+
 	it('parses supported boolean filters and ignores retired video favorites', () => {
 		const result = parse('http://localhost/inbox?is_watched=true&is_favorited=false&is_short=true');
 		expect(result.apiFilters.is_watched).toBe(true);

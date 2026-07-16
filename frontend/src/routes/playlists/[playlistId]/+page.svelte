@@ -26,6 +26,7 @@
 	let actionError = $state<string | null>(null);
 	let dragIndex = $state<number | null>(null);
 	let syncedPlaylistId = $state<string | null>(null);
+	let announcement = $state('');
 
 	$effect(() => {
 		if (syncedPlaylistId !== data.playlist.id) {
@@ -94,14 +95,8 @@
 		dragIndex = index;
 	}
 
-	async function handleDrop(index: number) {
-		if (dragIndex === null || dragIndex === index) {
-			dragIndex = null;
-			return;
-		}
-
-		const sourceIndex = dragIndex;
-		dragIndex = null;
+	async function reorder(sourceIndex: number, index: number) {
+		if (sourceIndex === index || sourceIndex < 0 || index < 0 || index >= videos.length) return;
 		const dragged = videos[sourceIndex];
 		if (!dragged) return;
 
@@ -116,10 +111,18 @@
 				video_id: dragged.id,
 				new_position: index
 			});
+			announcement = `Moved ${dragged.title} to position ${index + 1} of ${videos.length}.`;
 		} catch (err) {
 			videos = previous;
 			actionError = err instanceof Error ? err.message : 'Failed to reorder video';
 		}
+	}
+
+	async function handleDrop(index: number) {
+		if (dragIndex === null) return;
+		const sourceIndex = dragIndex;
+		dragIndex = null;
+		await reorder(sourceIndex, index);
 	}
 </script>
 
@@ -127,7 +130,7 @@
 	<title>{data.playlist.name} - Playlists - ChooseYourTube</title>
 </svelte:head>
 
-<div class="container mx-auto max-w-7xl p-6">
+<div class="container mx-auto max-w-7xl px-4 py-6 sm:px-6">
 	<div class="mb-6 flex items-start justify-between gap-4">
 		<div>
 			<h1 class="text-2xl font-bold">{data.playlist.name}</h1>
@@ -168,9 +171,10 @@
 			</button>
 		</div>
 		{#if actionError}
-			<p class="mt-2 text-sm text-error">{actionError}</p>
+			<p class="mt-2 text-sm text-error" role="alert">{actionError}</p>
 		{/if}
 	</form>
+	<p class="sr-only" aria-live="polite">{announcement}</p>
 
 	{#if videos.length === 0}
 		<div
@@ -222,6 +226,22 @@
 					<button class="btn btn-ghost btn-sm" onclick={() => void handlePlay(video.id)}
 						>Play</button
 					>
+					<div class="join" aria-label={`Reorder ${video.title}`}>
+						<button
+							type="button"
+							class="btn join-item btn-square btn-ghost btn-sm"
+							onclick={() => void reorder(index, index - 1)}
+							disabled={index === 0}
+							aria-label={`Move ${video.title} up`}>↑</button
+						>
+						<button
+							type="button"
+							class="btn join-item btn-square btn-ghost btn-sm"
+							onclick={() => void reorder(index, index + 1)}
+							disabled={index === videos.length - 1}
+							aria-label={`Move ${video.title} down`}>↓</button
+						>
+					</div>
 					<button
 						class="btn text-error btn-ghost btn-sm"
 						onclick={() => void handleRemoveVideo(video.id)}

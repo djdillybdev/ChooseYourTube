@@ -17,6 +17,7 @@ from app.services.channel_service import (
 )
 from app.schemas.channel import ChannelCreate
 from app.db.models.channel import Channel
+from app.core.errors import ApplicationError
 
 
 @pytest_asyncio.fixture
@@ -165,11 +166,11 @@ class TestCreateChannel:
 
             payload = ChannelCreate(handle="@nonexistent")
 
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(ApplicationError) as exc_info:
                 await create_channel(payload, db_session, mock_youtube_api)
 
             assert exc_info.value.status_code == 404
-            assert "not found on YouTube" in exc_info.value.detail
+            assert exc_info.value.code == "YOUTUBE_CHANNEL_NOT_FOUND"
 
     async def test_create_channel_already_exists_raises_409(
         self, db_session, mock_youtube_api, sample_channel
@@ -191,11 +192,11 @@ class TestCreateChannel:
 
             payload = ChannelCreate(handle="@existingchannel")
 
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(ApplicationError) as exc_info:
                 await create_channel(payload, db_session, mock_youtube_api)
 
             assert exc_info.value.status_code == 409
-            assert "already been added" in exc_info.value.detail
+            assert exc_info.value.code == "CHANNEL_ALREADY_FOLLOWED"
 
     async def test_create_channel_youtube_api_error_raises_502(
         self, db_session, mock_youtube_api

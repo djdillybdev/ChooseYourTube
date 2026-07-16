@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidate } from '$app/navigation';
 	import { api } from '$lib/api';
+	import { actionStatus } from '$lib/stores/actionStatus.svelte';
 
 	interface Props {
 		channelId: string;
@@ -9,13 +10,9 @@
 	}
 
 	let { channelId, channelTitle, isFavorited }: Props = $props();
-	let favorite = $state(false);
+	let favorite = $derived(isFavorited);
 	let isUpdating = $state(false);
 	let updateError = $state<string | null>(null);
-
-	$effect(() => {
-		favorite = isFavorited;
-	});
 
 	async function toggleFavorite(event: MouseEvent) {
 		event.preventDefault();
@@ -30,6 +27,9 @@
 			const updated = await api.channels.update(channelId, { is_favorited: favorite });
 			favorite = updated.is_favorited;
 			await invalidate('app:channels');
+			actionStatus.announce(
+				favorite ? `${channelTitle} added to favorites.` : `${channelTitle} removed from favorites.`
+			);
 		} catch (cause) {
 			favorite = previous;
 			updateError = cause instanceof Error ? cause.message : 'Failed to update favorite';

@@ -29,6 +29,7 @@
 		"test:e2e:fast": "playwright test",
 		"test:e2e:full": "../scripts/run_e2e.sh",
 		"test:e2e": "pnpm run test:e2e:fast && pnpm run test:e2e:full",
+		"portfolio:screenshots": "CAPTURE_PORTFOLIO=1 playwright test portfolio-screenshots.test.ts",
 		"test:ci": "pnpm run api:check && pnpm run test:coverage && pnpm run test:e2e",
 		"test": "pnpm run test:ci"
 	},

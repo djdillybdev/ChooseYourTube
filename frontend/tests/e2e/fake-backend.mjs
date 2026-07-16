@@ -55,6 +55,7 @@ const baseRun = {
 	updated_at: '2026-07-14T10:00:00Z'
 };
 let refreshPolls = 0;
+let initialSyncPolls = 0;
 let failedStatus = 'failed';
 const importId = '10000000-0000-0000-0000-000000000001';
 const candidateId = '20000000-0000-0000-0000-000000000001';
@@ -336,7 +337,17 @@ createServer(async (request, response) => {
 			folder_id: body.folder_id ?? null
 		};
 		channels = [...channels.filter((item) => item.id !== addedChannel.id), addedChannel];
-		return send(response, 201, addedChannel);
+		initialSyncPolls = 0;
+		return send(response, 201, {
+			channel: addedChannel,
+			initial_sync: {
+				...baseRun,
+				id: '00000000-0000-0000-0000-000000000004',
+				channel_id: addedChannel.id,
+				kind: 'initial_channel_sync',
+				status: 'queued'
+			}
+		});
 	}
 	if (path === '/channels' && request.method === 'GET')
 		return send(response, 200, {
@@ -422,6 +433,16 @@ createServer(async (request, response) => {
 			id: '00000000-0000-0000-0000-000000000001',
 			kind: 'channel_refresh',
 			status
+		});
+	}
+	if (path === '/sync-runs/00000000-0000-0000-0000-000000000004') {
+		initialSyncPolls += 1;
+		return send(response, 200, {
+			...baseRun,
+			id: '00000000-0000-0000-0000-000000000004',
+			channel_id: 'UC_added_channel',
+			kind: 'initial_channel_sync',
+			status: initialSyncPolls > 1 ? 'succeeded' : 'running'
 		});
 	}
 	if (path === '/sync-runs/quota')

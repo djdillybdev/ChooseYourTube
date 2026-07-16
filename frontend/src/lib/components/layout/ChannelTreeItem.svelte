@@ -6,24 +6,21 @@
 
 	interface Props {
 		channel: ChannelOut;
-		depth?: number;
 	}
 
-	let { channel, depth = 0 }: Props = $props();
+	let { channel }: Props = $props();
 
 	const isActive = $derived(page.params.id === channel.id.toString());
 </script>
 
-<li class="group">
-	<div class="channel-item flex items-center" style="padding-left: {depth * 1}rem">
-		<!-- Spacer to align with folders that have chevrons -->
-		<span class="mr-1 w-4"></span>
-
+<li class="group w-full max-w-full min-w-0">
+	<div class="channel-item flex w-full max-w-full min-w-0 items-center">
 		<!-- Channel link -->
 		<a
 			href={resolve('/channels/[id]', { id: channel.id })}
-			class="flex flex-1 items-center gap-2 rounded px-2 py-1.5 transition-colors"
+			class="flex max-w-full min-w-0 flex-1 items-center gap-2 overflow-hidden rounded px-1 py-1 transition-colors"
 			class:bg-base-200={isActive}
+			aria-current={isActive ? 'page' : undefined}
 		>
 			<!-- Channel thumbnail or icon -->
 			{#if channel.thumbnail_url}
@@ -39,7 +36,7 @@
 					viewBox="0 0 24 24"
 					stroke-width="1.5"
 					stroke="currentColor"
-					class="h-5 w-5"
+					class="h-5 w-5 shrink-0"
 				>
 					<path
 						stroke-linecap="round"
@@ -54,10 +51,10 @@
 				</svg>
 			{/if}
 
-			<span class="text-sm">{channel.title}</span>
+			<span class="min-w-0 truncate text-sm" title={channel.title}>{channel.title}</span>
 		</a>
 		<button
-			class="btn pointer-events-none btn-square opacity-0 btn-ghost transition-opacity btn-xs group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
+			class="btn pointer-events-none btn-square shrink-0 opacity-0 btn-ghost transition-opacity btn-xs group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100"
 			onclick={() => openEditChannel(channel)}
 			aria-label={`Edit ${channel.title}`}
 		>

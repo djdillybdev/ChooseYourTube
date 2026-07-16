@@ -1,21 +1,10 @@
 import type { UserRead } from '$lib/types/api';
+import { authMessage } from '$lib/utils/authMessages';
 
 interface AuthResult {
 	ok: boolean;
 	error?: string;
 }
-
-const AUTH_MESSAGES: Record<string, string> = {
-	INVALID_CREDENTIALS: 'Email or password is incorrect.',
-	EMAIL_ALREADY_REGISTERED: 'An account with this email already exists.',
-	EMAIL_ALREADY_EXISTS: 'An account with this email already exists.',
-	REGISTER_USER_ALREADY_EXISTS: 'An account with this email already exists.',
-	INVALID_PASSWORD: 'Choose a stronger password and try again.',
-	CURRENT_PASSWORD_INVALID: 'The current password is incorrect.',
-	DEMO_ACCOUNT_UNAVAILABLE: 'The demo account is temporarily unavailable. Please try again.',
-	VALIDATION_ERROR: 'Check the information you entered and try again.',
-	AUTH_REQUEST_FAILED: 'Authentication could not be completed. Please try again.'
-};
 
 async function parseResponse(response: Response): Promise<AuthResult> {
 	if (response.ok) {
@@ -24,7 +13,7 @@ async function parseResponse(response: Response): Promise<AuthResult> {
 
 	const payload = await response.json().catch(() => ({ error: 'AUTH_REQUEST_FAILED' }));
 	const code = payload.error ?? 'AUTH_REQUEST_FAILED';
-	return { ok: false, error: AUTH_MESSAGES[code] ?? AUTH_MESSAGES.AUTH_REQUEST_FAILED };
+	return { ok: false, error: authMessage(code) };
 }
 
 export class AuthAPI {

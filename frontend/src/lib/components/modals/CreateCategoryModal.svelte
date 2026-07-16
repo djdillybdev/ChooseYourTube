@@ -2,6 +2,7 @@
 	import { invalidate } from '$app/navigation';
 	import { api } from '$lib/api';
 	import CategoryIconPicker from '$lib/components/ui/CategoryIconPicker.svelte';
+	import DialogShell from '$lib/components/ui/DialogShell.svelte';
 
 	interface Props {
 		onClose: () => void;
@@ -12,8 +13,6 @@
 	let iconKey = $state<string | null>(null);
 	let isSubmitting = $state(false);
 	let error = $state<string | null>(null);
-	let dialogElement: HTMLDialogElement;
-	$effect(() => dialogElement?.showModal());
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
@@ -32,48 +31,43 @@
 	}
 </script>
 
-<dialog
-	bind:this={dialogElement}
-	class="modal-open modal"
-	oncancel={(event) => {
-		event.preventDefault();
-		if (!isSubmitting) onClose();
-	}}
+<DialogShell
+	id="create-category-dialog"
+	titleId="create-category-title"
+	descriptionId="create-category-description"
+	busy={isSubmitting}
+	{onClose}
 >
-	<div class="modal-box">
-		<h3 class="text-lg font-bold">Create New Category</h3>
-		<p class="py-2 text-sm text-base-content/60">
-			Categories can contain any number of channels, and channels can appear in several categories.
-		</p>
-		<form onsubmit={handleSubmit} class="space-y-4">
-			<label class="form-control" for="category-name">
-				<span class="label-text mb-1">Category Name</span>
-				<input
-					id="category-name"
-					class="input-bordered input"
-					bind:value={name}
-					maxlength="255"
-					disabled={isSubmitting}
-					required
-				/>
-			</label>
-			<CategoryIconPicker
-				value={iconKey}
+	<h2 id="create-category-title" class="text-lg font-bold">Create New Category</h2>
+	<p id="create-category-description" class="py-2 text-sm text-base-content/80">
+		Categories can contain any number of channels, and channels can appear in several categories.
+	</p>
+	<form onsubmit={handleSubmit} class="space-y-4">
+		<label class="form-control" for="category-name">
+			<span class="label-text mb-1">Category Name</span>
+			<input
+				id="category-name"
+				data-dialog-initial-focus
+				class="input-bordered input"
+				bind:value={name}
+				maxlength="255"
 				disabled={isSubmitting}
-				onChange={(value) => (iconKey = value)}
+				required
 			/>
-			{#if error}<div class="alert alert-error" role="alert">{error}</div>{/if}
-			<div class="modal-action">
-				<button type="button" class="btn btn-ghost" onclick={onClose} disabled={isSubmitting}
-					>Cancel</button
-				>
-				<button class="btn btn-primary" type="submit" disabled={isSubmitting || !name.trim()}>
-					{isSubmitting ? 'Creating…' : 'Create Category'}
-				</button>
-			</div>
-		</form>
-	</div>
-	<form method="dialog" class="modal-backdrop">
-		<button type="button" onclick={onClose}>close</button>
+		</label>
+		<CategoryIconPicker
+			value={iconKey}
+			disabled={isSubmitting}
+			onChange={(value) => (iconKey = value)}
+		/>
+		{#if error}<div class="alert alert-error" role="alert">{error}</div>{/if}
+		<div class="modal-action">
+			<button type="button" class="btn btn-ghost" onclick={onClose} disabled={isSubmitting}
+				>Cancel</button
+			>
+			<button class="btn btn-primary" type="submit" disabled={isSubmitting || !name.trim()}>
+				{isSubmitting ? 'Creating…' : 'Create Category'}
+			</button>
+		</div>
 	</form>
-</dialog>
+</DialogShell>

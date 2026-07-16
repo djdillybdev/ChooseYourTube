@@ -1,11 +1,15 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	interface Props {
 		title: string;
 		message?: string;
 		icon?: 'inbox' | 'folder' | 'search' | 'video';
+		actionLabel?: string;
+		actionHref?: string;
+		onAction?: () => void;
 	}
 
-	let { title, message, icon = 'inbox' }: Props = $props();
+	let { title, message, icon = 'inbox', actionLabel, actionHref, onAction }: Props = $props();
 </script>
 
 <div class="flex flex-col items-center justify-center py-12">
@@ -74,6 +78,11 @@
 
 	<h2 class="mb-2 text-xl font-semibold">{title}</h2>
 	{#if message}
-		<p class="text-sm text-base-content/60">{message}</p>
+		<p class="max-w-lg text-center text-sm text-base-content">{message}</p>
+	{/if}
+	{#if actionLabel && actionHref}
+		<a class="btn mt-4 btn-primary" href={resolve(actionHref as '/inbox')}>{actionLabel}</a>
+	{:else if actionLabel && onAction}
+		<button class="btn mt-4 btn-primary" type="button" onclick={onAction}>{actionLabel}</button>
 	{/if}
 </div>

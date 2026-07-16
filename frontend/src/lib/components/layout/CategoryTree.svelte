@@ -24,8 +24,8 @@
 	}
 </script>
 
-<li>
-	<div class="flex items-center">
+<li class="w-full max-w-full min-w-0">
+	<div class="category-row flex w-full max-w-full min-w-0 items-center">
 		{#if channels.length > 0}
 			<button
 				onclick={toggleExpand}
@@ -52,15 +52,19 @@
 		{#if category}
 			<a
 				href={resolve('/categories/[id]', { id: category.id })}
-				class="flex flex-1 items-center gap-2 rounded px-2 py-1.5 transition-colors"
+				class="flex max-w-full min-w-0 flex-1 items-center gap-2 overflow-hidden rounded px-2 py-1.5 transition-colors"
 				class:bg-base-200={isActive}
+				aria-current={isActive ? 'page' : undefined}
 			>
 				<CategoryIcon iconKey={category.icon_key} class="h-5 w-5 shrink-0" />
-				<span class="text-sm">{category.name}</span>
+				<span class="min-w-0 truncate text-sm font-bold" title={category.name}>{category.name}</span
+				>
 			</a>
 		{:else}
-			<span class="flex flex-1 items-center gap-2 px-2 py-1.5 text-sm text-base-content/70">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5">
+			<span
+				class="flex max-w-full min-w-0 flex-1 items-center gap-2 overflow-hidden px-2 py-1.5 text-sm text-base-content"
+			>
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5 shrink-0">
 					<path
 						stroke-linecap="round"
 						stroke-linejoin="round"
@@ -68,16 +72,25 @@
 						d="M9.568 3.75h4.864c1.336 0 2.591.638 3.38 1.717l2.505 3.423a4.2 4.2 0 010 4.96l-2.505 3.423a4.2 4.2 0 01-3.38 1.717H9.568a4.2 4.2 0 01-3.38-1.717L3.683 13.85a4.2 4.2 0 010-4.96l2.505-3.423a4.2 4.2 0 013.38-1.717z"
 					/>
 				</svg>
-				{label}
+				<span class="min-w-0 truncate" title={label}>{label}</span>
 			</span>
 		{/if}
 	</div>
 
 	{#if channels.length > 0 && isExpanded}
-		<ul class="mt-1">
+		<ul class="channel-list mt-0.5 max-w-full min-w-0 overflow-hidden">
 			{#each channels as channel (channel.id)}
-				<ChannelTreeItem {channel} depth={1} />
+				<ChannelTreeItem {channel} />
 			{/each}
 		</ul>
 	{/if}
 </li>
+
+<style>
+	.channel-list {
+		max-width: calc(100% - 0.5rem);
+		margin-inline-start: 0.5rem;
+		padding-inline-start: 1.625rem;
+		white-space: normal;
+	}
+</style>

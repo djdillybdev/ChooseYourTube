@@ -10,6 +10,9 @@
 	import SearchBar from '$lib/components/ui/SearchBar.svelte';
 	import { uiState, setPageSize } from '$lib/stores/uiState.svelte';
 	import { createChannelMap } from '$lib/utils/channelLookup';
+	import { openAddChannel } from '$lib/stores/modalState.svelte';
+	import { invalidateAll } from '$app/navigation';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 
 	interface Props {
 		data: PageData;
@@ -37,14 +40,16 @@
 	});
 </script>
 
-<div class="container mx-auto max-w-4xl p-6">
-	<div class="mb-6">
-		<h1 class="text-2xl font-bold">Inbox</h1>
-		<p class="text-sm text-base-content/90">
-			{data.total}
-			{data.total === 1 ? 'video' : 'videos'}
-		</p>
-	</div>
+<svelte:head>
+	<title>Inbox - ChooseYourTube</title>
+	<meta name="description" content="Browse recent videos from the channels you follow." />
+</svelte:head>
+
+<div class="container mx-auto max-w-5xl px-4 py-6 sm:px-6">
+	<PageHeader
+		title="Inbox"
+		description={`${data.total} ${data.total === 1 ? 'video' : 'videos'}`}
+	/>
 
 	<!-- Search bar -->
 	<div class="mb-4">
@@ -52,14 +57,26 @@
 	</div>
 
 	{#if data.error}
-		<ErrorState message={data.error} />
+		<ErrorState
+			heading="Videos could not be loaded"
+			message={data.error}
+			onRetry={() => invalidateAll()}
+		/>
 	{:else if data.videos.length === 0}
 		<EmptyState
-			icon={data.q ? 'search' : 'video'}
-			title="No videos found"
+			icon={data.q ? 'search' : channels.length === 0 ? 'inbox' : 'video'}
+			title={data.q
+				? 'No matching videos'
+				: channels.length === 0
+					? 'Follow your first channel'
+					: 'No new standard videos'}
 			message={data.q
-				? `No results for "${data.q}". Try a different search term.`
-				: 'No unwatched videos. Check back later or adjust your subscriptions!'}
+				? `No results for "${data.q}". Try a different search term or reset filters.`
+				: channels.length === 0
+					? 'Choose a YouTube channel you value. Its latest public videos will appear here after synchronization.'
+					: 'Your followed channels may still be synchronizing, or you have watched everything currently in the Inbox.'}
+			actionLabel={channels.length === 0 ? 'Follow a channel' : undefined}
+			onAction={channels.length === 0 ? openAddChannel : undefined}
 		/>
 	{:else}
 		<VideoList videos={data.videos} {channelMap} />

@@ -4,11 +4,20 @@
 
 	interface Props {
 		placeholder?: string;
+		label?: string;
 		initialValue?: string;
 		basePath: string;
 	}
 
-	let { placeholder = 'Search videos...', initialValue = '', basePath }: Props = $props();
+	let {
+		placeholder = 'Search videos...',
+		label = 'Search videos',
+		initialValue = '',
+		basePath
+	}: Props = $props();
+	const inputId = $derived(
+		`video-search-${basePath.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'all'}`
+	);
 
 	let searchQuery = $state('');
 	let syncedInitialValue = $state<string | null>(null);
@@ -70,6 +79,7 @@
 </script>
 
 <div class="relative w-full">
+	<label class="sr-only" for={inputId}>{label}</label>
 	<div class="relative">
 		<!-- Search icon -->
 		<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -91,6 +101,7 @@
 
 		<!-- Search input -->
 		<input
+			id={inputId}
 			type="text"
 			class="input-bordered input w-full pr-10 pl-10"
 			{placeholder}

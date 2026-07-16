@@ -22,7 +22,7 @@ describe('SearchBar', () => {
 	it('updates q query param with debounce and resets page to 1', async () => {
 		render(SearchBar, { basePath: '/inbox' });
 
-		const input = screen.getByPlaceholderText('Search videos...');
+		const input = screen.getByRole('textbox', { name: 'Search videos' });
 		await fireEvent.input(input, { target: { value: 'svelte' } });
 
 		expect(gotoMock).not.toHaveBeenCalled();
@@ -46,7 +46,7 @@ describe('SearchBar', () => {
 	it('syncs displayed value when initialValue prop changes', async () => {
 		const { rerender } = render(SearchBar, { basePath: '/inbox', initialValue: 'first' });
 
-		const input = screen.getByPlaceholderText('Search videos...') as HTMLInputElement;
+		const input = screen.getByRole('textbox', { name: 'Search videos' }) as HTMLInputElement;
 		expect(input.value).toBe('first');
 
 		await rerender({ basePath: '/inbox', initialValue: 'second' });

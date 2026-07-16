@@ -3,17 +3,13 @@
 	import { resolve } from '$app/paths';
 	import { authApi } from '$lib/api/auth';
 	import { page } from '$app/state';
+	import DialogShell from '$lib/components/ui/DialogShell.svelte';
 
 	let password = $state('');
 	let confirming = $state(false);
 	let busy = $state(false);
 	let error = $state<string | null>(null);
-	let deleteDialog = $state<HTMLDialogElement>();
-	let deleteTrigger = $state<HTMLButtonElement>();
 	const demoMode = $derived(page.data.runtime?.mode === 'demo');
-	$effect(() => {
-		if (confirming) queueMicrotask(() => deleteDialog?.showModal());
-	});
 
 	function cancelDeletion(event?: Event) {
 		event?.preventDefault();
@@ -21,7 +17,6 @@
 		confirming = false;
 		password = '';
 		error = null;
-		queueMicrotask(() => deleteTrigger?.focus());
 	}
 
 	async function deleteAccount() {
@@ -34,6 +29,8 @@
 				return;
 			}
 			await goto(resolve('/login'), { replaceState: true });
+		} catch {
+			error = 'Account deletion could not be completed. Please try again.';
 		} finally {
 			busy = false;
 		}
@@ -61,25 +58,28 @@
 				<p class="mt-1 text-sm text-base-content/70">
 					Permanently deletes the account and all owned application data. This cannot be undone.
 				</p>
-				<button
-					bind:this={deleteTrigger}
-					class="btn mt-4 btn-outline btn-error"
-					onclick={() => (confirming = true)}
-				>
+				<button class="btn mt-4 btn-outline btn-error" onclick={() => (confirming = true)}>
 					Delete my account
 				</button>
 				{#if confirming}
-					<dialog
-						bind:this={deleteDialog}
-						class="modal"
-						oncancel={cancelDeletion}
-						aria-labelledby="delete-account-title"
+					<DialogShell
+						id="delete-account-dialog"
+						titleId="delete-account-title"
+						descriptionId="delete-account-description"
+						{busy}
+						onClose={cancelDeletion}
+						boxClass="max-w-md"
 					>
-						<div class="modal-box max-w-md">
-							<h3 id="delete-account-title" class="text-lg font-bold">
-								Permanently delete account?
-							</h3>
-							<p class="mt-2 text-sm text-base-content/70">Enter your password to confirm.</p>
+						<h3 id="delete-account-title" class="text-lg font-bold">Permanently delete account?</h3>
+						<p id="delete-account-description" class="mt-2 text-sm text-base-content/80">
+							Enter your password to confirm. This permanently deletes all owned data.
+						</p>
+						<form
+							onsubmit={(event) => {
+								event.preventDefault();
+								void deleteAccount();
+							}}
+						>
 							<label for="delete-password" class="label">Current password</label>
 							<input
 								id="delete-password"
@@ -87,18 +87,25 @@
 								autocomplete="current-password"
 								class="input-bordered input w-full"
 								bind:value={password}
+								required
 							/>
 							{#if error}<p class="mt-2 text-sm text-error" role="alert">{error}</p>{/if}
 							<div class="mt-4 flex gap-2">
-								<button class="btn btn-ghost" disabled={busy} onclick={cancelDeletion}>
+								<button
+									data-dialog-initial-focus
+									type="button"
+									class="btn btn-ghost"
+									disabled={busy}
+									onclick={cancelDeletion}
+								>
 									Cancel
 								</button>
-								<button class="btn btn-error" disabled={busy || !password} onclick={deleteAccount}>
+								<button type="submit" class="btn btn-error" disabled={busy || !password}>
 									{busy ? 'Deleting…' : 'Permanently delete'}
 								</button>
 							</div>
-						</div>
-					</dialog>
+						</form>
+					</DialogShell>
 				{/if}
 			</div>
 		{/if}

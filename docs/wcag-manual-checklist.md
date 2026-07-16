@@ -30,3 +30,14 @@ Run this checklist against the production build at desktop and mobile widths bef
 - Confirm session expiry preserves a safe return path and never exposes another user's content.
 
 Record the browser, assistive technology, viewport, tester, date, failures, and linked fixes in the release notes or release issue.
+
+## 2026-07-16 automated evidence
+
+- `pnpm check`, `pnpm lint`, and `pnpm test:unit` passed.
+- `pnpm test:e2e:fast` passed its JavaScript-disabled auth, keyboard/focus, responsive, status,
+  failure-retry, and Axe scenarios after the implementation work.
+- Chromium reflow fixtures passed at 320, 375, 768, 1280, and 1440 CSS pixels.
+- Axe reported no serious or critical issues on the covered principal pages or the open filter
+  surface, with color contrast enabled throughout.
+- This evidence does not complete the manual screen-reader, physical touch-device, or real 200% zoom
+  items. Those remain unchecked for the release tester.

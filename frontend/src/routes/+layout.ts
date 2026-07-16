@@ -1,11 +1,4 @@
-import type {
-	CategoryOut,
-	FolderOut,
-	ChannelOut,
-	TagOut,
-	UserRead,
-	PlaylistDetailOut
-} from '$lib/types/api';
+import type { CategoryOut, ChannelOut, TagOut, UserRead, PlaylistDetailOut } from '$lib/types/api';
 import { APIError, createScopedAPI } from '$lib/api';
 import { error, redirect } from '@sveltejs/kit';
 import type { LayoutLoad } from './$types';
@@ -33,7 +26,6 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 		return {
 			isPublicAuthRoute: true,
 			currentUser: null,
-			folders: [] as FolderOut[],
 			categories: [] as CategoryOut[],
 			uncategorizedChannels: [] as ChannelOut[],
 			channels: [] as ChannelOut[],
@@ -52,7 +44,10 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 	const response = await fetch('/api/bootstrap');
 	if (response.status === 401) {
 		await fetch('/api/auth/logout', { method: 'POST' });
-		throw redirect(307, `/login?next=${encodeURIComponent(url.pathname + url.search)}`);
+		throw redirect(
+			307,
+			`/login?reason=session_expired&next=${encodeURIComponent(url.pathname + url.search)}`
+		);
 	}
 	if (!response.ok) {
 		console.error('Failed to load application bootstrap', response.status);
@@ -61,7 +56,6 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 
 	const bootstrap = (await response.json()) as {
 		current_user: UserRead;
-		folders: FolderOut[];
 		channels: ChannelOut[];
 		tags: TagOut[];
 		watch_later: PlaylistDetailOut;
@@ -73,7 +67,10 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 	} catch (cause) {
 		if (cause instanceof APIError && cause.status === 401) {
 			await fetch('/api/auth/logout', { method: 'POST' });
-			throw redirect(307, `/login?next=${encodeURIComponent(url.pathname + url.search)}`);
+			throw redirect(
+				307,
+				`/login?reason=session_expired&next=${encodeURIComponent(url.pathname + url.search)}`
+			);
 		}
 		console.error('Failed to load categories', cause);
 		throw error(503, 'ChooseYourTube could not load your library. Please retry.');
@@ -88,7 +85,6 @@ export const load: LayoutLoad = async ({ depends, fetch, url }) => {
 	return {
 		isPublicAuthRoute: false,
 		currentUser: bootstrap.current_user,
-		folders: bootstrap.folders,
 		categories,
 		uncategorizedChannels,
 		channels: bootstrap.channels,

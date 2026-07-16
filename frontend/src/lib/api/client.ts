@@ -42,7 +42,7 @@ export class APIClient {
 	private baseURL: string;
 	private fetcher: typeof fetch;
 	private cache = new Map<string, CacheEntry>();
-	private defaultRetries = 3;
+	private defaultGetRetries = 3;
 	private defaultCacheTTL = 5 * 60 * 1000; // 5 minutes
 
 	constructor(baseURL?: string, fetcher: typeof fetch = fetch) {
@@ -54,15 +54,11 @@ export class APIClient {
 	 * Main fetch method with retry logic and caching
 	 */
 	async fetch<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
-		const {
-			retries = this.defaultRetries,
-			cacheKey,
-			cacheTTL = this.defaultCacheTTL,
-			...fetchOptions
-		} = options;
+		const { retries, cacheKey, cacheTTL = this.defaultCacheTTL, ...fetchOptions } = options;
 
 		const url = `${this.baseURL}${endpoint}`;
 		const method = fetchOptions.method || 'GET';
+		const maximumAttempts = retries ?? (method === 'GET' ? this.defaultGetRetries : 1);
 		const finalCacheKey = cacheKey || `${method}:${url}`;
 
 		const shouldCache = method === 'GET' && cacheTTL > 0 && typeof window !== 'undefined';
@@ -79,7 +75,7 @@ export class APIClient {
 		let lastError: Error | null = null;
 		let refreshed = false;
 
-		for (let attempt = 0; attempt < retries; attempt++) {
+		for (let attempt = 0; attempt < maximumAttempts; attempt++) {
 			try {
 				const response = await this.fetcher(url, {
 					...fetchOptions,
@@ -130,7 +126,7 @@ export class APIClient {
 				}
 
 				// Exponential backoff for retries
-				if (attempt < retries - 1) {
+				if (attempt < maximumAttempts - 1) {
 					const backoffTime = Math.pow(2, attempt) * 1000;
 					await delay(backoffTime);
 				}

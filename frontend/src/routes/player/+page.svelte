@@ -39,6 +39,10 @@
 	const QUEUE_RESERVED_REM = 24;
 	const QUEUE_GAP_PX = 16;
 
+	function safeReturnUrl(value: string | null): string {
+		return value?.startsWith('/') && !value.startsWith('//') ? value : '/inbox';
+	}
+
 	function getRootFontSizePx(): number {
 		if (typeof window === 'undefined') return 16;
 		const value = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -95,7 +99,7 @@
 	});
 
 	onMount(() => {
-		returnUrl = new URLSearchParams(window.location.search).get('return') ?? '/inbox';
+		returnUrl = safeReturnUrl(new URLSearchParams(window.location.search).get('return'));
 
 		void initializeQueue().then(() => {
 			if (!playerState.current.currentVideo && playerState.current.queue.length === 0) {
@@ -241,10 +245,10 @@
 	<div class="relative z-20 shrink-0 border-t border-base-300 bg-base-100">
 		<!-- Video info -->
 		<div class="px-6 pt-4 pb-4">
-			<h2 class="text-lg font-semibold text-base-content">
+			<h1 class="text-lg font-semibold text-base-content">
 				{playerState.current.currentVideo?.title}
-			</h2>
-			<p class="text-sm text-base-content/60">
+			</h1>
+			<p class="text-sm text-base-content">
 				{#if channelMap && playerState.current.currentVideo}
 					{getChannelTitle(playerState.current.currentVideo.channel_id, channelMap)}
 				{:else}
@@ -272,7 +276,7 @@
 								{playerState.current.currentVideo.description}
 							</p>
 						{:else}
-							<p class="text-base-content/60 italic">No description available.</p>
+							<p class="text-base-content italic">No description available.</p>
 						{/if}
 					</div>
 				{/if}

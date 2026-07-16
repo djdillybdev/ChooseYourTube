@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { useWatchLater } from '$lib/stores/watchLater.svelte';
+	import { actionStatus } from '$lib/stores/actionStatus.svelte';
 
 	interface Props {
 		videoId: string;
@@ -15,8 +16,10 @@
 	async function toggle(event: MouseEvent) {
 		event.stopPropagation();
 		error = null;
+		const willSave = !saved;
 		try {
 			await watchLater.toggle(videoId);
+			actionStatus.announce(willSave ? 'Saved to Watch Later.' : 'Removed from Watch Later.');
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : 'Could not update Watch Later.';
 		}

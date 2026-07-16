@@ -1,13 +1,23 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	interface Props {
 		message: string;
-		onRetry?: () => void;
+		heading?: string;
+		onRetry?: () => void | Promise<void>;
+		retryHref?: string;
+		requestId?: string | null;
 	}
 
-	let { message, onRetry }: Props = $props();
+	let {
+		message,
+		heading = 'Something went wrong',
+		onRetry,
+		retryHref,
+		requestId = null
+	}: Props = $props();
 </script>
 
-<div class="flex flex-col items-center justify-center py-12">
+<div class="flex flex-col items-center justify-center py-12 text-center" role="alert">
 	<svg
 		xmlns="http://www.w3.org/2000/svg"
 		fill="none"
@@ -23,11 +33,12 @@
 		/>
 	</svg>
 
-	<h2 class="mb-2 text-xl font-semibold">Something went wrong</h2>
-	<p class="mb-4 text-sm text-base-content/60">{message}</p>
+	<h2 class="mb-2 text-xl font-semibold">{heading}</h2>
+	<p class="mb-4 max-w-xl text-sm text-base-content/80">{message}</p>
+	{#if requestId}<p class="mb-4 text-xs text-base-content/70">Request ID: {requestId}</p>{/if}
 
 	{#if onRetry}
-		<button class="btn btn-sm btn-primary" onclick={onRetry}>
+		<button class="btn btn-sm btn-primary" onclick={() => void onRetry()}>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				fill="none"
@@ -44,5 +55,7 @@
 			</svg>
 			Try Again
 		</button>
+	{:else if retryHref}
+		<a class="btn btn-sm btn-primary" href={resolve(retryHref as '/inbox')}>Try again</a>
 	{/if}
 </div>

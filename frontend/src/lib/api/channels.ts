@@ -1,6 +1,7 @@
 import type { APIClient } from './client';
 import type {
 	ChannelOut,
+	ChannelCreateResult,
 	SyncRunOut,
 	ChannelPlaylistFilters,
 	ChannelPlaylistOut,
@@ -33,13 +34,13 @@ export class ChannelsAPI {
 	/**
 	 * Create a new channel
 	 */
-	async create(data: ChannelCreate): Promise<ChannelOut> {
-		const channel = await this.client.post<ChannelOut>('/channels/', data);
+	async create(data: ChannelCreate): Promise<ChannelCreateResult> {
+		const result = await this.client.post<ChannelCreateResult>('/channels/', data);
 
 		// Invalidate channel list cache
 		this.client.invalidateCache('channels/');
 
-		return channel;
+		return result;
 	}
 
 	/**
