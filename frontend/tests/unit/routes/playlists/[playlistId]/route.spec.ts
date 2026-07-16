@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
 	playlistGetMock,
-	videoGetMock,
+	videoListByIdsMock,
 	createScopedAPIMock,
 	redirectMock,
 	errorMock,
@@ -20,7 +20,7 @@ const {
 
 	return {
 		playlistGetMock: vi.fn(),
-		videoGetMock: vi.fn(),
+		videoListByIdsMock: vi.fn(),
 		createScopedAPIMock: vi.fn(),
 		redirectMock: vi.fn((status: number, location: string) => {
 			const err = new Error('redirect') as Error & { status: number; location: string };
@@ -52,14 +52,14 @@ import { load } from '../../../../../src/routes/playlists/[playlistId]/+page';
 describe('/playlists/[playlistId] load', () => {
 	beforeEach(() => {
 		playlistGetMock.mockReset();
-		videoGetMock.mockReset();
+		videoListByIdsMock.mockReset();
 		createScopedAPIMock.mockReset();
 		redirectMock.mockClear();
 		errorMock.mockClear();
 
 		createScopedAPIMock.mockReturnValue({
 			playlists: { get: playlistGetMock },
-			videos: { get: videoGetMock }
+			videos: { listByIds: videoListByIdsMock }
 		});
 	});
 
@@ -77,21 +77,23 @@ describe('/playlists/[playlistId] load', () => {
 			created_at: '2026-01-01T00:00:00Z',
 			video_ids: ['v1', 'v2', 'v3']
 		});
-		videoGetMock.mockImplementation((id: string) => {
-			if (id === 'v2') return Promise.reject(new Error('missing'));
-			return Promise.resolve({ id, title: `Video ${id}` });
-		});
+		videoListByIdsMock.mockResolvedValue([
+			{ id: 'v3', title: 'Video v3' },
+			{ id: 'v1', title: 'Video v1' }
+		]);
 
 		const result = (await load({
 			params: { playlistId: 'pl-1' },
 			url: new URL('http://localhost/playlists/pl-1'),
-			fetch: vi.fn()
+			fetch: vi.fn(),
+			parent: vi.fn()
 		} as any)) as any;
 
 		expect(result.videos).toEqual([
 			{ id: 'v1', title: 'Video v1' },
 			{ id: 'v3', title: 'Video v3' }
 		]);
+		expect(videoListByIdsMock).toHaveBeenCalledWith(['v1', 'v2', 'v3']);
 	});
 
 	it('rejects non-manual playlists with 404', async () => {
@@ -113,7 +115,8 @@ describe('/playlists/[playlistId] load', () => {
 			load({
 				params: { playlistId: 'pl-1' },
 				url: new URL('http://localhost/playlists/pl-1'),
-				fetch: vi.fn()
+				fetch: vi.fn(),
+				parent: vi.fn()
 			} as any)
 		).rejects.toMatchObject({ status: 404 });
 	});
@@ -126,7 +129,8 @@ describe('/playlists/[playlistId] load', () => {
 			load({
 				params: { playlistId: 'pl-1' },
 				url: new URL('http://localhost/playlists/pl-1'),
-				fetch: fetchMock
+				fetch: fetchMock,
+				parent: vi.fn()
 			} as any)
 		).rejects.toMatchObject({
 			status: 307,

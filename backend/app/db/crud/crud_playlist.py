@@ -3,6 +3,7 @@ from typing import Any, Literal, overload
 from sqlalchemy import select, func, delete, insert, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.playlist import Playlist
+from ..models.video import Video
 from ..models.association_tables import playlist_videos
 from .crud_base import (
     base_get,
@@ -159,6 +160,61 @@ async def count_playlists(
 
     result = await db.execute(query)
     return result.scalar() or 0
+
+
+async def get_playlist_summaries(
+    db: AsyncSession, owner_id: str, playlist_ids: list[str]
+) -> dict[str, tuple[int, str | None]]:
+    if not playlist_ids:
+        return {}
+
+    counts_result = await db.execute(
+        select(
+            playlist_videos.c.playlist_id,
+            func.count().label("total_videos"),
+        )
+        .where(
+            playlist_videos.c.owner_id == owner_id,
+            playlist_videos.c.playlist_id.in_(playlist_ids),
+        )
+        .group_by(playlist_videos.c.playlist_id)
+    )
+    counts = {playlist_id: int(total) for playlist_id, total in counts_result.all()}
+
+    ranked = (
+        select(
+            playlist_videos.c.playlist_id.label("playlist_id"),
+            Video.thumbnail_url.label("thumbnail_url"),
+            func.row_number()
+            .over(
+                partition_by=playlist_videos.c.playlist_id,
+                order_by=playlist_videos.c.position.asc(),
+            )
+            .label("row_number"),
+        )
+        .join(
+            Video,
+            (Video.owner_id == playlist_videos.c.owner_id)
+            & (Video.id == playlist_videos.c.video_id),
+        )
+        .where(
+            playlist_videos.c.owner_id == owner_id,
+            playlist_videos.c.playlist_id.in_(playlist_ids),
+        )
+        .subquery()
+    )
+    thumbnails_result = await db.execute(
+        select(ranked.c.playlist_id, ranked.c.thumbnail_url).where(
+            ranked.c.row_number == 1
+        )
+    )
+    thumbnails: dict[str, str | None] = {
+        str(row.playlist_id): row.thumbnail_url for row in thumbnails_result.all()
+    }
+    return {
+        playlist_id: (counts.get(playlist_id, 0), thumbnails.get(playlist_id))
+        for playlist_id in playlist_ids
+    }
 
 
 async def create_playlist(db: AsyncSession, playlist: Playlist) -> Playlist:

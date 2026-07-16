@@ -47,11 +47,22 @@ def test_persistent_database_mode_checks_and_recycles_connections(monkeypatch) -
     assert "poolclass" not in kwargs
 
 
+def test_fluid_database_mode_uses_a_small_bounded_pool(monkeypatch) -> None:
+    monkeypatch.setattr(session.settings, "DATABASE_POOL_MODE", "fluid")
+
+    kwargs = session.engine_kwargs_for_runtime()
+    assert kwargs["pool_pre_ping"] is True
+    assert kwargs["pool_recycle"] == 300
+    assert kwargs["pool_size"] == 2
+    assert kwargs["max_overflow"] == 0
+    assert kwargs["pool_timeout"] == 10
+
+
 def test_vercel_configuration_has_daily_maintenance() -> None:
     backend_root = Path(__file__).resolve().parents[2]
     configured = json.loads((backend_root / "vercel.json").read_text())
 
-    assert configured["regions"] == ["fra1"]
+    assert configured["regions"] == ["iad1"]
     assert "functions" not in configured
     assert configured["crons"] == [
         {"path": "/internal/demo/maintenance", "schedule": "0 4 * * *"}

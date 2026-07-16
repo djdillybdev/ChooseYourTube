@@ -14,6 +14,18 @@ export class VideosAPI {
 		return this.client.get<PaginatedResponse<VideoOut>>('/videos/', filters);
 	}
 
+	async listByIds(ids: string[]): Promise<VideoOut[]> {
+		const uniqueIds = [...new Set(ids)];
+		const chunks: string[][] = [];
+		for (let index = 0; index < uniqueIds.length; index += 200) {
+			chunks.push(uniqueIds.slice(index, index + 200));
+		}
+		const responses = await Promise.all(
+			chunks.map((chunk) => this.list({ video_ids: chunk.join(','), limit: chunk.length }))
+		);
+		return responses.flatMap((response) => response.items);
+	}
+
 	/**
 	 * Get a single video by ID
 	 */

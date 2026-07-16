@@ -52,6 +52,7 @@ export interface VideoFilters extends Record<string, unknown> {
 	is_watched?: boolean;
 	is_short?: boolean;
 	channel_id?: string;
+	video_ids?: string;
 	tag_id?: string;
 	published_after?: string;
 	published_before?: string;

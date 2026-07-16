@@ -80,7 +80,12 @@ describe('channels/[id] load', () => {
 		const fetchMock = vi.fn();
 		const url = new URL('http://localhost/channels/ch-1?page=2&pageSize=12&q=svelte');
 
-		const result = await load({ params: { id: 'ch-1' }, url, fetch: fetchMock } as any);
+		const result = await load({
+			params: { id: 'ch-1' },
+			url,
+			fetch: fetchMock,
+			parent: vi.fn()
+		} as any);
 
 		expect(parseVideoFilterQueryMock).toHaveBeenCalledWith(url, { forcedChannelId: 'ch-1' });
 		expect(channelGetMock).toHaveBeenCalledWith('ch-1');
@@ -107,7 +112,7 @@ describe('channels/[id] load', () => {
 		const url = new URL('http://localhost/channels/ch-1?q=x');
 
 		await expect(
-			load({ params: { id: 'ch-1' }, url, fetch: fetchMock } as any)
+			load({ params: { id: 'ch-1' }, url, fetch: fetchMock, parent: vi.fn() } as any)
 		).rejects.toMatchObject({
 			status: 307,
 			location: '/login?next=%2Fchannels%2Fch-1%3Fq%3Dx'
@@ -123,7 +128,7 @@ describe('channels/[id] load', () => {
 		const url = new URL('http://localhost/channels/ch-missing');
 
 		await expect(
-			load({ params: { id: 'ch-missing' }, url, fetch: fetchMock } as any)
+			load({ params: { id: 'ch-missing' }, url, fetch: fetchMock, parent: vi.fn() } as any)
 		).rejects.toMatchObject({
 			status: 404,
 			message: 'Channel not found'

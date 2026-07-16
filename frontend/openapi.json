@@ -38,6 +38,43 @@
 				"title": "AccountDeleteRequest",
 				"type": "object"
 			},
+			"AppBootstrapOut": {
+				"properties": {
+					"channels": {
+						"items": {
+							"$ref": "#/components/schemas/ChannelOut"
+						},
+						"title": "Channels",
+						"type": "array"
+					},
+					"current_user": {
+						"$ref": "#/components/schemas/UserRead"
+					},
+					"folders": {
+						"items": {
+							"$ref": "#/components/schemas/FolderOut"
+						},
+						"title": "Folders",
+						"type": "array"
+					},
+					"runtime": {
+						"$ref": "#/components/schemas/RuntimeMetadataOut"
+					},
+					"tags": {
+						"items": {
+							"$ref": "#/components/schemas/TagOut"
+						},
+						"title": "Tags",
+						"type": "array"
+					},
+					"watch_later": {
+						"$ref": "#/components/schemas/PlaylistDetailOut"
+					}
+				},
+				"required": ["current_user", "folders", "channels", "tags", "watch_later", "runtime"],
+				"title": "AppBootstrapOut",
+				"type": "object"
+			},
 			"BearerResponse": {
 				"properties": {
 					"access_token": {
@@ -1173,6 +1210,17 @@
 						"title": "Name",
 						"type": "string"
 					},
+					"preview_thumbnail_url": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Preview Thumbnail Url"
+					},
 					"source_channel_id": {
 						"anyOf": [
 							{
@@ -1236,6 +1284,11 @@
 							}
 						],
 						"title": "Thumbnail Url"
+					},
+					"total_videos": {
+						"default": 0,
+						"title": "Total Videos",
+						"type": "integer"
 					}
 				},
 				"required": [
@@ -1317,6 +1370,61 @@
 					}
 				},
 				"title": "PlaylistUpdate",
+				"type": "object"
+			},
+			"RuntimeFeaturesOut": {
+				"properties": {
+					"background_jobs": {
+						"title": "Background Jobs",
+						"type": "boolean"
+					},
+					"demo_login": {
+						"title": "Demo Login",
+						"type": "boolean"
+					},
+					"registration": {
+						"title": "Registration",
+						"type": "boolean"
+					},
+					"subscription_imports": {
+						"title": "Subscription Imports",
+						"type": "boolean"
+					},
+					"youtube_oauth": {
+						"title": "Youtube Oauth",
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"registration",
+					"background_jobs",
+					"youtube_oauth",
+					"demo_login",
+					"subscription_imports"
+				],
+				"title": "RuntimeFeaturesOut",
+				"type": "object"
+			},
+			"RuntimeMetadataOut": {
+				"properties": {
+					"features": {
+						"$ref": "#/components/schemas/RuntimeFeaturesOut"
+					},
+					"mode": {
+						"title": "Mode",
+						"type": "string"
+					},
+					"name": {
+						"title": "Name",
+						"type": "string"
+					},
+					"version": {
+						"title": "Version",
+						"type": "string"
+					}
+				},
+				"required": ["name", "version", "mode", "features"],
+				"title": "RuntimeMetadataOut",
 				"type": "object"
 			},
 			"SessionLoginRequest": {
@@ -2303,6 +2411,100 @@
 				},
 				"summary": "Root",
 				"tags": ["Metadata"]
+			}
+		},
+		"/app/bootstrap": {
+			"get": {
+				"operationId": "get_app_bootstrap_app_bootstrap_get",
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AppBootstrapOut"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Get App Bootstrap",
+				"tags": ["Application"]
 			}
 		},
 		"/auth/jwt/login": {
@@ -8708,6 +8910,24 @@
 							"description": "Filter by channel ID (single ID or comma-separated list)",
 							"examples": ["ch001", "ch001,ch002,ch003"],
 							"title": "Channel Id"
+						}
+					},
+					{
+						"description": "Filter by a comma-separated list of up to 200 video IDs",
+						"in": "query",
+						"name": "video_ids",
+						"required": false,
+						"schema": {
+							"anyOf": [
+								{
+									"type": "string"
+								},
+								{
+									"type": "null"
+								}
+							],
+							"description": "Filter by a comma-separated list of up to 200 video IDs",
+							"title": "Video Ids"
 						}
 					},
 					{

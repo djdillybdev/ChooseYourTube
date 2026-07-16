@@ -3,15 +3,14 @@ import type { VideoOut } from '$lib/types/api';
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async ({ fetch, url }) => {
+export const load: PageLoad = async ({ fetch, url, parent }) => {
+	await parent();
 	const api = createScopedAPI(fetch);
 	try {
 		const playlist = await api.playlists.getWatchLater();
-		const results = await Promise.allSettled(playlist.video_ids.map((id) => api.videos.get(id)));
 		const byId = new Map<string, VideoOut>();
-		for (const result of results) {
-			if (result.status === 'fulfilled') byId.set(result.value.id, result.value);
-		}
+		const videos = await api.videos.listByIds(playlist.video_ids);
+		for (const video of videos) byId.set(video.id, video);
 		return {
 			playlist,
 			videos: playlist.video_ids

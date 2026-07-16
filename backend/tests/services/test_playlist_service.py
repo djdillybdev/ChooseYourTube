@@ -106,6 +106,7 @@ async def sample_playlist_with_videos(db_session, sample_channel):
             id=f"SPV{i:03d}",
             channel_id=sample_channel.id,
             title=f"Service PL Video {i}",
+            thumbnail_url=f"https://img.example/SPV{i:03d}.jpg",
             published_at=datetime.now(timezone.utc),
             duration_seconds=300,
             is_short=False,
@@ -165,6 +166,18 @@ class TestGetAllPlaylists:
 
         assert response.total == 1
         assert response.items[0].is_system is True
+
+    async def test_includes_video_count_and_preview_thumbnail(
+        self, db_session, sample_playlist_with_videos
+    ):
+        response = await get_all_playlists(db_session)
+
+        assert response.items[0].id == sample_playlist_with_videos.id
+        assert response.items[0].total_videos == 3
+        assert (
+            response.items[0].preview_thumbnail_url
+            == "https://img.example/SPV001.jpg"
+        )
 
     async def test_empty_result(self, db_session):
         """Should return empty items list when no playlists."""

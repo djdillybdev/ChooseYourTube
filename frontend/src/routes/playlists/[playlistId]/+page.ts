@@ -8,18 +8,14 @@ async function hydratePlaylistVideos(api: ReturnType<typeof createScopedAPI>, vi
 	if (!videoIds.length) return [] as VideoOut[];
 
 	const byId = new Map<string, VideoOut>();
-	const results = await Promise.allSettled(videoIds.map((id) => api.videos.get(id)));
-
-	for (const result of results) {
-		if (result.status === 'fulfilled') {
-			byId.set(result.value.id, result.value);
-		}
-	}
+	const videos = await api.videos.listByIds(videoIds);
+	for (const video of videos) byId.set(video.id, video);
 
 	return videoIds.map((id) => byId.get(id)).filter((video): video is VideoOut => Boolean(video));
 }
 
-export const load: PageLoad = async ({ params, url, fetch }) => {
+export const load: PageLoad = async ({ params, url, fetch, parent }) => {
+	await parent();
 	const api = createScopedAPI(fetch);
 
 	try {

@@ -101,7 +101,12 @@ describe('channels/[id]/playlists load', () => {
 		const url = new URL('http://localhost/channels/ch-1/playlists?page=2&pageSize=12');
 		const fetchMock = vi.fn();
 
-		const result = (await load({ params: { id: 'ch-1' }, url, fetch: fetchMock } as any)) as any;
+		const result = (await load({
+			params: { id: 'ch-1' },
+			url,
+			fetch: fetchMock,
+			parent: vi.fn()
+		} as any)) as any;
 
 		expect(channelGetMock).toHaveBeenCalledWith('ch-1');
 		expect(channelListPlaylistsMock).toHaveBeenCalledWith('ch-1', {
@@ -162,7 +167,12 @@ describe('channels/[id]/playlists load', () => {
 		const url = new URL('http://localhost/channels/ch-1/playlists?page=1&pageSize=24');
 		const fetchMock = vi.fn();
 
-		const result = (await load({ params: { id: 'ch-1' }, url, fetch: fetchMock } as any)) as any;
+		const result = (await load({
+			params: { id: 'ch-1' },
+			url,
+			fetch: fetchMock,
+			parent: vi.fn()
+		} as any)) as any;
 
 		expect(playlistGetMock).toHaveBeenCalledWith('pl-1');
 		expect(videoGetMock).toHaveBeenCalledWith('v-1');
@@ -194,7 +204,12 @@ describe('channels/[id]/playlists load', () => {
 		const url = new URL('http://localhost/channels/ch-1/playlists?page=1');
 		const fetchMock = vi.fn();
 
-		const result = (await load({ params: { id: 'ch-1' }, url, fetch: fetchMock } as any)) as any;
+		const result = (await load({
+			params: { id: 'ch-1' },
+			url,
+			fetch: fetchMock,
+			parent: vi.fn()
+		} as any)) as any;
 
 		expect(result.playlists[0]?.display_thumbnail_url).toBeNull();
 	});
@@ -206,7 +221,7 @@ describe('channels/[id]/playlists load', () => {
 		const url = new URL('http://localhost/channels/ch-1/playlists?page=1');
 
 		await expect(
-			load({ params: { id: 'ch-1' }, url, fetch: fetchMock } as any)
+			load({ params: { id: 'ch-1' }, url, fetch: fetchMock, parent: vi.fn() } as any)
 		).rejects.toMatchObject({
 			status: 307,
 			location: '/login?next=%2Fchannels%2Fch-1%2Fplaylists%3Fpage%3D1'

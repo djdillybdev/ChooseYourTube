@@ -11,7 +11,8 @@ const kinds = new Set([
 	'demo_maintenance'
 ]);
 
-export const load: PageLoad = async ({ fetch, url }) => {
+export const load: PageLoad = async ({ fetch, url, parent }) => {
+	await parent();
 	const api = createScopedAPI(fetch);
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 	const pageSize = 20;

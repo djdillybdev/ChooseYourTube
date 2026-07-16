@@ -21,6 +21,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/app/bootstrap': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get App Bootstrap */
+		get: operations['get_app_bootstrap_app_bootstrap_get'];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/auth/jwt/login': {
 		parameters: {
 			query?: never;
@@ -940,6 +957,18 @@ export interface components {
 			/** Current Password */
 			current_password: string;
 		};
+		/** AppBootstrapOut */
+		AppBootstrapOut: {
+			/** Channels */
+			channels: components['schemas']['ChannelOut'][];
+			current_user: components['schemas']['UserRead'];
+			/** Folders */
+			folders: components['schemas']['FolderOut'][];
+			runtime: components['schemas']['RuntimeMetadataOut'];
+			/** Tags */
+			tags: components['schemas']['TagOut'][];
+			watch_later: components['schemas']['PlaylistDetailOut'];
+		};
 		/** BearerResponse */
 		BearerResponse: {
 			/** Access Token */
@@ -1398,6 +1427,8 @@ export interface components {
 			is_system: boolean;
 			/** Name */
 			name: string;
+			/** Preview Thumbnail Url */
+			preview_thumbnail_url?: string | null;
 			/** Source Channel Id */
 			source_channel_id?: string | null;
 			/** Source Is Active */
@@ -1412,6 +1443,11 @@ export interface components {
 			system_key?: string | null;
 			/** Thumbnail Url */
 			thumbnail_url?: string | null;
+			/**
+			 * Total Videos
+			 * @default 0
+			 */
+			total_videos: number;
 		};
 		/**
 		 * PlaylistSetPosition
@@ -1450,6 +1486,29 @@ export interface components {
 			 * @description New playlist name
 			 */
 			name?: string | null;
+		};
+		/** RuntimeFeaturesOut */
+		RuntimeFeaturesOut: {
+			/** Background Jobs */
+			background_jobs: boolean;
+			/** Demo Login */
+			demo_login: boolean;
+			/** Registration */
+			registration: boolean;
+			/** Subscription Imports */
+			subscription_imports: boolean;
+			/** Youtube Oauth */
+			youtube_oauth: boolean;
+		};
+		/** RuntimeMetadataOut */
+		RuntimeMetadataOut: {
+			features: components['schemas']['RuntimeFeaturesOut'];
+			/** Mode */
+			mode: string;
+			/** Name */
+			name: string;
+			/** Version */
+			version: string;
 		};
 		/** SessionLoginRequest */
 		SessionLoginRequest: {
@@ -1846,6 +1905,89 @@ export interface operations {
 					'application/json': {
 						[key: string]: unknown;
 					};
+				};
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	get_app_bootstrap_app_bootstrap_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['AppBootstrapOut'];
 				};
 			};
 			/** @description Safe API error */
@@ -6850,6 +6992,8 @@ export interface operations {
 				is_short?: boolean | null;
 				/** @description Filter by channel ID (single ID or comma-separated list) */
 				channel_id?: string | null;
+				/** @description Filter by a comma-separated list of up to 200 video IDs */
+				video_ids?: string | null;
 				/** @description Filter by tag ID */
 				tag_id?: string | null;
 				/** @description Filter videos published after this date (ISO 8601 format) */

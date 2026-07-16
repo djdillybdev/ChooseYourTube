@@ -43,6 +43,8 @@ function makePlaylist(overrides: Partial<PlaylistOut>): PlaylistOut {
 		source_is_active: true,
 		source_last_synced_at: null,
 		created_at: '2026-01-01T00:00:00Z',
+		total_videos: 0,
+		preview_thumbnail_url: null,
 		...overrides
 	};
 }

@@ -11,6 +11,23 @@ interface FetchOptions extends RequestInit {
 	cacheTTL?: number;
 }
 
+let browserRefreshPromise: Promise<boolean> | null = null;
+
+async function refreshBrowserSession(fetcher: typeof fetch): Promise<boolean> {
+	if (!browserRefreshPromise) {
+		browserRefreshPromise = fetcher('/api/auth/refresh', {
+			method: 'POST',
+			credentials: 'include'
+		})
+			.then((response) => response.ok)
+			.catch(() => false)
+			.finally(() => {
+				browserRefreshPromise = null;
+			});
+	}
+	return browserRefreshPromise;
+}
+
 /**
  * Delay utility for exponential backoff
  */
@@ -44,8 +61,7 @@ export class APIClient {
 			...fetchOptions
 		} = options;
 
-		const normalizedEndpoint = endpoint.replace(/\/+(\?|$)/, '$1');
-		const url = `${this.baseURL}${normalizedEndpoint}`;
+		const url = `${this.baseURL}${endpoint}`;
 		const method = fetchOptions.method || 'GET';
 		const finalCacheKey = cacheKey || `${method}:${url}`;
 
@@ -61,6 +77,7 @@ export class APIClient {
 
 		// Attempt fetch with retry logic
 		let lastError: Error | null = null;
+		let refreshed = false;
 
 		for (let attempt = 0; attempt < retries; attempt++) {
 			try {
@@ -76,6 +93,13 @@ export class APIClient {
 				// Handle non-2xx responses
 				if (!response.ok) {
 					const errorBody = await response.json().catch(() => ({}));
+					if (response.status === 401 && typeof window !== 'undefined' && !refreshed) {
+						refreshed = true;
+						if (await refreshBrowserSession(this.fetcher)) {
+							attempt -= 1;
+							continue;
+						}
+					}
 					if (response.status === 401 && typeof window !== 'undefined') {
 						const next = `${window.location.pathname}${window.location.search}`;
 						window.location.assign(

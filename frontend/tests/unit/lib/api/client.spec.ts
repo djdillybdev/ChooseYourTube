@@ -14,14 +14,14 @@ describe('APIClient', () => {
 		delete (globalThis as { window?: unknown }).window;
 	});
 
-	it('normalizes endpoint trailing slashes before SvelteKit routing', async () => {
+	it('preserves canonical endpoint trailing slashes', async () => {
 		const fetcher = vi.fn().mockResolvedValue(HttpResponse.json({ items: [] }));
 		const client = new APIClient('http://api.test', fetcher);
 
 		await client.get('/channels/');
 
 		expect(fetcher).toHaveBeenCalledWith(
-			'http://api.test/channels',
+			'http://api.test/channels/',
 			expect.objectContaining({ method: 'GET' })
 		);
 	});
@@ -129,5 +129,37 @@ describe('APIClient', () => {
 		expect(first).toEqual({ items: [{ id: '1' }] });
 		expect(second).toEqual({ items: [{ id: '1' }] });
 		expect(attempts).toBe(1);
+	});
+
+	it('shares one browser refresh across concurrent 401 responses', async () => {
+		(globalThis as { window?: unknown }).window = {
+			location: { pathname: '/inbox', search: '', assign: vi.fn() }
+		};
+		let endpointAttempts = 0;
+		let resolveRefresh!: (response: Response) => void;
+		const refreshResponse = new Promise<Response>((resolve) => {
+			resolveRefresh = resolve;
+		});
+		const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+			if (String(input) === '/api/auth/refresh') return refreshResponse;
+			endpointAttempts += 1;
+			return endpointAttempts <= 2
+				? HttpResponse.json({ code: 'UNAUTHENTICATED' }, { status: 401 })
+				: HttpResponse.json({ ok: true });
+		});
+		const client = new APIClient('http://api.test', fetcher as typeof fetch);
+
+		const first = client.get('/videos/');
+		const second = client.get('/channels/');
+		await vi.waitFor(() => {
+			expect(fetcher).toHaveBeenCalledWith(
+				'/api/auth/refresh',
+				expect.objectContaining({ method: 'POST' })
+			);
+		});
+		resolveRefresh(new Response(null, { status: 200 }));
+
+		await expect(Promise.all([first, second])).resolves.toEqual([{ ok: true }, { ok: true }]);
+		expect(fetcher.mock.calls.filter(([url]) => url === '/api/auth/refresh')).toHaveLength(1);
 	});
 });

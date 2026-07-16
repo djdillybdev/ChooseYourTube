@@ -386,7 +386,9 @@ async def get_videos(
         )
         # Use a subquery with GROUP BY Video.id to deduplicate
         # instead of DISTINCT, since we need to order by _rank
-        ranked_query = ranked_query.group_by(Video.id)
+        # PostgreSQL only treats the remaining Video columns as functionally
+        # dependent when the complete composite primary key is grouped.
+        ranked_query = ranked_query.group_by(Video.owner_id, Video.id)
         ranked_query = ranked_query.order_by(func.max(rank_label).desc())
 
         # Apply pagination

@@ -19,6 +19,7 @@ from app.db.session import sessionmanager
 from app.routers import (
     accounts,
     auth_session,
+    bootstrap,
     channels,
     demo_auth,
     demo_maintenance,
@@ -91,6 +92,7 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
     application.add_middleware(RequestContextMiddleware)
 
     application.include_router(channels.router)
+    application.include_router(bootstrap.router)
     application.include_router(videos.router)
     application.include_router(folders.router)
     application.include_router(tags.router)

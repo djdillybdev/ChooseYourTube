@@ -21,7 +21,8 @@ describe('settings page load', () => {
 	it('loads synchronization activity and quota status', async () => {
 		const result = await load({
 			fetch: vi.fn(),
-			url: new URL('http://localhost/settings?status=failed')
+			url: new URL('http://localhost/settings?status=failed'),
+			parent: vi.fn()
 		} as never);
 		expect(list).toHaveBeenCalledWith({
 			status: 'failed',

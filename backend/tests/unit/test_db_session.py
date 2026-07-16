@@ -273,6 +273,7 @@ class TestGetDbSession:
             session = await gen.__anext__()
 
             assert session == mock_session
+            mock_session.connection.assert_awaited_once()
 
             # Clean up generator
             try:

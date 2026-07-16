@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextvars
 import json
 import logging
+import os
 import sys
 import time
 import uuid
@@ -16,6 +17,7 @@ from starlette.responses import Response
 request_id_context: contextvars.ContextVar[str] = contextvars.ContextVar(
     "request_id", default="-"
 )
+_cold_start = True
 
 _STANDARD_LOG_FIELDS = {
     "name",
@@ -57,6 +59,9 @@ _ALLOWED_EXTRA_FIELDS = {
     "items_updated",
     "items_skipped",
     "items_failed",
+    "db_checkout_ms",
+    "region",
+    "cold_start",
 }
 
 
@@ -99,9 +104,13 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
+        global _cold_start
+
         request_id = _request_id(request.headers.get("X-Request-ID"))
         token = request_id_context.set(request_id)
         request.state.request_id = request_id
+        cold_start = _cold_start
+        _cold_start = False
         started = time.perf_counter()
         try:
             response = await call_next(request)
@@ -113,6 +122,8 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
                     "path": request.url.path,
                     "status": response.status_code,
                     "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+                    "region": os.getenv("VERCEL_REGION", os.getenv("AWS_REGION", "local")),
+                    "cold_start": cold_start,
                 },
             )
             return response

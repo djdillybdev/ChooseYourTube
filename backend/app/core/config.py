@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     APP_MODE: Literal["full", "demo"] = "full"
 
     DATABASE_URL: str
-    DATABASE_POOL_MODE: Literal["persistent", "serverless"] = "persistent"
+    DATABASE_POOL_MODE: Literal["persistent", "serverless", "fluid"] = "persistent"
     REDIS_URL: str | None = None
     API_ORIGIN: str = "http://localhost:5173"
     API_CORS_ORIGINS: str | None = None

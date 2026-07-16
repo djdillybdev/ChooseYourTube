@@ -1,4 +1,6 @@
 import contextlib
+import logging
+import time
 from typing import Any, AsyncIterator
 
 from ..core.config import settings
@@ -82,6 +84,10 @@ def engine_kwargs_for_runtime() -> dict[str, Any]:
     else:
         kwargs["pool_pre_ping"] = True
         kwargs["pool_recycle"] = 300
+        if settings.DATABASE_POOL_MODE == "fluid":
+            kwargs["pool_size"] = 2
+            kwargs["max_overflow"] = 0
+            kwargs["pool_timeout"] = 10
     return kwargs
 
 
@@ -92,4 +98,12 @@ sessionmanager = DatabaseSessionManager(
 
 async def get_db_session():
     async with sessionmanager.session() as session:
+        started = time.perf_counter()
+        await session.connection()
+        logging.getLogger("chooseyourtube.database").info(
+            "database_checkout_completed",
+            extra={
+                "db_checkout_ms": round((time.perf_counter() - started) * 1000, 2)
+            },
+        )
         yield session

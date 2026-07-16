@@ -58,14 +58,15 @@ docker compose --env-file .env down --volumes
 
 ## Vercel and Neon recruiter demo
 
-Use a Neon project in AWS Europe (Frankfurt) and two Vercel projects connected to this repository:
+The recruiter demo currently uses a Neon project in AWS US East (Northern Virginia). Keep both
+Vercel function projects in Washington, D.C. (`iad1`) so database traffic stays in-region:
 
 | Project | Root directory | Framework/runtime |
 | --- | --- | --- |
 | `chooseyourtube-api` | `backend/` | FastAPI / Python 3.12 |
 | `chooseyourtube-demo` | `frontend/` | SvelteKit |
 
-The backend is configured in `backend/vercel.json` for `fra1`, a 300-second function limit, and the
+The backend is configured in `backend/vercel.json` for `iad1` and the
 daily `0 4 * * *` UTC maintenance request. The frontend selects `adapter-vercel` automatically when
 Vercel sets `VERCEL=1`; Docker continues to use `adapter-node`.
 
@@ -104,7 +105,7 @@ Set these separately for Preview and Production, using the matching Neon branch 
 APP_ENV=production
 APP_MODE=demo
 DATABASE_URL=<pooled async Neon URL>
-DATABASE_POOL_MODE=serverless
+DATABASE_POOL_MODE=fluid
 API_ORIGIN=https://<frontend-alias>.vercel.app
 API_CORS_ORIGINS=https://<frontend-alias>.vercel.app
 AUTH_SECRET=<random 32+ character secret>
@@ -146,10 +147,10 @@ same-origin through SvelteKit's `/api/backend/*` proxy.
    ```bash
    cd backend
    APP_ENV=production APP_MODE=demo \
-   DATABASE_URL='<pooled async URL>' DATABASE_POOL_MODE=serverless \
+   DATABASE_URL='<pooled async URL>' DATABASE_POOL_MODE=fluid \
    AUTH_SECRET='<auth secret>' CRON_SECRET='<cron secret>' \
    DEMO_USER_EMAIL='demo@your-domain.example' \
-   UV_CACHE_DIR=/tmp/chooseyourtube-uv-cache uv run python scripts/seed_demo.py
+   UV_CACHE_DIR=/tmp/chooseyourtube-uv-cache uv run python -m scripts.seed_demo
    ```
 
 5. Redeploy/promote the backend, then frontend. Do not run migrations or seeding as a Vercel build

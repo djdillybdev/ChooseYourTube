@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
 	channelGetMock,
 	playlistGetMock,
-	videoGetMock,
+	videoListByIdsMock,
 	createScopedAPIMock,
 	redirectMock,
 	errorMock,
@@ -22,7 +22,7 @@ const {
 	return {
 		channelGetMock: vi.fn(),
 		playlistGetMock: vi.fn(),
-		videoGetMock: vi.fn(),
+		videoListByIdsMock: vi.fn(),
 		createScopedAPIMock: vi.fn(),
 		redirectMock: vi.fn((status: number, location: string) => {
 			const err = new Error('redirect') as Error & { status: number; location: string };
@@ -55,7 +55,7 @@ describe('channels/[id]/playlists/[playlistId] load', () => {
 	beforeEach(() => {
 		channelGetMock.mockReset();
 		playlistGetMock.mockReset();
-		videoGetMock.mockReset();
+		videoListByIdsMock.mockReset();
 		createScopedAPIMock.mockReset();
 		redirectMock.mockClear();
 		errorMock.mockClear();
@@ -63,7 +63,7 @@ describe('channels/[id]/playlists/[playlistId] load', () => {
 		createScopedAPIMock.mockReturnValue({
 			channels: { get: channelGetMock },
 			playlists: { get: playlistGetMock },
-			videos: { get: videoGetMock }
+			videos: { listByIds: videoListByIdsMock }
 		});
 	});
 
@@ -76,25 +76,24 @@ describe('channels/[id]/playlists/[playlistId] load', () => {
 			video_ids: ['v1', 'v2', 'v3'],
 			total_videos: 3
 		});
-		videoGetMock.mockImplementation((id: string) => {
-			if (id === 'v2') {
-				return Promise.reject(new Error('missing'));
-			}
-			return Promise.resolve({ id, title: `Video ${id}` });
-		});
+		videoListByIdsMock.mockResolvedValue([
+			{ id: 'v3', title: 'Video v3' },
+			{ id: 'v1', title: 'Video v1' }
+		]);
 
 		const url = new URL('http://localhost/channels/ch-1/playlists/pl-1?page=1&pageSize=3');
 		const result = (await load({
 			params: { id: 'ch-1', playlistId: 'pl-1' },
 			url,
-			fetch: vi.fn()
+			fetch: vi.fn(),
+			parent: vi.fn()
 		} as any)) as any;
 
 		expect(result.videos).toEqual([
 			{ id: 'v1', title: 'Video v1' },
 			{ id: 'v3', title: 'Video v3' }
 		]);
-		expect(videoGetMock).toHaveBeenCalledTimes(3);
+		expect(videoListByIdsMock).toHaveBeenCalledWith(['v1', 'v2', 'v3']);
 	});
 
 	it('logs out and redirects on API 401', async () => {
@@ -112,7 +111,8 @@ describe('channels/[id]/playlists/[playlistId] load', () => {
 			load({
 				params: { id: 'ch-1', playlistId: 'pl-1' },
 				url,
-				fetch: fetchMock
+				fetch: fetchMock,
+				parent: vi.fn()
 			} as any)
 		).rejects.toMatchObject({
 			status: 307,

@@ -91,6 +91,8 @@ class PlaylistOut(BaseSchema):
     source_is_active: bool
     source_last_synced_at: datetime | None = None
     created_at: datetime
+    total_videos: int = 0
+    preview_thumbnail_url: str | None = None
 
     model_config = {"from_attributes": True}
 

@@ -28,7 +28,8 @@ async function listAllNonSystemPlaylists(
 	return playlists;
 }
 
-export const load: PageLoad = async ({ url, fetch }) => {
+export const load: PageLoad = async ({ url, fetch, parent }) => {
+	await parent();
 	const api = createScopedAPI(fetch);
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 	const pageSize = Number(url.searchParams.get('pageSize')) || 24;
@@ -40,21 +41,11 @@ export const load: PageLoad = async ({ url, fetch }) => {
 		const offset = (page - 1) * pageSize;
 		const pagedPlaylists = manualPlaylists.slice(offset, offset + pageSize);
 
-		const cards = await Promise.all(
-			pagedPlaylists.map(async (playlist): Promise<PlaylistCard> => {
-				const detail = await api.playlists.get(playlist.id);
-				let display_thumbnail_url = playlist.thumbnail_url ?? null;
-
-				if (!display_thumbnail_url && detail.video_ids.length > 0) {
-					const firstVideo = await api.videos.get(detail.video_ids[0]);
-					display_thumbnail_url = firstVideo.thumbnail_url ?? null;
-				}
-
-				return {
-					...playlist,
-					total_videos: detail.total_videos,
-					display_thumbnail_url
-				};
+		const cards = pagedPlaylists.map(
+			(playlist): PlaylistCard => ({
+				...playlist,
+				total_videos: playlist.total_videos,
+				display_thumbnail_url: playlist.preview_thumbnail_url ?? null
 			})
 		);
 

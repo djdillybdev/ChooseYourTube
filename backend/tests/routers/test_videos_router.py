@@ -65,6 +65,46 @@ class TestVideosRouter:
         data = data["items"]
         assert len(data) == 2
 
+    async def test_list_videos_filters_by_video_ids(self, test_client, db_session):
+        from app.db.models.channel import Channel
+        from app.db.models.video import Video
+
+        channel = Channel(
+            id="UC_video_ids",
+            handle="videoids",
+            title="Video IDs",
+            uploads_playlist_id="UU_video_ids",
+        )
+        db_session.add(channel)
+        db_session.add_all(
+            [
+                Video(
+                    id=f"batch_{index}",
+                    channel_id=channel.id,
+                    title=f"Batch {index}",
+                    published_at=datetime.now(timezone.utc),
+                )
+                for index in range(3)
+            ]
+        )
+        await db_session.commit()
+
+        response = test_client.get("/videos/?video_ids=batch_0,batch_2,batch_0")
+
+        assert response.status_code == 200
+        assert response.json()["total"] == 2
+        assert {item["id"] for item in response.json()["items"]} == {
+            "batch_0",
+            "batch_2",
+        }
+
+    async def test_list_videos_rejects_more_than_200_video_ids(self, test_client):
+        video_ids = ",".join(f"video_{index}" for index in range(201))
+
+        response = test_client.get(f"/videos/?video_ids={video_ids}")
+
+        assert response.status_code == 400
+
     async def test_list_videos_with_pagination(self, test_client, db_session):
         """Test GET /videos/ with pagination parameters."""
         from app.db.models.channel import Channel

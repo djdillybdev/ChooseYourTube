@@ -7,6 +7,10 @@ Tests dynamic filtering, pagination, ordering, and edge cases using TDD approach
 import pytest
 import pytest_asyncio
 from datetime import datetime, timezone, timedelta
+from unittest.mock import AsyncMock, MagicMock
+
+from sqlalchemy.dialects import postgresql
+
 from app.db.crud.crud_video import get_videos, count_videos
 from app.db.models.video import Video
 from app.db.models.tag import Tag
@@ -718,6 +722,26 @@ class TestGetVideosRelevanceOrdering:
         # Should return Python videos (SQLite falls back to published_at)
         assert len(results) == 2
         assert all("python" in v.title.lower() for v in results)
+
+    async def test_postgresql_relevance_groups_complete_composite_key(self):
+        """PostgreSQL search SQL must group both columns in Video's primary key."""
+        db = AsyncMock()
+        db.bind = MagicMock()
+        db.bind.dialect.name = "postgresql"
+        result = MagicMock()
+        result.all.return_value = []
+        db.execute.return_value = result
+
+        await get_videos(
+            db,
+            owner_id="user-1",
+            q="Python",
+            order_by="relevance",
+        )
+
+        statement = db.execute.await_args.args[0]
+        sql = str(statement.compile(dialect=postgresql.dialect()))
+        assert "GROUP BY videos.owner_id, videos.id" in sql
 
     async def test_relevance_order_by_without_q(self, db_session, sample_videos):
         """order_by='relevance' without q should fall back to published_at."""

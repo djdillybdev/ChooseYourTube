@@ -19,6 +19,18 @@ VALID_ORDER_BY = {
 router = APIRouter(prefix="/videos", tags=["Videos"])
 
 
+def _parse_comma_separated_ids(value: str | None, param_name: str) -> list[str] | None:
+    if value is None:
+        return None
+    values = list(dict.fromkeys(item.strip() for item in value.split(",") if item.strip()))
+    if not values or len(values) > 200:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{param_name} must contain between 1 and 200 unique IDs",
+        )
+    return values
+
+
 def _parse_iso_date(value: str, param_name: str) -> datetime:
     """Parse an ISO 8601 date string, raising 400 on failure."""
     try:
@@ -43,6 +55,10 @@ async def list_videos(
         None,
         description="Filter by channel ID (single ID or comma-separated list)",
         examples=["ch001", "ch001,ch002,ch003"],
+    ),
+    video_ids: str | None = Query(
+        None,
+        description="Filter by a comma-separated list of up to 200 video IDs",
     ),
     tag_id: str | None = Query(None, description="Filter by tag ID"),
     published_after: str | None = Query(
@@ -118,6 +134,7 @@ async def list_videos(
         is_watched=is_watched,
         is_short=is_short,
         channel_id=parsed_channel_id,
+        video_ids=_parse_comma_separated_ids(video_ids, "video_ids"),
         tag_id=tag_id,
         published_after=parsed_after,
         published_before=parsed_before,

@@ -66,7 +66,7 @@ describe('inbox load', () => {
 		const fetchMock = vi.fn();
 		const url = new URL('http://localhost/inbox?page=2&pageSize=12&q=test');
 
-		const result = await load({ url, fetch: fetchMock } as any);
+		const result = await load({ url, fetch: fetchMock, parent: vi.fn() } as any);
 
 		expect(invalidateMock).toHaveBeenCalledWith('videos/');
 		expect(parseVideoFilterQueryMock).toHaveBeenCalledWith(url, { defaultWatched: false });
@@ -90,7 +90,7 @@ describe('inbox load', () => {
 		const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
 		const url = new URL('http://localhost/inbox?page=3');
 
-		await expect(load({ url, fetch: fetchMock } as any)).rejects.toMatchObject({
+		await expect(load({ url, fetch: fetchMock, parent: vi.fn() } as any)).rejects.toMatchObject({
 			status: 307,
 			location: '/login?next=%2Finbox%3Fpage%3D3'
 		});
@@ -103,7 +103,7 @@ describe('inbox load', () => {
 		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 		const url = new URL('http://localhost/inbox?page=-1&pageSize=48');
 
-		const result = await load({ url, fetch: fetchMock } as any);
+		const result = await load({ url, fetch: fetchMock, parent: vi.fn() } as any);
 
 		expect(result).toEqual({
 			videos: [],

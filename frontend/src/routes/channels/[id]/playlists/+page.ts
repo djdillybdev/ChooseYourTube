@@ -29,7 +29,8 @@ async function resolvePlaylistCardThumbnail(
 	return firstVideo.thumbnail_url ?? null;
 }
 
-export const load: PageLoad = async ({ params, url, fetch }) => {
+export const load: PageLoad = async ({ params, url, fetch, parent }) => {
+	await parent();
 	const api = createScopedAPI(fetch);
 	const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
 	const pageSize = Number(url.searchParams.get('pageSize')) || 24;

@@ -1,5 +1,5 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { backendFetchFromEvent, refreshAuthSession } from '$lib/server/auth';
+import { backendFetchFromEvent } from '$lib/server/auth';
 
 const ALLOWED_PREFIXES = [
 	'videos',
@@ -17,6 +17,7 @@ function isAllowed(path: string): boolean {
 }
 
 async function proxy(event: RequestEvent, method: string) {
+	const startedAt = performance.now();
 	const rawPath = event.url.pathname.replace(/^\/api\/backend\/?/, '');
 	const normalizedPath = rawPath.replace(/\/+$/, '');
 
@@ -31,25 +32,26 @@ async function proxy(event: RequestEvent, method: string) {
 			: new Blob([await event.request.arrayBuffer()]);
 	const contentType = event.request.headers.get('content-type');
 
-	let response = await backendFetchFromEvent(event, `/${rawPath}${query}`, {
+	const response = await backendFetchFromEvent(event, `/${rawPath}${query}`, {
 		method,
 		headers: contentType ? { 'Content-Type': contentType } : undefined,
 		body
 	});
 
-	if (response.status === 401) {
-		const refreshed = await refreshAuthSession(event);
-		if (refreshed) {
-			response = await backendFetchFromEvent(event, `/${rawPath}${query}`, {
-				method,
-				headers: contentType ? { 'Content-Type': contentType } : undefined,
-				body
-			});
-		}
-	}
-
 	const headers = new Headers(response.headers);
 	headers.delete('content-length');
+	const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
+	headers.append('Server-Timing', `backend;dur=${durationMs}`);
+	console.info(
+		JSON.stringify({
+			message: 'backend_proxy_completed',
+			method,
+			path: `/${normalizedPath}`,
+			status: response.status,
+			duration_ms: durationMs,
+			region: process.env.VERCEL_REGION ?? process.env.AWS_REGION ?? 'local'
+		})
+	);
 
 	return new Response(response.body, {
 		status: response.status,

@@ -79,9 +79,21 @@ async def get_all_playlists(
     if not isinstance(playlists, list):
         playlists = [] if playlists is None else [playlists]
 
+    typed_playlists = cast(list[Playlist], playlists)
+    summaries = await crud_playlist.get_playlist_summaries(
+        db_session, owner_id, [playlist.id for playlist in typed_playlists]
+    )
+    items = []
+    for playlist in typed_playlists:
+        total_videos, first_thumbnail = summaries.get(playlist.id, (0, None))
+        output = PlaylistOut.model_validate(playlist)
+        output.total_videos = total_videos
+        output.preview_thumbnail_url = playlist.thumbnail_url or first_thumbnail
+        items.append(output)
+
     return PaginatedResponse[PlaylistOut](
         total=total,
-        items=cast(list[PlaylistOut], playlists),
+        items=items,
         limit=limit,
         offset=offset,
         has_more=(offset + limit) < total,
