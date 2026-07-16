@@ -3,7 +3,6 @@
  */
 interface FilterState extends Record<string, unknown> {
 	is_watched: boolean | undefined;
-	is_favorited: boolean | undefined;
 	is_short: boolean | undefined;
 	channel_id: string | undefined;
 	tag_id: string | undefined;
@@ -18,7 +17,6 @@ interface FilterState extends Record<string, unknown> {
  */
 const defaultState: FilterState = {
 	is_watched: false,
-	is_favorited: undefined,
 	is_short: undefined,
 	channel_id: undefined,
 	tag_id: undefined,
@@ -84,16 +82,6 @@ export function setWatchedFilter(value: boolean | undefined) {
 	filterState.update((state) => ({
 		...state,
 		is_watched: value
-	}));
-}
-
-/**
- * Set favorited filter
- */
-export function setFavoritedFilter(value: boolean | undefined) {
-	filterState.update((state) => ({
-		...state,
-		is_favorited: value
 	}));
 }
 

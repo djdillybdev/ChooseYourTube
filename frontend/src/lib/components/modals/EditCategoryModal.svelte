@@ -5,6 +5,7 @@
 	import { api } from '$lib/api';
 	import type { CategoryOut, ChannelOut } from '$lib/types/api';
 	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
+	import CategoryIconPicker from '$lib/components/ui/CategoryIconPicker.svelte';
 
 	interface Props {
 		category: CategoryOut;
@@ -14,6 +15,7 @@
 
 	let { category, channels, onClose }: Props = $props();
 	let name = $state('');
+	let iconKey = $state<string | null>(null);
 	let selectedChannelIds = $state<string[]>([]);
 	let syncedCategoryId = $state<string | null>(null);
 	let isSubmitting = $state(false);
@@ -24,6 +26,7 @@
 	$effect(() => {
 		if (category.id !== syncedCategoryId) {
 			name = category.name;
+			iconKey = category.icon_key ?? null;
 			selectedChannelIds = [...(category.channel_ids ?? [])];
 			syncedCategoryId = category.id;
 		}
@@ -41,7 +44,10 @@
 		isSubmitting = true;
 		error = null;
 		try {
-			await api.categories.update(category.id, { name: name.trim() });
+			await api.categories.update(category.id, {
+				name: name.trim(),
+				icon_key: iconKey
+			});
 			await api.categories.setChannels(category.id, { channel_ids: selectedChannelIds });
 			await Promise.all([invalidate('app:categories'), invalidate('app:channels')]);
 			onClose();
@@ -88,6 +94,12 @@
 					required
 				/>
 			</label>
+
+			<CategoryIconPicker
+				value={iconKey}
+				disabled={isSubmitting}
+				onChange={(value) => (iconKey = value)}
+			/>
 
 			<fieldset>
 				<legend class="label-text mb-2">Channels</legend>

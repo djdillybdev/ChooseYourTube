@@ -61,14 +61,21 @@ describe('Sidebar', () => {
 		expect(screen.getByRole('button', { name: /edit editable channel/i })).toBeInTheDocument();
 	});
 
-	it('renders playlists navigation link below inbox', async () => {
+	it('renders favorites directly below inbox and before other library links', async () => {
 		render(Sidebar, {
 			categories: [],
 			uncategorizedChannels: [],
 			channels: []
 		});
 
-		expect(screen.getByRole('link', { name: /inbox/i })).toBeInTheDocument();
+		const links = screen.getAllByRole('link');
+		const inboxIndex = links.findIndex((link) => link.textContent?.includes('Inbox'));
+		const favoritesIndex = links.findIndex((link) => link.textContent?.includes('Favorites'));
+		const playlistsIndex = links.findIndex((link) => link.textContent?.includes('Playlists'));
+
+		expect(screen.getByRole('link', { name: /favorites/i })).toHaveAttribute('href', '/favorites');
+		expect(favoritesIndex).toBe(inboxIndex + 1);
+		expect(playlistsIndex).toBeGreaterThan(favoritesIndex);
 		expect(screen.getByRole('link', { name: /playlists/i })).toHaveAttribute('href', '/playlists');
 	});
 
@@ -89,5 +96,33 @@ describe('Sidebar', () => {
 		await expand('uncategorized');
 		expect(screen.getAllByText('Shared Channel')).toHaveLength(2);
 		expect(screen.getAllByText('Loose Channel')).toHaveLength(1);
+	});
+
+	it('renders selected category icons and falls back for missing icons', () => {
+		render(Sidebar, {
+			categories: [
+				{
+					id: 'games',
+					name: 'Games',
+					icon_key: 'gamepad-2',
+					created_at: '2026-01-01T00:00:00Z',
+					channel_ids: []
+				},
+				{
+					id: 'other',
+					name: 'Other',
+					icon_key: 'removed-icon',
+					created_at: '2026-01-01T00:00:00Z',
+					channel_ids: []
+				}
+			],
+			uncategorizedChannels: [],
+			channels: []
+		});
+
+		expect(
+			screen.getByRole('link', { name: 'Games' }).querySelector('.lucide-gamepad-2')
+		).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'Other' }).querySelector('.lucide-list')).toBeTruthy();
 	});
 });

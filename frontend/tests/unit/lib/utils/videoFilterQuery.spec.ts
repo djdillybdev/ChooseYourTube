@@ -12,11 +12,12 @@ describe('parseVideoFilterQuery', () => {
 		expect(result.uiFilters.is_watched).toBe(false);
 	});
 
-	it('parses boolean filters from query', () => {
+	it('parses supported boolean filters and ignores retired video favorites', () => {
 		const result = parse('http://localhost/inbox?is_watched=true&is_favorited=false&is_short=true');
 		expect(result.apiFilters.is_watched).toBe(true);
-		expect(result.apiFilters.is_favorited).toBe(false);
 		expect(result.apiFilters.is_short).toBe(true);
+		expect(result.apiFilters).not.toHaveProperty('is_favorited');
+		expect(result.uiFilters).not.toHaveProperty('is_favorited');
 	});
 
 	it('normalizes invalid sort fields and relevance without search', () => {

@@ -85,6 +85,23 @@ test('video can be saved to and removed from Watch Later', async ({ page, contex
 	await expect(page.getByRole('heading', { name: 'Nothing saved yet' })).toBeVisible();
 });
 
+test('a channel can be favorited while videos cannot', async ({ page, context }) => {
+	await authenticate(context);
+	await page.goto('/channels/UC_portfolio');
+
+	await page.getByRole('button', { name: 'Add Portfolio Channel to favorites' }).click();
+	await page.getByRole('link', { name: 'Favorites' }).click();
+	await expect(page.getByRole('heading', { name: 'Favorites' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Portfolio Channel' })).toBeVisible();
+
+	const videoCard = page.getByRole('group', { name: 'Phase 3 portfolio video' });
+	await videoCard.hover();
+	await expect(videoCard.getByRole('button', { name: /favorites/i })).toHaveCount(0);
+
+	await page.getByRole('button', { name: 'Remove Portfolio Channel from favorites' }).click();
+	await expect(page.getByRole('heading', { name: 'No favorite channels' })).toBeVisible();
+});
+
 test('a channel can be added and browsed', async ({ page, context }) => {
 	await authenticate(context);
 	await page.goto('/inbox');
@@ -107,18 +124,26 @@ test('categories can be created, populated, renamed, and deleted', async ({ page
 
 	await page.getByRole('button', { name: 'New Category' }).click();
 	await page.getByLabel('Category Name').fill('Games');
+	await page.getByRole('radio', { name: 'Gaming' }).click();
 	await page.getByRole('dialog').getByRole('button', { name: 'Create Category' }).click();
-	await page.getByRole('link', { name: 'Games' }).click();
+	const gamesLink = page.getByRole('link', { name: 'Games' });
+	await expect(gamesLink.locator('svg.lucide-gamepad-2')).toBeVisible();
+	await gamesLink.click();
 	await expect(page.getByRole('heading', { name: 'Games' })).toBeVisible();
 
 	await page.getByRole('button', { name: 'Edit category' }).click();
 	const dialog = page.getByRole('dialog');
 	await dialog.getByLabel('Category Name').fill('Gaming');
+	await dialog.getByRole('radio', { name: 'Star' }).click();
 	await dialog.getByLabel('Portfolio Channel').check();
 	await dialog.getByRole('button', { name: 'Save' }).click();
 	await expect(page.getByRole('heading', { name: 'Gaming' })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Gaming' }).locator('svg.lucide-star')).toBeVisible();
 	await expect(
-		page.locator('main').getByRole('link', { name: /Portfolio Channel/ }).first()
+		page
+			.locator('main')
+			.getByRole('link', { name: /Portfolio Channel/ })
+			.first()
 	).toBeVisible();
 
 	await page.getByRole('button', { name: 'Edit category' }).click();
@@ -221,6 +246,7 @@ test('principal pages have no serious or critical axe violations', async ({ page
 	await authenticate(context);
 	for (const path of [
 		'/inbox',
+		'/favorites',
 		'/channels/UC_portfolio',
 		'/watch-later',
 		'/player',

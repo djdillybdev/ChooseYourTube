@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidate } from '$app/navigation';
 	import { api } from '$lib/api';
+	import CategoryIconPicker from '$lib/components/ui/CategoryIconPicker.svelte';
 
 	interface Props {
 		onClose: () => void;
@@ -8,6 +9,7 @@
 
 	let { onClose }: Props = $props();
 	let name = $state('');
+	let iconKey = $state<string | null>(null);
 	let isSubmitting = $state(false);
 	let error = $state<string | null>(null);
 	let dialogElement: HTMLDialogElement;
@@ -19,7 +21,7 @@
 		isSubmitting = true;
 		error = null;
 		try {
-			await api.categories.create({ name: name.trim() });
+			await api.categories.create({ name: name.trim(), icon_key: iconKey });
 			await invalidate('app:categories');
 			onClose();
 		} catch (cause) {
@@ -55,6 +57,11 @@
 					required
 				/>
 			</label>
+			<CategoryIconPicker
+				value={iconKey}
+				disabled={isSubmitting}
+				onChange={(value) => (iconKey = value)}
+			/>
 			{#if error}<div class="alert alert-error" role="alert">{error}</div>{/if}
 			<div class="modal-action">
 				<button type="button" class="btn btn-ghost" onclick={onClose} disabled={isSubmitting}

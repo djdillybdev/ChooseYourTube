@@ -4,6 +4,7 @@
 	import type { CategoryOut, ChannelOut } from '$lib/types/api';
 	import { categoryExpansion } from '$lib/stores/categoryExpansion.svelte';
 	import ChannelTreeItem from './ChannelTreeItem.svelte';
+	import CategoryIcon from '$lib/components/ui/CategoryIcon.svelte';
 
 	interface Props {
 		category?: CategoryOut;
@@ -54,14 +55,7 @@
 				class="flex flex-1 items-center gap-2 rounded px-2 py-1.5 transition-colors"
 				class:bg-base-200={isActive}
 			>
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M4.5 6.75h15M4.5 12h15m-15 5.25h15"
-					/>
-				</svg>
+				<CategoryIcon iconKey={category.icon_key} class="h-5 w-5 shrink-0" />
 				<span class="text-sm">{category.name}</span>
 			</a>
 		{:else}

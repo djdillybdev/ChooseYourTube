@@ -194,6 +194,7 @@ createServer(async (request, response) => {
 		const category = {
 			id: `category-${categories.length + 1}`,
 			name: String(body.name).trim(),
+			icon_key: body.icon_key ?? null,
 			created_at: '2026-07-14T10:00:00Z',
 			channel_ids: []
 		};
@@ -208,7 +209,13 @@ createServer(async (request, response) => {
 	if (categoryMatch && request.method === 'PATCH') {
 		const body = await readBody(request);
 		categories = categories.map((item) =>
-			item.id === categoryMatch[1] ? { ...item, name: String(body.name).trim() } : item
+			item.id === categoryMatch[1]
+				? {
+						...item,
+						name: String(body.name).trim(),
+						icon_key: 'icon_key' in body ? body.icon_key : item.icon_key
+					}
+				: item
 		);
 		return send(
 			response,
@@ -339,6 +346,15 @@ createServer(async (request, response) => {
 			offset: 0,
 			has_more: false
 		});
+	if (path.startsWith('/channels/') && request.method === 'PATCH') {
+		const body = await readBody(request);
+		const channelId = path.slice('/channels/'.length);
+		const existing = channels.find((item) => item.id === channelId);
+		if (!existing) return send(response, 404, {});
+		const updated = { ...existing, ...body };
+		channels = channels.map((item) => (item.id === channelId ? updated : item));
+		return send(response, 200, updated);
+	}
 	if (path.startsWith('/channels/') && request.method === 'GET') {
 		const requestedChannel = channels.find((item) => path === `/channels/${item.id}`);
 		if (requestedChannel) return send(response, 200, requestedChannel);

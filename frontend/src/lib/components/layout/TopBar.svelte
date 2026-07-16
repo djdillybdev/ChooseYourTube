@@ -18,6 +18,7 @@
 	const path = $derived(page.url.pathname);
 	const isVideoListPage = $derived(
 		path === '/inbox' ||
+			path === '/favorites' ||
 			/^\/channels\/[^/]+$/.test(path) ||
 			path.startsWith('/folders/') ||
 			path.startsWith('/categories/')
@@ -36,7 +37,6 @@
 	] as const;
 	const extendedFilterCount = $derived(
 		[
-			uiFilters.is_favorited,
 			uiFilters.is_short,
 			uiFilters.channel_id,
 			uiFilters.tag_id,
@@ -57,10 +57,7 @@
 		});
 	}
 
-	function setBooleanFilter(
-		key: 'is_watched' | 'is_favorited' | 'is_short',
-		value: boolean | undefined
-	) {
+	function setBooleanFilter(key: 'is_watched' | 'is_short', value: boolean | undefined) {
 		updateQuery((params) => {
 			if (value === undefined) {
 				params.delete(key);
@@ -97,7 +94,6 @@
 		updateQuery((params) => {
 			for (const key of [
 				'is_watched',
-				'is_favorited',
 				'is_short',
 				'channel_id',
 				'tag_id',
@@ -208,24 +204,6 @@
 								<option value="true">Watched</option>
 							</select>
 						</div>
-						<label class="pb-1 text-xs text-base-content/60" for="favorite-filter">Favorite</label>
-						<select
-							id="favorite-filter"
-							class="select-bordered select w-full select-sm"
-							value={uiFilters.is_favorited === undefined ? '' : String(uiFilters.is_favorited)}
-							onchange={(e) =>
-								setBooleanFilter(
-									'is_favorited',
-									(e.currentTarget as HTMLSelectElement).value === ''
-										? undefined
-										: (e.currentTarget as HTMLSelectElement).value === 'true'
-								)}
-						>
-							<option value="">Any favorite</option>
-							<option value="true">Favorited</option>
-							<option value="false">Not favorited</option>
-						</select>
-
 						<label class="pb-1 text-xs text-base-content/60" for="length-filter">Length</label>
 						<select
 							id="length-filter"

@@ -11,7 +11,6 @@ const ORDER_DIRECTION_VALUES = new Set(['asc', 'desc']);
 
 export interface VideoFilterQueryState {
 	is_watched: boolean | undefined;
-	is_favorited: boolean | undefined;
 	is_short: boolean | undefined;
 	channel_id: string | undefined;
 	tag_id: string | undefined;
@@ -64,7 +63,6 @@ export function parseVideoFilterQuery(
 	const watchedFromQuery = parseBooleanParam(url.searchParams.get('is_watched'));
 	const is_watched = watchedFromQuery !== undefined ? watchedFromQuery : options.defaultWatched;
 
-	const is_favorited = parseBooleanParam(url.searchParams.get('is_favorited'));
 	const is_short = parseBooleanParam(url.searchParams.get('is_short'));
 
 	const channelFromQuery = url.searchParams.get('channel_id') || undefined;
@@ -94,7 +92,6 @@ export function parseVideoFilterQuery(
 
 	const apiFilters: VideoFilters = {
 		is_watched,
-		is_favorited,
 		is_short,
 		channel_id,
 		tag_id,
@@ -106,7 +103,6 @@ export function parseVideoFilterQuery(
 
 	const uiFilters: VideoFilterQueryState = {
 		is_watched,
-		is_favorited,
 		is_short,
 		channel_id,
 		tag_id,

@@ -12,7 +12,7 @@
 
 	let { videos, channelMap, onPlay, showQueueActions = true }: Props = $props();
 
-	/** Optimistic update for watched / favorite toggles */
+	/** Optimistic update for watched-state changes. */
 	function handleVideoUpdate(updated: VideoOut) {
 		videos = videos.map((v) => (v.id === updated.id ? updated : v));
 	}

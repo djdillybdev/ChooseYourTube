@@ -40,23 +40,6 @@
 		}
 	}
 
-	async function handleToggleFavorite(e: MouseEvent) {
-		e.stopPropagation();
-		if (isUpdating) return;
-
-		isUpdating = true;
-		try {
-			const updated = await api.videos.update(video.id, {
-				is_favorited: !video.is_favorited
-			});
-			onUpdate?.(updated);
-		} catch (error) {
-			console.error('Failed to update favorite status:', error);
-		} finally {
-			isUpdating = false;
-		}
-	}
-
 	async function handlePlay() {
 		let started: boolean;
 		if (onPlay) {
@@ -200,31 +183,6 @@
 									stroke-linecap="round"
 									stroke-linejoin="round"
 									d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-								/>
-							</svg>
-						</button>
-
-						<button
-							class="btn btn-square btn-ghost btn-sm"
-							class:btn-active={video.is_favorited}
-							class:text-warning={video.is_favorited}
-							onclick={handleToggleFavorite}
-							disabled={isUpdating}
-							aria-label={video.is_favorited ? 'Remove from favorites' : 'Add to favorites'}
-							title={video.is_favorited ? 'Remove from favorites' : 'Add to favorites'}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill={video.is_favorited ? 'currentColor' : 'none'}
-								viewBox="0 0 24 24"
-								stroke-width="1.5"
-								stroke="currentColor"
-								class="h-5 w-5"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"
 								/>
 							</svg>
 						</button>

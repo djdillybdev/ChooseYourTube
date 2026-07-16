@@ -54,7 +54,6 @@ export interface PaginatedResponse<T> {
 }
 
 export interface VideoFilters extends Record<string, unknown> {
-	is_favorited?: boolean;
 	is_watched?: boolean;
 	is_short?: boolean;
 	channel_id?: string;

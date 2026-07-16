@@ -8,6 +8,7 @@
 	import { pollSyncRun } from '$lib/utils/syncPolling';
 	import { onDestroy } from 'svelte';
 	import type { SyncRunOut } from '$lib/types/api';
+	import ChannelFavoriteButton from './ChannelFavoriteButton.svelte';
 
 	interface Props {
 		channel: ChannelOut;
@@ -102,6 +103,12 @@
 					{activeRun ? `Refresh ${activeRun.status}` : ''}
 				</div>
 			</div>
+
+			<ChannelFavoriteButton
+				channelId={channel.id}
+				channelTitle={channel.title}
+				isFavorited={channel.is_favorited}
+			/>
 
 			<!-- Edit Button -->
 			<button

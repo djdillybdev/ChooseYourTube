@@ -21,10 +21,13 @@ def make_channel(channel_id: str, owner_id: str = "test-user") -> Channel:
 
 @pytest.mark.asyncio
 async def test_category_crud_and_case_insensitive_uniqueness(test_client, db_session):
-    created = test_client.post("/categories/", json={"name": "  Games  "})
+    created = test_client.post(
+        "/categories/", json={"name": "  Games  ", "icon_key": "gamepad-2"}
+    )
     assert created.status_code == 201
     category = created.json()
     assert category["name"] == "Games"
+    assert category["icon_key"] == "gamepad-2"
     assert category["channel_ids"] == []
 
     duplicate = test_client.post("/categories/", json={"name": "games"})
@@ -35,6 +38,21 @@ async def test_category_crud_and_case_insensitive_uniqueness(test_client, db_ses
     )
     assert renamed.status_code == 200
     assert renamed.json()["name"] == "Favorites"
+    assert renamed.json()["icon_key"] == "gamepad-2"
+
+    reiconed = test_client.patch(
+        f"/categories/{category['id']}",
+        json={"name": "Favorites", "icon_key": "star"},
+    )
+    assert reiconed.status_code == 200
+    assert reiconed.json()["icon_key"] == "star"
+
+    cleared = test_client.patch(
+        f"/categories/{category['id']}",
+        json={"name": "Favorites", "icon_key": None},
+    )
+    assert cleared.status_code == 200
+    assert cleared.json()["icon_key"] is None
 
     listed = test_client.get("/categories/")
     assert listed.status_code == 200
@@ -43,6 +61,18 @@ async def test_category_crud_and_case_insensitive_uniqueness(test_client, db_ses
     deleted = test_client.delete(f"/categories/{category['id']}")
     assert deleted.status_code == 204
     assert test_client.get(f"/categories/{category['id']}").status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_category_icon_key_is_optional_and_validated(test_client, db_session):
+    created = test_client.post("/categories/", json={"name": "No Icon"})
+    assert created.status_code == 201
+    assert created.json()["icon_key"] is None
+
+    malformed = test_client.post(
+        "/categories/", json={"name": "Malformed", "icon_key": "Not an icon!"}
+    )
+    assert malformed.status_code == 422
 
 
 @pytest.mark.asyncio

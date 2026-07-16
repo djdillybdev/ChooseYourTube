@@ -194,6 +194,20 @@
 			},
 			"CategoryCreate": {
 				"properties": {
+					"icon_key": {
+						"anyOf": [
+							{
+								"maxLength": 64,
+								"minLength": 1,
+								"pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Icon Key"
+					},
 					"name": {
 						"maxLength": 255,
 						"minLength": 1,
@@ -219,6 +233,17 @@
 						"title": "Created At",
 						"type": "string"
 					},
+					"icon_key": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Icon Key"
+					},
 					"id": {
 						"title": "Id",
 						"type": "string"
@@ -234,6 +259,20 @@
 			},
 			"CategoryUpdate": {
 				"properties": {
+					"icon_key": {
+						"anyOf": [
+							{
+								"maxLength": 64,
+								"minLength": 1,
+								"pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Icon Key"
+					},
 					"name": {
 						"maxLength": 255,
 						"minLength": 1,

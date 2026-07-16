@@ -16,6 +16,7 @@
 	import SyncStatus from '$lib/components/channel/SyncStatus.svelte';
 	import { pollSyncRun } from '$lib/utils/syncPolling';
 	import type { SyncRunOut } from '$lib/types/api';
+	import ChannelFavoriteButton from '$lib/components/channel/ChannelFavoriteButton.svelte';
 
 	interface Props {
 		data: PageData;
@@ -135,6 +136,11 @@
 
 			<!-- Action buttons: Edit + Refresh -->
 			<div class="flex items-center gap-2">
+				<ChannelFavoriteButton
+					channelId={data.channel.id}
+					channelTitle={data.channel.title}
+					isFavorited={data.channel.is_favorited}
+				/>
 				<button
 					class="btn btn-square btn-ghost btn-sm"
 					onclick={() => openEditChannel(data.channel)}

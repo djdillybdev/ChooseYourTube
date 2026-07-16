@@ -1093,6 +1093,8 @@ export interface components {
 		};
 		/** CategoryCreate */
 		CategoryCreate: {
+			/** Icon Key */
+			icon_key?: string | null;
 			/** Name */
 			name: string;
 		};
@@ -1105,6 +1107,8 @@ export interface components {
 			 * Format: date-time
 			 */
 			created_at: string;
+			/** Icon Key */
+			icon_key?: string | null;
 			/** Id */
 			id: string;
 			/** Name */
@@ -1112,6 +1116,8 @@ export interface components {
 		};
 		/** CategoryUpdate */
 		CategoryUpdate: {
+			/** Icon Key */
+			icon_key?: string | null;
 			/** Name */
 			name: string;
 		};

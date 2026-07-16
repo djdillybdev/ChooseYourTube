@@ -27,6 +27,7 @@ def _to_out(category: Category) -> CategoryOut:
     return CategoryOut(
         id=category.id,
         name=category.name,
+        icon_key=category.icon_key,
         created_at=category.created_at,
         channel_ids=sorted(channel.id for channel in category.channels),
     )
@@ -62,6 +63,7 @@ async def create_category(
         owner_id=owner_id,
         name=payload.name,
         normalized_name=_normalized_name(payload.name),
+        icon_key=payload.icon_key,
     )
     category.channels = []
     try:
@@ -82,6 +84,8 @@ async def update_category(
     category = await get_category(category_id, db, owner_id=owner_id)
     category.name = payload.name
     category.normalized_name = _normalized_name(payload.name)
+    if "icon_key" in payload.model_fields_set:
+        category.icon_key = payload.icon_key
     try:
         await crud_category.save_category(db, category)
     except IntegrityError:

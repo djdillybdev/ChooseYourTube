@@ -34,7 +34,7 @@ export class VideosAPI {
 	}
 
 	/**
-	 * Update video metadata (favorited, watched, short status, tags)
+	 * Update video metadata (watched, short status, tags)
 	 */
 	async update(id: string, data: VideoUpdate): Promise<VideoOut> {
 		const video = await this.client.patch<VideoOut>(`/videos/${id}`, data);
