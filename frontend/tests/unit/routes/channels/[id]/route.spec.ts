@@ -120,8 +120,8 @@ describe('channels/[id] load', () => {
 		expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST' });
 	});
 
-	it('throws 404 via sveltekit error helper for non-auth failures', async () => {
-		channelGetMock.mockRejectedValue(new Error('missing'));
+	it('throws 404 only when the backend reports that the channel is missing', async () => {
+		channelGetMock.mockRejectedValue(new APIErrorMock(404, { detail: 'missing' }));
 		videosListMock.mockResolvedValue({ items: [], total: 0 });
 		const fetchMock = vi.fn();
 		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -135,6 +135,30 @@ describe('channels/[id] load', () => {
 		});
 
 		expect(errorMock).toHaveBeenCalledWith(404, 'Channel not found');
+		consoleErrorSpy.mockRestore();
+	});
+
+	it('reports transport failures as a bad gateway instead of a false 404', async () => {
+		channelGetMock.mockResolvedValue({ id: 'ch-1', title: 'Channel 1' });
+		videosListMock.mockRejectedValue(new TypeError('Decoding failed'));
+		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+		await expect(
+			load({
+				params: { id: 'ch-1' },
+				url: new URL('http://localhost/channels/ch-1'),
+				fetch: vi.fn(),
+				parent: vi.fn()
+			} as any)
+		).rejects.toMatchObject({
+			status: 502,
+			message: 'Channel videos could not be loaded. Please retry.'
+		});
+
+		expect(errorMock).toHaveBeenCalledWith(
+			502,
+			'Channel videos could not be loaded. Please retry.'
+		);
 		consoleErrorSpy.mockRestore();
 	});
 });

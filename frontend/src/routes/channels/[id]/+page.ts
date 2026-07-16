@@ -38,6 +38,9 @@ export const load: PageLoad = async ({ params, url, fetch, parent }) => {
 			throw redirect(307, `/login?next=${encodeURIComponent(url.pathname + url.search)}`);
 		}
 		console.error('Failed to load channel:', err);
-		throw error(404, 'Channel not found');
+		if (err instanceof APIError && err.status === 404) {
+			throw error(404, 'Channel not found');
+		}
+		throw error(502, 'Channel videos could not be loaded. Please retry.');
 	}
 };

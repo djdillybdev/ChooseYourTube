@@ -74,6 +74,9 @@ export const load: PageLoad = async ({ params, url, fetch, parent }) => {
 			throw redirect(307, `/login?next=${encodeURIComponent(url.pathname + url.search)}`);
 		}
 		console.error('Failed to load folder:', err);
-		throw error(404, 'Folder not found');
+		if (err instanceof APIError && err.status === 404) {
+			throw error(404, 'Folder not found');
+		}
+		throw error(502, 'Folder videos could not be loaded. Please retry.');
 	}
 };

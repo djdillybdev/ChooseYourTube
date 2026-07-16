@@ -111,7 +111,7 @@ describe('inbox load', () => {
 			page: 1,
 			pageSize: 48,
 			q: undefined,
-			error: 'boom'
+			error: 'Videos could not be loaded. Please retry.'
 		});
 		consoleErrorSpy.mockRestore();
 	});

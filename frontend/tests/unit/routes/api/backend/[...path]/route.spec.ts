@@ -8,7 +8,11 @@ vi.mock('$lib/server/auth', () => ({
 	backendFetchFromEvent: backendFetchFromEventMock
 }));
 
-import { GET, POST } from '../../../../../../src/routes/api/backend/[...path]/+server';
+import {
+	GET,
+	POST,
+	trailingSlash
+} from '../../../../../../src/routes/api/backend/[...path]/+server';
 
 function makeEvent(path: string, init?: { method?: string; body?: string; contentType?: string }) {
 	const request = new Request(`http://localhost${path}`, {
@@ -36,13 +40,15 @@ describe('backend proxy route', () => {
 		expect(backendFetchFromEventMock).not.toHaveBeenCalled();
 	});
 
-	it('proxies allowed GET requests and strips content-length', async () => {
+	it('proxies collection requests canonically and strips stale representation headers', async () => {
 		backendFetchFromEventMock.mockResolvedValue(
 			new Response(JSON.stringify({ ok: true }), {
 				status: 200,
 				headers: {
 					'content-type': 'application/json',
+					'content-encoding': 'br',
 					'content-length': '18',
+					'transfer-encoding': 'chunked',
 					'x-test': 'pass'
 				}
 			})
@@ -52,11 +58,15 @@ describe('backend proxy route', () => {
 
 		expect(backendFetchFromEventMock).toHaveBeenCalledWith(
 			expect.anything(),
-			'/videos?limit=10',
+			'/videos/?limit=10',
 			expect.objectContaining({ method: 'GET', body: undefined })
 		);
+		expect(trailingSlash).toBe('ignore');
 		expect(response.headers.get('x-test')).toBe('pass');
+		expect(response.headers.get('content-encoding')).toBeNull();
 		expect(response.headers.get('content-length')).toBeNull();
+		expect(response.headers.get('transfer-encoding')).toBeNull();
+		expect(response.headers.get('cache-control')).toBe('private, no-store');
 		expect(response.headers.get('server-timing')).toMatch(/^backend;dur=/);
 		expect(await response.json()).toEqual({ ok: true });
 	});
@@ -78,6 +88,23 @@ describe('backend proxy route', () => {
 		);
 	});
 
+	it('preserves detail paths without appending a trailing slash', async () => {
+		backendFetchFromEventMock.mockResolvedValue(
+			new Response(JSON.stringify({ id: 'video-1' }), {
+				status: 200,
+				headers: { 'content-type': 'application/json' }
+			})
+		);
+
+		await GET(makeEvent('/api/backend/videos/video-1'));
+
+		expect(backendFetchFromEventMock).toHaveBeenCalledWith(
+			expect.anything(),
+			'/videos/video-1',
+			expect.objectContaining({ method: 'GET' })
+		);
+	});
+
 	it('forwards body and content-type for POST requests', async () => {
 		backendFetchFromEventMock.mockResolvedValue(new Response(null, { status: 204 }));
 
@@ -92,7 +119,7 @@ describe('backend proxy route', () => {
 		expect(response.status).toBe(204);
 		expect(backendFetchFromEventMock).toHaveBeenCalledWith(
 			expect.anything(),
-			'/channels',
+			'/channels/',
 			expect.objectContaining({
 				method: 'POST',
 				body: expect.any(Blob),

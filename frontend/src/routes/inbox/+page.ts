@@ -42,7 +42,7 @@ export const load: PageLoad = async ({ url, fetch, parent }) => {
 			page: 1,
 			pageSize,
 			q,
-			error: error instanceof Error ? error.message : 'Failed to load videos'
+			error: 'Videos could not be loaded. Please retry.'
 		};
 	}
 };
