@@ -30,6 +30,7 @@ class Video(Base):
         Index("ix_video_is_watched", "is_watched"),
         Index("ix_video_is_short", "is_short"),
         Index("ix_video_channel_published", "owner_id", "channel_id", "published_at"),
+        Index("ix_video_owner_duration", "owner_id", "duration_seconds"),
         ForeignKeyConstraint(
             ["owner_id", "channel_id"],
             ["channels.owner_id", "channels.id"],

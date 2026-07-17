@@ -67,6 +67,12 @@ async def list_videos(
     published_before: str | None = Query(
         None, description="Filter videos published before this date (ISO 8601 format)"
     ),
+    min_duration_seconds: int | None = Query(
+        None, ge=0, description="Minimum video duration in seconds (inclusive)"
+    ),
+    max_duration_seconds: int | None = Query(
+        None, ge=0, description="Maximum video duration in seconds (inclusive)"
+    ),
     q: str | None = Query(
         None, description="Search videos by title, description, or tag name"
     ),
@@ -89,6 +95,8 @@ async def list_videos(
     - tag_id: Show only videos with a specific tag
     - published_after: Show videos published after a date (e.g., "2026-01-01T00:00:00Z")
     - published_before: Show videos published before a date (e.g., "2026-12-31T23:59:59Z")
+    - min_duration_seconds: Minimum video duration in seconds (inclusive)
+    - max_duration_seconds: Maximum video duration in seconds (inclusive)
     - q: Full-text search across video title, description, and tag names
     - order_by: Sort field (default: published_at; use "relevance" with search queries)
     - order_direction: Sort direction (asc or desc)
@@ -125,6 +133,16 @@ async def list_videos(
         else None
     )
 
+    if (
+        min_duration_seconds is not None
+        and max_duration_seconds is not None
+        and min_duration_seconds > max_duration_seconds
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="min_duration_seconds cannot be greater than max_duration_seconds",
+        )
+
     return await video_service.get_all_videos(
         owner_id=str(user.id),
         db_session=db_session,
@@ -138,6 +156,8 @@ async def list_videos(
         tag_id=tag_id,
         published_after=parsed_after,
         published_before=parsed_before,
+        min_duration_seconds=min_duration_seconds,
+        max_duration_seconds=max_duration_seconds,
         q=q,
         order_by=order_by,
         order_direction=order_direction,

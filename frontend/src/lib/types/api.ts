@@ -62,6 +62,8 @@ export interface VideoFilters extends Record<string, unknown> {
 	tag_id?: string;
 	published_after?: string;
 	published_before?: string;
+	min_duration_seconds?: number;
+	max_duration_seconds?: number;
 	limit?: number;
 	offset?: number;
 	q?: string;

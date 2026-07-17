@@ -168,7 +168,7 @@ test('interactive elements use consistent semantic cursors', async ({ page, cont
 
 	await page.getByText('Filters', { exact: true }).click();
 	await expectCursor(page.getByText('Filters', { exact: true }), 'pointer');
-	await expectCursor(page.getByLabel('Length'), 'pointer');
+	await expectCursor(page.getByLabel('Shorts'), 'pointer');
 
 	await page.getByRole('button', { name: 'Save to Watch Later', exact: true }).click();
 	await page.goto('/watch-later');
@@ -189,6 +189,28 @@ test('interactive elements use consistent semantic cursors', async ({ page, cont
 	await expect(disabledGoogleButton).toBeDisabled();
 	await expectCursor(disabledGoogleButton, 'not-allowed');
 	await expect(disabledGoogleButton).toHaveCSS('pointer-events', 'auto');
+});
+
+test('filters videos by duration and persists the range in the URL', async ({ page, context }) => {
+	await authenticate(context);
+	await page.goto('/inbox?page=3');
+	await expect(page.getByRole('article', { name: 'Phase 3 portfolio video' })).toBeVisible();
+
+	await page.getByText('Filters', { exact: true }).click();
+	const minimum = page.getByRole('slider', { name: 'Minimum duration' });
+	await minimum.evaluate((element) => {
+		const input = element as HTMLInputElement;
+		input.value = '4';
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+		input.dispatchEvent(new Event('change', { bubbles: true }));
+	});
+
+	await expect(page).toHaveURL(/page=1.*min_duration_minutes=4/);
+	await expect(page.getByRole('article', { name: 'Phase 3 portfolio video' })).toHaveCount(0);
+
+	await page.getByRole('button', { name: 'Reset filters' }).click();
+	await expect(page).not.toHaveURL(/min_duration_minutes/);
+	await expect(page.getByRole('article', { name: 'Phase 3 portfolio video' })).toBeVisible();
 });
 
 test('a channel can be favorited while videos cannot', async ({ page, context }) => {

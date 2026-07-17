@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from typing import Literal, Any, overload
-from sqlalchemy import select, func, or_
+from sqlalchemy import and_, select, func, or_
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.video import Video
@@ -96,10 +96,22 @@ def _has_extended_filters(
     tag_id: str | None,
     published_after: datetime | None,
     published_before: datetime | None,
+    min_duration_seconds: int | None,
+    max_duration_seconds: int | None,
     q: str | None,
 ) -> bool:
     """Check if any extended filters are active."""
-    return any([tag_id, published_after, published_before, q])
+    return any(
+        value is not None
+        for value in (
+            tag_id,
+            published_after,
+            published_before,
+            min_duration_seconds,
+            max_duration_seconds,
+            q,
+        )
+    )
 
 
 def _apply_extended_filters(
@@ -109,6 +121,8 @@ def _apply_extended_filters(
     tag_id: str | None,
     published_after: datetime | None,
     published_before: datetime | None,
+    min_duration_seconds: int | None,
+    max_duration_seconds: int | None,
     q: str | None,
 ):
     """Apply standard filters, JOINs, search, and date filters to a query.
@@ -168,7 +182,31 @@ def _apply_extended_filters(
     if published_before is not None:
         query = query.where(Video.published_at <= published_before)
 
+    if min_duration_seconds is not None:
+        query = query.where(Video.duration_seconds >= min_duration_seconds)
+    if max_duration_seconds is not None:
+        query = query.where(Video.duration_seconds <= max_duration_seconds)
+
     return query, rank_expr
+
+
+def _deduplicate_joined_videos(query):
+    """Deduplicate joined rows without comparing every Video column.
+
+    PostgreSQL's JSON type has no equality operator, so applying DISTINCT to a
+    full Video row fails because ``yt_tags`` is JSON. Select distinct composite
+    primary keys in a subquery, then load the corresponding Video rows.
+    """
+    matching_ids = (
+        query.with_only_columns(Video.owner_id, Video.id).distinct().subquery()
+    )
+    return select(Video).join(
+        matching_ids,
+        and_(
+            Video.owner_id == matching_ids.c.owner_id,
+            Video.id == matching_ids.c.id,
+        ),
+    )
 
 
 async def create_videos_bulk(
@@ -228,6 +266,8 @@ async def get_videos(
     tag_id: str | None = None,
     published_after: datetime | None = None,
     published_before: datetime | None = None,
+    min_duration_seconds: int | None = None,
+    max_duration_seconds: int | None = None,
     q: str | None = None,
     limit: int | None = None,
     offset: int = 0,
@@ -251,6 +291,8 @@ async def get_videos(
     tag_id: str | None = None,
     published_after: datetime | None = None,
     published_before: datetime | None = None,
+    min_duration_seconds: int | None = None,
+    max_duration_seconds: int | None = None,
     q: str | None = None,
     limit: int | None = None,
     offset: int = 0,
@@ -275,6 +317,8 @@ async def get_videos(
     tag_id: str | None = None,
     published_after: datetime | None = None,
     published_before: datetime | None = None,
+    min_duration_seconds: int | None = None,
+    max_duration_seconds: int | None = None,
     q: str | None = None,
     # Pagination
     limit: int | None = None,
@@ -299,6 +343,8 @@ async def get_videos(
         tag_id: Filter by tag ID (SQL JOIN, not post-filter)
         published_after: Filter videos published on or after this datetime
         published_before: Filter videos published on or before this datetime
+        min_duration_seconds: Minimum duration in seconds (inclusive)
+        max_duration_seconds: Maximum duration in seconds (inclusive)
         q: Search query matching title, description, or tag names
         limit: Maximum number of results (None = unlimited)
         offset: Number of results to skip (for pagination)
@@ -351,7 +397,14 @@ async def get_videos(
         _validate_filter_field(Video, field_name)
 
     # Fast path: no extended filters, delegate to base_get
-    if not _has_extended_filters(tag_id, published_after, published_before, q):
+    if not _has_extended_filters(
+        tag_id,
+        published_after,
+        published_before,
+        min_duration_seconds,
+        max_duration_seconds,
+        q,
+    ):
         return await base_get(
             db,
             Video,
@@ -366,7 +419,15 @@ async def get_videos(
 
     # Extended path: build query with JOINs
     query, rank_expr = _apply_extended_filters(
-        select(Video), db, filters, tag_id, published_after, published_before, q
+        select(Video),
+        db,
+        filters,
+        tag_id,
+        published_after,
+        published_before,
+        min_duration_seconds,
+        max_duration_seconds,
+        q,
     )
 
     # Handle relevance ordering with rank expression
@@ -382,6 +443,8 @@ async def get_videos(
             tag_id,
             published_after,
             published_before,
+            min_duration_seconds,
+            max_duration_seconds,
             q,
         )
         # Use a subquery with GROUP BY Video.id to deduplicate
@@ -403,8 +466,10 @@ async def get_videos(
             return rows[0][0] if rows else None
         return [row[0] for row in rows]
 
-    # DISTINCT to deduplicate from JOINs
-    query = query.distinct()
+    # Tag/search joins can produce duplicate videos. Deduplicate by primary key
+    # rather than the full row, which contains PostgreSQL's non-comparable JSON.
+    if tag_id is not None or q:
+        query = _deduplicate_joined_videos(query)
 
     # Fall back to published_at for relevance on SQLite
     effective_order_by = "published_at" if order_by == RELEVANCE_ORDER_BY else order_by
@@ -440,6 +505,8 @@ async def count_videos(
     tag_id: str | None = None,
     published_after: datetime | None = None,
     published_before: datetime | None = None,
+    min_duration_seconds: int | None = None,
+    max_duration_seconds: int | None = None,
     q: str | None = None,
     # Catch-all for any other Video field
     **kwargs: Any,
@@ -456,6 +523,8 @@ async def count_videos(
         tag_id: Filter by tag ID (SQL JOIN)
         published_after: Filter videos published on or after this datetime
         published_before: Filter videos published on or before this datetime
+        min_duration_seconds: Minimum duration in seconds (inclusive)
+        max_duration_seconds: Maximum duration in seconds (inclusive)
         q: Search query matching title, description, or tag names
         **kwargs: Additional filter fields
 
@@ -489,7 +558,14 @@ async def count_videos(
         _validate_filter_field(Video, field_name)
 
     # Simple path: no extended filters
-    if not _has_extended_filters(tag_id, published_after, published_before, q):
+    if not _has_extended_filters(
+        tag_id,
+        published_after,
+        published_before,
+        min_duration_seconds,
+        max_duration_seconds,
+        q,
+    ):
         query = select(func.count()).select_from(Video)
         for field_name, value in filters.items():
             column = getattr(Video, field_name)
@@ -508,6 +584,8 @@ async def count_videos(
         tag_id,
         published_after,
         published_before,
+        min_duration_seconds,
+        max_duration_seconds,
         q,
     )
     result = await db.execute(count_query)

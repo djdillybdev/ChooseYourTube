@@ -58,6 +58,43 @@ describe('parseVideoFilterQuery', () => {
 		expect(result.apiFilters.published_before).toBe('2026-02-15T23:59:59.999Z');
 	});
 
+	it('converts inclusive duration minute bounds to seconds', () => {
+		const result = parse('http://localhost/inbox?min_duration_minutes=5&max_duration_minutes=30');
+
+		expect(result.uiFilters.min_duration_minutes).toBe(5);
+		expect(result.uiFilters.max_duration_minutes).toBe(30);
+		expect(result.apiFilters.min_duration_seconds).toBe(300);
+		expect(result.apiFilters.max_duration_seconds).toBe(1800);
+	});
+
+	it('treats duration range endpoints as unbounded sentinels', () => {
+		const anyDuration = parse(
+			'http://localhost/inbox?min_duration_minutes=0&max_duration_minutes=60'
+		);
+		const oneHourPlus = parse(
+			'http://localhost/inbox?min_duration_minutes=60&max_duration_minutes=60'
+		);
+
+		expect(anyDuration.apiFilters.min_duration_seconds).toBeUndefined();
+		expect(anyDuration.apiFilters.max_duration_seconds).toBeUndefined();
+		expect(oneHourPlus.apiFilters.min_duration_seconds).toBe(3600);
+		expect(oneHourPlus.apiFilters.max_duration_seconds).toBeUndefined();
+	});
+
+	it('ignores malformed and reversed duration ranges', () => {
+		const malformed = parse(
+			'http://localhost/inbox?min_duration_minutes=1.5&max_duration_minutes=61'
+		);
+		const reversed = parse(
+			'http://localhost/inbox?min_duration_minutes=30&max_duration_minutes=10'
+		);
+
+		expect(malformed.apiFilters.min_duration_seconds).toBeUndefined();
+		expect(malformed.apiFilters.max_duration_seconds).toBeUndefined();
+		expect(reversed.apiFilters.min_duration_seconds).toBeUndefined();
+		expect(reversed.apiFilters.max_duration_seconds).toBeUndefined();
+	});
+
 	it('enforces forcedChannelId over channel_id query', () => {
 		const result = parse('http://localhost/channels/abc?channel_id=xyz', {
 			forcedChannelId: 'abc'

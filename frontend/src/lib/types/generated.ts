@@ -950,6 +950,8 @@ export interface paths {
 		 *     - tag_id: Show only videos with a specific tag
 		 *     - published_after: Show videos published after a date (e.g., "2026-01-01T00:00:00Z")
 		 *     - published_before: Show videos published before a date (e.g., "2026-12-31T23:59:59Z")
+		 *     - min_duration_seconds: Minimum video duration in seconds (inclusive)
+		 *     - max_duration_seconds: Maximum video duration in seconds (inclusive)
 		 *     - q: Full-text search across video title, description, and tag names
 		 *     - order_by: Sort field (default: published_at; use "relevance" with search queries)
 		 *     - order_direction: Sort direction (asc or desc)
@@ -7731,6 +7733,10 @@ export interface operations {
 				published_after?: string | null;
 				/** @description Filter videos published before this date (ISO 8601 format) */
 				published_before?: string | null;
+				/** @description Minimum video duration in seconds (inclusive) */
+				min_duration_seconds?: number | null;
+				/** @description Maximum video duration in seconds (inclusive) */
+				max_duration_seconds?: number | null;
 				/** @description Search videos by title, description, or tag name */
 				q?: string | null;
 				/** @description Sort field: published_at, title, created_at, duration_seconds, relevance (with q) */

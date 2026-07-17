@@ -167,6 +167,41 @@ class TestGetVideosBasicFiltering:
         assert len(results) == 1
         assert results[0].id == "vid001"
 
+    async def test_filter_by_duration_range_is_inclusive(
+        self, db_session, sample_videos
+    ):
+        results = await get_videos(
+            db_session, min_duration_seconds=500, max_duration_seconds=700
+        )
+
+        assert {video.id for video in results} == {"vid001", "vid008", "vid009"}
+
+    async def test_filter_by_duration_combines_with_shorts(
+        self, db_session, sample_videos
+    ):
+        results = await get_videos(
+            db_session, min_duration_seconds=45, max_duration_seconds=50, is_short=True
+        )
+
+        assert {video.id for video in results} == {"vid002", "vid004"}
+
+    async def test_duration_filter_excludes_unknown_durations(
+        self, db_session, sample_videos
+    ):
+        db_session.add(
+            Video(
+                id="unknown_duration",
+                channel_id="ch001",
+                title="Unknown duration",
+                duration_seconds=None,
+            )
+        )
+        await db_session.commit()
+
+        results = await get_videos(db_session, min_duration_seconds=0)
+
+        assert "unknown_duration" not in {video.id for video in results}
+
     async def test_filter_by_channel_id(self, db_session, sample_videos):
         """Should return all videos for a specific channel."""
         results = await get_videos(db_session, channel_id="ch001")
@@ -691,6 +726,16 @@ class TestCountVideosExtendedFilters:
 
         assert count == len(results)
 
+    async def test_count_with_duration_range(self, db_session, sample_videos):
+        results = await get_videos(
+            db_session, min_duration_seconds=300, max_duration_seconds=600
+        )
+        count = await count_videos(
+            db_session, min_duration_seconds=300, max_duration_seconds=600
+        )
+
+        assert count == len(results) == 3
+
 
 # Prefix Search Tests
 
@@ -742,6 +787,41 @@ class TestGetVideosRelevanceOrdering:
         statement = db.execute.await_args.args[0]
         sql = str(statement.compile(dialect=postgresql.dialect()))
         assert "GROUP BY videos.owner_id, videos.id" in sql
+
+    async def test_postgresql_duration_filter_does_not_distinct_json_row(self):
+        """Duration predicates must not apply DISTINCT to Video's JSON column."""
+        db = AsyncMock()
+        db.bind = MagicMock()
+        db.bind.dialect.name = "postgresql"
+        result = MagicMock()
+        result.unique.return_value.scalars.return_value.all.return_value = []
+        db.execute.return_value = result
+
+        await get_videos(db, owner_id="user-1", min_duration_seconds=360)
+
+        statement = db.execute.await_args.args[0]
+        sql = str(statement.compile(dialect=postgresql.dialect()))
+        assert "SELECT DISTINCT" not in sql
+        assert "videos.duration_seconds >=" in sql
+
+    async def test_postgresql_joined_filter_distincts_only_video_ids(self):
+        """Join deduplication must compare primary keys, not the JSON row."""
+        db = AsyncMock()
+        db.bind = MagicMock()
+        db.bind.dialect.name = "postgresql"
+        result = MagicMock()
+        result.unique.return_value.scalars.return_value.all.return_value = []
+        db.execute.return_value = result
+
+        await get_videos(db, owner_id="user-1", tag_id="tag-1")
+
+        statement = db.execute.await_args.args[0]
+        sql = str(statement.compile(dialect=postgresql.dialect()))
+        assert not sql.lstrip().startswith("SELECT DISTINCT")
+        distinct_ids = sql[sql.index("SELECT DISTINCT") : sql.index(") AS anon_1")]
+        assert "videos.owner_id" in distinct_ids
+        assert "videos.id" in distinct_ids
+        assert "videos.yt_tags" not in distinct_ids
 
     async def test_relevance_order_by_without_q(self, db_session, sample_videos):
         """order_by='relevance' without q should fall back to published_at."""

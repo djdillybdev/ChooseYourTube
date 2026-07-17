@@ -370,8 +370,19 @@ createServer(async (request, response) => {
 		const requestedChannel = channels.find((item) => path === `/channels/${item.id}`);
 		if (requestedChannel) return send(response, 200, requestedChannel);
 	}
-	if (path === '/videos')
-		return send(response, 200, { total: 1, items: [video], limit: 24, offset: 0, has_more: false });
+	if (path === '/videos') {
+		const minimum = Number(url.searchParams.get('min_duration_seconds') ?? 0);
+		const maximum = Number(url.searchParams.get('max_duration_seconds') ?? Infinity);
+		const items =
+			video.duration_seconds >= minimum && video.duration_seconds <= maximum ? [video] : [];
+		return send(response, 200, {
+			total: items.length,
+			items,
+			limit: 24,
+			offset: 0,
+			has_more: false
+		});
+	}
 	if (path === `/videos/${video.id}`) return send(response, 200, video);
 	if (path === '/playlists/watch-later' && request.method === 'GET')
 		return send(response, 200, {

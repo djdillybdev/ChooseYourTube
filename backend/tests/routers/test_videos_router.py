@@ -148,6 +148,51 @@ class TestVideosRouter:
         data = data["items"]
         assert len(data) == 2
 
+    async def test_list_videos_filters_by_duration(self, test_client, db_session):
+        from app.db.models.channel import Channel
+        from app.db.models.video import Video
+
+        channel = Channel(
+            id="UC_duration",
+            handle="duration",
+            title="Duration Channel",
+            uploads_playlist_id="UU_duration",
+        )
+        db_session.add(channel)
+        db_session.add_all(
+            [
+                Video(
+                    id=f"duration_{seconds}",
+                    channel_id=channel.id,
+                    title=f"Duration {seconds}",
+                    published_at=datetime.now(timezone.utc),
+                    duration_seconds=seconds,
+                )
+                for seconds in (299, 300, 600, 601)
+            ]
+        )
+        await db_session.commit()
+
+        response = test_client.get(
+            "/videos/?min_duration_seconds=300&max_duration_seconds=600"
+        )
+
+        assert response.status_code == 200
+        assert response.json()["total"] == 2
+        assert {item["duration_seconds"] for item in response.json()["items"]} == {
+            300,
+            600,
+        }
+
+    async def test_list_videos_rejects_invalid_duration_bounds(self, test_client):
+        reversed_response = test_client.get(
+            "/videos/?min_duration_seconds=600&max_duration_seconds=300"
+        )
+        negative_response = test_client.get("/videos/?min_duration_seconds=-1")
+
+        assert reversed_response.status_code == 400
+        assert negative_response.status_code == 422
+
     async def test_list_videos_pagination_limits(self, test_client, db_session):
         """Test GET /videos/ pagination limit constraints."""
         # Test minimum limit (1)

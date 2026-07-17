@@ -9707,7 +9707,7 @@
 		},
 		"/videos/": {
 			"get": {
-				"description": "List videos with optional filtering and search.\n\nFilters:\n- is_favorited: Show only favorited videos\n- is_watched: Show only watched/unwatched videos\n- is_short: Show only YouTube Shorts or exclude them\n- channel_id: Filter by single channel ID or multiple IDs (comma-separated)\n- tag_id: Show only videos with a specific tag\n- published_after: Show videos published after a date (e.g., \"2026-01-01T00:00:00Z\")\n- published_before: Show videos published before a date (e.g., \"2026-12-31T23:59:59Z\")\n- q: Full-text search across video title, description, and tag names\n- order_by: Sort field (default: published_at; use \"relevance\" with search queries)\n- order_direction: Sort direction (asc or desc)",
+				"description": "List videos with optional filtering and search.\n\nFilters:\n- is_favorited: Show only favorited videos\n- is_watched: Show only watched/unwatched videos\n- is_short: Show only YouTube Shorts or exclude them\n- channel_id: Filter by single channel ID or multiple IDs (comma-separated)\n- tag_id: Show only videos with a specific tag\n- published_after: Show videos published after a date (e.g., \"2026-01-01T00:00:00Z\")\n- published_before: Show videos published before a date (e.g., \"2026-12-31T23:59:59Z\")\n- min_duration_seconds: Minimum video duration in seconds (inclusive)\n- max_duration_seconds: Maximum video duration in seconds (inclusive)\n- q: Full-text search across video title, description, and tag names\n- order_by: Sort field (default: published_at; use \"relevance\" with search queries)\n- order_direction: Sort direction (asc or desc)",
 				"operationId": "list_videos_videos__get",
 				"parameters": [
 					{
@@ -9876,6 +9876,44 @@
 							],
 							"description": "Filter videos published before this date (ISO 8601 format)",
 							"title": "Published Before"
+						}
+					},
+					{
+						"description": "Minimum video duration in seconds (inclusive)",
+						"in": "query",
+						"name": "min_duration_seconds",
+						"required": false,
+						"schema": {
+							"anyOf": [
+								{
+									"minimum": 0,
+									"type": "integer"
+								},
+								{
+									"type": "null"
+								}
+							],
+							"description": "Minimum video duration in seconds (inclusive)",
+							"title": "Min Duration Seconds"
+						}
+					},
+					{
+						"description": "Maximum video duration in seconds (inclusive)",
+						"in": "query",
+						"name": "max_duration_seconds",
+						"required": false,
+						"schema": {
+							"anyOf": [
+								{
+									"minimum": 0,
+									"type": "integer"
+								},
+								{
+									"type": "null"
+								}
+							],
+							"description": "Maximum video duration in seconds (inclusive)",
+							"title": "Max Duration Seconds"
 						}
 					},
 					{

@@ -5,6 +5,7 @@
 	import type { ChannelOut, TagOut } from '$lib/types/api';
 	import { parseVideoFilterQuery } from '$lib/utils/videoFilterQuery';
 	import { dismissibleDetails } from '$lib/actions/dismissibleDetails';
+	import DurationRangeFilter from './DurationRangeFilter.svelte';
 
 	interface Props {
 		channels?: ChannelOut[];
@@ -27,6 +28,9 @@
 			uiFilters.published_after,
 			uiFilters.published_before
 		].filter((value) => value !== undefined && value !== '').length +
+			(uiFilters.min_duration_minutes !== undefined || uiFilters.max_duration_minutes !== undefined
+				? 1
+				: 0) +
 			(uiFilters.is_short !== false ? 1 : 0) +
 			(uiFilters.order_by && uiFilters.order_by !== 'published_at' ? 1 : 0) +
 			(uiFilters.order_direction && uiFilters.order_direction !== 'desc' ? 1 : 0)
@@ -71,6 +75,22 @@
 		});
 	}
 
+	function setDurationFilter({
+		minMinutes,
+		maxMinutes
+	}: {
+		minMinutes: number | undefined;
+		maxMinutes: number | undefined;
+	}) {
+		updateQuery((params) => {
+			if (minMinutes === undefined) params.delete('min_duration_minutes');
+			else params.set('min_duration_minutes', String(minMinutes));
+
+			if (maxMinutes === undefined) params.delete('max_duration_minutes');
+			else params.set('max_duration_minutes', String(maxMinutes));
+		});
+	}
+
 	function resetFilters() {
 		updateQuery((params) => {
 			for (const key of [
@@ -80,6 +100,8 @@
 				'tag_id',
 				'published_after',
 				'published_before',
+				'min_duration_minutes',
+				'max_duration_minutes',
 				'order_by',
 				'order_direction'
 			]) {
@@ -147,12 +169,18 @@
 					</select>
 				</div>
 
+				<DurationRangeFilter
+					minMinutes={uiFilters.min_duration_minutes}
+					maxMinutes={uiFilters.max_duration_minutes}
+					onchange={setDurationFilter}
+				/>
+
 				<div>
-					<label class="mb-1 block text-xs font-medium text-base-content" for="length-filter">
-						Length
+					<label class="mb-1 block text-xs font-medium text-base-content" for="shorts-filter">
+						Shorts
 					</label>
 					<select
-						id="length-filter"
+						id="shorts-filter"
 						class="select-bordered select w-full select-sm text-base-content"
 						value={uiFilters.is_short === undefined ? 'all' : String(uiFilters.is_short)}
 						onchange={(event) => {

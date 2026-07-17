@@ -557,6 +557,8 @@ async def get_all_videos(
     tag_id: str | None = None,
     published_after: datetime | None = None,
     published_before: datetime | None = None,
+    min_duration_seconds: int | None = None,
+    max_duration_seconds: int | None = None,
     q: str | None = None,
     order_by: str = "published_at",
     order_direction: Literal["asc", "desc"] = "desc",
@@ -585,6 +587,8 @@ async def get_all_videos(
         tag_id=tag_id,
         published_after=published_after,
         published_before=published_before,
+        min_duration_seconds=min_duration_seconds,
+        max_duration_seconds=max_duration_seconds,
         q=q,
     )
 
@@ -603,6 +607,8 @@ async def get_all_videos(
         tag_id=tag_id,
         published_after=published_after,
         published_before=published_before,
+        min_duration_seconds=min_duration_seconds,
+        max_duration_seconds=max_duration_seconds,
         q=q,
     )
 
