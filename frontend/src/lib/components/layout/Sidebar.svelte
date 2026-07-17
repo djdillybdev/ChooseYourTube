@@ -159,6 +159,25 @@
 						</a>
 					</li>
 
+					<li>
+						<a
+							href={resolve('/queue')}
+							class="sidebar-library-link flex w-full max-w-full min-w-0 items-center gap-2"
+							class:bg-base-200={isCurrent('/queue', true)}
+							aria-current={isCurrent('/queue', true) ? 'page' : undefined}
+						>
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5 shrink-0">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="1.5"
+									d="M4.5 6.75h15m-15 5.25h15m-15 5.25h10.5"
+								/>
+							</svg>
+							<span class="min-w-0 truncate">Queue</span>
+						</a>
+					</li>
+
 					<!-- Playlists -->
 					<li>
 						<a

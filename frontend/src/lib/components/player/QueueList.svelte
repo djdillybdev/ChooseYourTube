@@ -12,17 +12,27 @@
 
 	interface Props {
 		channelMap?: Map<string, ChannelOut>;
+		variant?: 'panel' | 'page';
+		onPlaybackStarted?: () => void | Promise<void>;
 	}
 
-	let { channelMap }: Props = $props();
+	let { channelMap, variant = 'panel', onPlaybackStarted }: Props = $props();
 
 	let dragIndex = $state<number | null>(null);
 	let announcement = $state('');
 	const isQueueMutable = $derived(playerState.current.queueMutable);
+	const removableCount = $derived(
+		playerState.current.queue.length -
+			(playerState.current.currentVideo &&
+			playerState.current.queue.some((video) => video.id === playerState.current.currentVideo?.id)
+				? 1
+				: 0)
+	);
 
 	async function selectQueueItem(index: number) {
 		if (playerState.current.isQueueSyncing) return;
-		await jumpToQueueItem(index);
+		const started = await jumpToQueueItem(index);
+		if (started) await onPlaybackStarted?.();
 	}
 
 	async function remove(videoId: string) {
@@ -50,21 +60,27 @@
 	}
 </script>
 
-<div class="queue-list flex flex-col border-t border-base-300 bg-base-100">
+<div
+	class="queue-list flex flex-col bg-base-100"
+	class:border-t={variant === 'panel'}
+	class:border={variant === 'page'}
+	class:rounded-box={variant === 'page'}
+	class:border-base-300={true}
+>
 	<div class="flex items-center justify-between border-b border-base-300 px-4 py-2">
 		<h2 class="text-sm font-semibold">Queue ({playerState.current.queue.length})</h2>
 		<div class="flex items-center gap-2">
 			{#if playerState.current.queueMode === 'playlist'}
 				<span class="badge badge-sm">Playlist queue</span>
 			{/if}
-			{#if playerState.current.queue.length > 0 && isQueueMutable}
+			{#if removableCount > 0 && isQueueMutable}
 				<button
 					type="button"
 					class="btn btn-ghost btn-xs"
 					onclick={() => void clearQueue()}
 					disabled={playerState.current.isQueueSyncing}
 				>
-					Clear all
+					Clear queue
 				</button>
 			{/if}
 		</div>
@@ -75,7 +91,7 @@
 	{/if}
 	<p class="sr-only" aria-live="polite">{announcement}</p>
 
-	<div class="max-h-96 overflow-y-auto">
+	<div class:overflow-y-auto={variant === 'panel'} class:max-h-96={variant === 'panel'}>
 		{#if playerState.current.queue.length === 0}
 			<div class="flex flex-col items-center justify-center py-8 text-center">
 				<svg
@@ -98,7 +114,7 @@
 		{:else}
 			<ol>
 				{#each playerState.current.queue as video, index (video.id)}
-					{@const isActive = index === playerState.current.queueIndex}
+					{@const isActive = playerState.current.currentVideo?.id === video.id}
 					<li
 						class="queue-item flex w-full items-start gap-2 border-b border-base-300 p-2 transition-colors hover:bg-base-200"
 						class:active={isActive}

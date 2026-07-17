@@ -175,8 +175,7 @@ class TestGetAllPlaylists:
         assert response.items[0].id == sample_playlist_with_videos.id
         assert response.items[0].total_videos == 3
         assert (
-            response.items[0].preview_thumbnail_url
-            == "https://img.example/SPV001.jpg"
+            response.items[0].preview_thumbnail_url == "https://img.example/SPV001.jpg"
         )
 
     async def test_empty_result(self, db_session):
@@ -386,6 +385,37 @@ class TestSetPlaylistVideos:
         )
 
         assert detail.current_position is None
+
+    async def test_tracks_current_video_when_reordered(
+        self, db_session, sample_playlist_with_videos
+    ):
+        sample_playlist_with_videos.current_position = 1
+        db_session.add(sample_playlist_with_videos)
+        await db_session.commit()
+
+        payload = PlaylistSetVideos(video_ids=["SPV002", "SPV001", "SPV003"])
+
+        detail = await set_playlist_videos(
+            sample_playlist_with_videos.id, payload, db_session
+        )
+
+        assert detail.current_position == 0
+
+    async def test_keeps_current_video_when_it_is_the_only_replacement(
+        self, db_session, sample_playlist_with_videos
+    ):
+        sample_playlist_with_videos.current_position = 1
+        db_session.add(sample_playlist_with_videos)
+        await db_session.commit()
+
+        payload = PlaylistSetVideos(video_ids=["SPV002"])
+
+        detail = await set_playlist_videos(
+            sample_playlist_with_videos.id, payload, db_session
+        )
+
+        assert detail.video_ids == ["SPV002"]
+        assert detail.current_position == 0
 
     async def test_deduplicates_ids_and_resets_position_out_of_bounds(
         self, db_session, sample_playlist_with_videos

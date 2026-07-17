@@ -6,6 +6,7 @@ import {
 	hydrateQueueVideos,
 	loadQueueDetail,
 	moveQueueVideo,
+	replaceQueueVideos,
 	removeVideoFromQueue,
 	setQueuePosition
 } from '$lib/services/queuePlaylist';
@@ -476,26 +477,29 @@ export async function playPrevious(): Promise<void> {
 /**
  * Jump to specific video in queue.
  */
-export async function jumpToQueueItem(index: number): Promise<void> {
+export async function jumpToQueueItem(index: number): Promise<boolean> {
 	await initializeQueue();
 	const playlistId = playerState.current.queuePlaylistId;
-	if (!playlistId) return;
-	if (index < 0 || index >= playerState.current.queue.length) return;
+	if (!playlistId) return false;
+	if (index < 0 || index >= playerState.current.queue.length) return false;
 
+	let succeeded = false;
 	await runQueuedMutation(async () => {
 		playerState.update((state) => ({ ...state, isQueueSyncing: true, queueError: null }));
 		try {
 			await setQueuePosition(playlistId, index);
 			await syncFromPlaylistDetail(playlistId, { setPlaying: true, clearError: true });
+			succeeded = true;
 		} catch (error) {
 			setQueueError(error);
 			playerState.update((state) => ({ ...state, isQueueSyncing: false }));
 		}
 	});
+	return succeeded;
 }
 
 /**
- * Clear entire queue and stop playback.
+ * Clear queued videos while preserving the current video and playback.
  */
 export async function clearQueue(): Promise<void> {
 	await initializeQueue();
@@ -506,12 +510,13 @@ export async function clearQueue(): Promise<void> {
 	await runQueuedMutation(async () => {
 		playerState.update((state) => ({ ...state, isQueueSyncing: true, queueError: null }));
 		try {
-			await clearQueueVideos(playlistId);
+			const currentVideo = playerState.current.currentVideo;
+			if (currentVideo) {
+				await replaceQueueVideos(playlistId, [currentVideo.id]);
+			} else {
+				await clearQueueVideos(playlistId);
+			}
 			await syncFromPlaylistDetail(playlistId, { clearError: true });
-			playerState.update((state) => ({
-				...state,
-				isPlaying: false
-			}));
 		} catch (error) {
 			setQueueError(error);
 			playerState.update((state) => ({ ...state, isQueueSyncing: false }));

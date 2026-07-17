@@ -82,3 +82,10 @@ export async function moveQueueVideo(
 export async function clearQueueVideos(playlistId: string): Promise<PlaylistDetailOut> {
 	return api.playlists.clearVideos(playlistId);
 }
+
+export async function replaceQueueVideos(
+	playlistId: string,
+	videoIds: string[]
+): Promise<PlaylistDetailOut> {
+	return api.playlists.setVideos(playlistId, { video_ids: videoIds });
+}

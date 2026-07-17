@@ -79,6 +79,16 @@ describe('Sidebar', () => {
 		expect(screen.getByRole('link', { name: /playlists/i })).toHaveAttribute('href', '/playlists');
 	});
 
+	it('links directly to the queue from primary navigation', () => {
+		render(Sidebar, {
+			categories: [],
+			uncategorizedChannels: [],
+			channels: []
+		});
+
+		expect(screen.getByRole('link', { name: 'Queue' })).toHaveAttribute('href', '/queue');
+	});
+
 	it('shows a channel in every assigned category and only zero-category channels as uncategorized', async () => {
 		const shared = makeChannel({ id: 'shared', title: 'Shared Channel' });
 		const loose = makeChannel({ id: 'loose', title: 'Loose Channel' });

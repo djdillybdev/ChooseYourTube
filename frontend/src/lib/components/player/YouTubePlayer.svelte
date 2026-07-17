@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { api } from '$lib/api';
 	import { playerState, playNext } from '$lib/stores/playerState.svelte';
 
 	interface Props {
@@ -12,6 +13,27 @@
 	let player: YT.Player | null = null;
 	let isReady = $state(false);
 	let isAdvancingQueue = false;
+	const watchedUpdatesInFlight = new Set<string>();
+
+	async function markCurrentVideoWatched() {
+		const video = playerState.current.currentVideo;
+		if (!video || video.is_watched || watchedUpdatesInFlight.has(video.id)) return;
+
+		watchedUpdatesInFlight.add(video.id);
+		try {
+			const updatedVideo = await api.videos.update(video.id, { is_watched: true });
+			playerState.update((state) => ({
+				...state,
+				currentVideo:
+					state.currentVideo?.id === updatedVideo.id ? updatedVideo : state.currentVideo,
+				queue: state.queue.map((item) => (item.id === updatedVideo.id ? updatedVideo : item))
+			}));
+		} catch (error) {
+			console.error('Failed to mark video as watched:', error);
+		} finally {
+			watchedUpdatesInFlight.delete(video.id);
+		}
+	}
 
 	function initializePlayer() {
 		if (!playerElement || !window.YT || player) return;
@@ -54,6 +76,7 @@
 		// Update playing state
 		if (state === window.YT.PlayerState.PLAYING) {
 			playerState.update((s) => ({ ...s, isPlaying: true }));
+			void markCurrentVideoWatched();
 		} else if (state === window.YT.PlayerState.PAUSED) {
 			playerState.update((s) => ({ ...s, isPlaying: false }));
 		} else if (state === window.YT.PlayerState.ENDED) {

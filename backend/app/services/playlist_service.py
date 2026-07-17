@@ -277,6 +277,15 @@ async def set_playlist_videos(
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
     _assert_playlist_is_mutable(playlist)
     unique_video_ids = _dedupe_video_ids_keep_first(payload.video_ids)
+    existing_video_ids = await crud_playlist.get_playlist_video_ids(
+        db_session, playlist_id, owner_id=owner_id
+    )
+    current_video_id = (
+        existing_video_ids[playlist.current_position]
+        if playlist.current_position is not None
+        and 0 <= playlist.current_position < len(existing_video_ids)
+        else None
+    )
 
     # Validate all video IDs exist
     if unique_video_ids:
@@ -295,13 +304,12 @@ async def set_playlist_videos(
         db_session, playlist_id, unique_video_ids, owner_id=owner_id
     )
 
-    # Reset current_position if playlist was cleared or position is now out of bounds
-    if not unique_video_ids:
-        playlist.current_position = None
-    elif playlist.current_position is not None and playlist.current_position >= len(
-        unique_video_ids
-    ):
-        playlist.current_position = None
+    # Keep playback attached to the same video when a replacement retains it.
+    playlist.current_position = (
+        unique_video_ids.index(current_video_id)
+        if current_video_id is not None and current_video_id in unique_video_ids
+        else None
+    )
 
     db_session.add(playlist)
     await db_session.commit()

@@ -119,6 +119,94 @@ test('video can be saved to and removed from Watch Later', async ({ page, contex
 	await expect(page.getByRole('heading', { name: 'Nothing saved yet' })).toBeVisible();
 });
 
+test('queue can be opened from the sidebar and cleared without stopping the current video', async ({
+	page,
+	context
+}) => {
+	await authenticate(context);
+	let videoIds = ['queue-video-1', 'queue-video-2'];
+	let currentPosition: number | null = null;
+	const videos = new Map(
+		videoIds.map((id, index) => [
+			id,
+			{
+				id,
+				channel_id: 'UC_portfolio',
+				title: `${index === 0 ? 'First' : 'Second'} queue video`,
+				description: null,
+				thumbnail_url: null,
+				published_at: '2026-01-01T00:00:00Z',
+				created_at: '2026-01-01T00:00:00Z',
+				duration_seconds: 120,
+				is_watched: false,
+				is_favorited: false,
+				is_short: false,
+				tag_ids: [],
+				yt_tags: []
+			}
+		])
+	);
+	const queueDetail = () => ({
+		id: 'queue-id',
+		name: 'Queue',
+		description: 'System queue playlist for playback',
+		is_system: true,
+		current_position: currentPosition,
+		total_videos: videoIds.length,
+		video_ids: videoIds
+	});
+
+	await page.route('**/api/backend/**', async (route) => {
+		const request = route.request();
+		const path = new URL(request.url()).pathname;
+		if (path === '/api/backend/playlists/' && request.method() === 'GET') {
+			await route.fulfill({
+				json: { total: 1, items: [queueDetail()], limit: 200, offset: 0, has_more: false }
+			});
+			return;
+		}
+		if (path === '/api/backend/playlists/queue-id' && request.method() === 'GET') {
+			await route.fulfill({ json: queueDetail() });
+			return;
+		}
+		if (path === '/api/backend/playlists/queue-id/position' && request.method() === 'PATCH') {
+			currentPosition = request.postDataJSON().current_position;
+			await route.fulfill({ json: queueDetail() });
+			return;
+		}
+		if (path === '/api/backend/playlists/queue-id/videos' && request.method() === 'PUT') {
+			videoIds = request.postDataJSON().video_ids;
+			currentPosition = videoIds.length > 0 ? 0 : null;
+			await route.fulfill({ json: queueDetail() });
+			return;
+		}
+		const videoId = path.match(/^\/api\/backend\/videos\/([^/]+)$/)?.[1];
+		if (videoId && request.method() === 'GET' && videos.has(videoId)) {
+			await route.fulfill({ json: videos.get(videoId) });
+			return;
+		}
+		await route.fallback();
+	});
+
+	await page.goto('/inbox');
+	await page.getByRole('link', { name: 'Queue' }).click();
+	await expect(page).toHaveURL(/\/queue$/);
+	await expect(page.getByRole('heading', { name: 'Queue', exact: true })).toBeVisible();
+
+	await page.getByRole('button', { name: 'Play First queue video' }).click();
+	await expect(page).toHaveURL(/\/player\?return=%2Fqueue$/);
+	await expect(page.getByRole('heading', { name: 'First queue video' })).toBeVisible();
+
+	await page.getByRole('button', { name: /Queue/ }).click();
+	await page.getByRole('button', { name: 'Clear queue' }).click();
+
+	await expect(page.getByRole('heading', { name: 'First queue video' })).toBeVisible();
+	await expect(
+		page.getByRole('button', { name: 'Currently playing First queue video' })
+	).toBeVisible();
+	await expect(page.getByText('Second queue video')).toHaveCount(0);
+});
+
 test('video display preference persists across shared feeds', async ({ page, context }) => {
 	await authenticate(context);
 	await page.setViewportSize({ width: 1440, height: 900 });
