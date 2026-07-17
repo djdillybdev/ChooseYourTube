@@ -37,28 +37,31 @@ boundaries remain explicitly asynchronous.
 ## Local development
 
 Requirements: Python 3.12, `uv`, PostgreSQL 16 and Redis 7. The root Compose stack is the simplest way
-to start infrastructure.
+to start infrastructure. Run these commands from the repository root:
 
 ```bash
-cp ../.env.example ../.env
-cd ..
+cp .env.example .env
 docker compose --env-file .env up -d postgres redis
 
 cd backend
 uv sync --frozen
-uv run alembic upgrade head
-uv run uvicorn app.main:app --reload
+uv run --env-file ../.env alembic upgrade head
+uv run --env-file ../.env uvicorn app.main:app --reload
 ```
 
 Run the full-mode worker in another terminal:
 
 ```bash
 cd backend
-uv run arq app.worker.WorkerSettings
+uv run --env-file ../.env arq app.worker.WorkerSettings
 ```
 
 API documentation is available at <http://localhost:8000/docs>. Process and dependency checks are
 available at `/health/live` and `/health/ready`.
+
+The hosted demo uses `app.index:app` as its Vercel entrypoint. It shares routers, services, models and
+migrations with the full application but disables Redis-backed jobs, public registration and
+quota-sensitive mutations through validated runtime settings.
 
 ## Configuration
 
@@ -107,7 +110,8 @@ uv run alembic check
 ```
 
 Pytest includes line and branch coverage. Auth, ownership, imports, quota accounting and workers require
-direct tests even when aggregate coverage passes.
+direct tests even when aggregate coverage passes. The release gate requires at least 80% backend
+coverage.
 
 ## Migrations and operations
 

@@ -58,38 +58,7 @@ replace the long-running API/worker stack, and daily maintenance uses public RSS
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    Browser[Browser] -->|same-origin cookies| Web[SvelteKit UI + API proxy]
-    Web -->|Bearer access token| API[FastAPI]
-    API --> DB[(PostgreSQL)]
-    API -->|enqueue by sync-run UUID| Redis[(Redis)]
-    Redis --> Worker[arq worker + hourly scheduler]
-    Worker --> DB
-    Worker --> RSS[YouTube RSS]
-    Worker --> YT[YouTube Data API]
-
-    subgraph Full[Full Docker deployment]
-        Web
-        API
-        DB
-        Redis
-        Worker
-    end
-```
-
-```mermaid
-flowchart LR
-    Recruiter[Browser] --> VWeb[SvelteKit on Vercel]
-    VWeb --> VAPI[FastAPI function on Vercel]
-    VAPI --> Neon[(Neon PostgreSQL)]
-    Cron[Vercel daily cron] -->|secret-protected| VAPI
-    VAPI -->|maintenance only| RSS[Public YouTube RSS]
-
-    classDef omitted fill:#f1f5f9,stroke:#94a3b8,color:#475569,stroke-dasharray: 5 5;
-    Redis[Redis not required]:::omitted
-    Worker[Hourly worker not available]:::omitted
-```
+[![ChooseYourTube architecture showing the full Docker application and hosted Vercel demo](docs/images/architecture-overview.svg)](docs/architecture.md)
 
 See [Architecture](docs/architecture.md) for request, worker and tenancy flows, and [Engineering
 decisions](docs/engineering-decisions.md) for the trade-offs behind them.
