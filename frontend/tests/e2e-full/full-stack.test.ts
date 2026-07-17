@@ -29,7 +29,7 @@ test('full-mode login, inbox, persistent state, and logout', async ({ page }) =>
 	await page.getByRole('button', { name: 'Log in' }).click();
 	await expect(page).toHaveURL(/\/inbox/);
 	await page.getByText('Filters', { exact: true }).click();
-	await page.getByLabel('Length').selectOption('all');
+	await page.getByLabel('Shorts').selectOption('all');
 	await expect(page.getByText('Phase 6 portfolio video 1')).toBeVisible();
 	await expectAccessible(page);
 
