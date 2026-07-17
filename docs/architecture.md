@@ -1,10 +1,10 @@
 # Architecture
 
-ChooseYourTube uses one application codebase for a complete Docker deployment and a restricted
-recruiter-facing demo. Runtime configuration changes infrastructure requirements and permitted
-operations; it does not fork product models, migrations or UI components.
+ChooseYourTube has one application codebase and two runtime configurations. The full Docker
+installation includes background workers and YouTube Data API access. The hosted demo uses the same
+models, services, migrations, and frontend components with a restricted set of operations.
 
-## Component boundaries
+## Components
 
 ```mermaid
 flowchart LR
@@ -20,16 +20,15 @@ flowchart LR
     Services --> YT[YouTube Data API]
 ```
 
-- SvelteKit owns browser-facing authentication routes and proxies API requests so session cookies
-  remain same-origin and HTTP-only.
-- FastAPI routers validate HTTP input and delegate orchestration to services. Persistence stays in
-  asynchronous CRUD modules.
-- PostgreSQL stores accounts, channels, videos, categories, tags, playlists, imports, API usage and
-  durable synchronization history.
-- Redis carries full-mode jobs and the worker heartbeat. It is transport, not the source of truth for
-  job status.
-- arq workers execute idempotent refresh/import services and update PostgreSQL progress after each
-  deliberate batch.
+SvelteKit renders the interface, handles browser-facing authentication, and proxies API requests.
+This keeps access and refresh tokens in same-origin HTTP-only cookies.
+
+FastAPI routers validate requests and call application services. Services coordinate data access,
+external clients, and background jobs. Async CRUD modules contain database queries.
+
+PostgreSQL stores accounts, channels, videos, categories, tags, playlists, imports, YouTube API usage,
+and synchronization history. Redis carries queued work and the worker heartbeat; PostgreSQL remains
+the durable record of job status.
 
 ## Authenticated request flow
 
@@ -40,77 +39,99 @@ sequenceDiagram
     participant A as FastAPI
     participant P as PostgreSQL
 
-    B->>S: Request page/API route with HTTP-only cookies
-    S->>A: Forward request with short-lived access token
-    A->>P: Owner-scoped query
-    P-->>A: Current user's records
-    A-->>S: Typed response or safe error body
-    S-->>B: Rendered page/JSON
-    Note over S,A: Expired access tokens are refreshed once through a rotating session
+    B->>S: Request with HTTP-only cookies
+    S->>A: Forward with short-lived access token
+    A->>P: Run owner-scoped query
+    P-->>A: Return current user's records
+    A-->>S: Return typed response or safe error
+    S-->>B: Render page or return JSON
+    Note over S,A: SvelteKit attempts one refresh when the access token expires
 ```
 
-The browser never receives database credentials or Google OAuth tokens. A standard error contains a
-stable code, safe message, request ID and retryability flag; detailed exceptions remain in logs.
+The browser never receives database credentials or Google OAuth tokens. Public API errors contain a
+stable code, safe message, request ID, and retryable flag. Detailed exceptions remain in structured
+server logs.
 
 ## Synchronization flow
 
-1. A command creates or reuses an owner-scoped `sync_run` in `queued` state.
-2. The run UUID is also the arq job ID, preventing duplicate active delivery for the same work.
-3. A worker atomically claims the run, records its attempt and executes an idempotent service.
-4. RSS conditional requests detect changes before full mode spends YouTube Data API quota.
-5. Upserts and unique source IDs make retries safe; counters are persisted as batches complete.
-6. The run ends as `succeeded`, `partial` or `failed` with a safe error. Retryable failures use bounded
-   backoff; credential and quota failures do not loop indefinitely.
-7. The frontend polls the durable record and preserves the last successfully loaded content when a
-   refresh fails.
+```mermaid
+sequenceDiagram
+    participant U as User or scheduler
+    participant A as FastAPI
+    participant P as PostgreSQL
+    participant R as Redis
+    participant W as arq worker
+    participant Y as YouTube
 
-The scheduler paginates through every followed channel and isolates per-channel failures so one bad
-feed cannot stop other users' work.
+    U->>A: Request refresh or import
+    A->>P: Create or reuse queued sync run
+    A->>R: Enqueue run UUID
+    A-->>U: Return 202 with sync run
+    R->>W: Deliver job
+    W->>P: Claim run and record attempt
+    W->>Y: Check RSS, then request API metadata when needed
+    W->>P: Upsert data and persist counters
+    W->>P: Store succeeded, partial, or failed state
+    U->>A: Poll sync run
+    A->>P: Read durable state
+    A-->>U: Return progress or terminal result
+```
+
+The run UUID is also the arq job ID, which prevents duplicate active delivery for the same work.
+Workers claim runs atomically. Unique source IDs and upserts make retries safe.
+
+RSS conditional requests use `ETag` and `Last-Modified` values to detect changes before full mode
+spends Data API quota. Batch counters are committed as work progresses. Retryable failures use bounded
+backoff; configuration, credential, and quota errors do not retry indefinitely.
+
+The scheduler paginates across every followed channel and isolates channel failures. One unavailable
+feed therefore does not stop unrelated refreshes. The frontend reads the PostgreSQL sync record and
+keeps the last successfully loaded content visible when a refresh fails.
 
 ## Data ownership
 
-Core records carry an `owner_id`, and routers resolve the authenticated owner before calling services.
-CRUD queries scope reads and writes by that owner. Cross-user identifiers therefore behave as missing
-rather than revealing another account's data. Account deletion removes owned state transactionally.
+Core application records include `owner_id`. Routers resolve the authenticated account before calling
+services, and CRUD queries scope reads and writes to that owner. An identifier owned by another user
+returns the same response as a missing identifier. Account deletion removes owned data in one
+transaction.
 
-Videos and channel metadata are currently duplicated per owner. This consumes more storage and may
-repeat refresh work, but simplifies isolation, export and deletion and avoids shared-record lifecycle
-coupling.
+Channel and video metadata is duplicated for each owner. This increases storage and can repeat refresh
+work, but it keeps queries, exports, and deletion within one ownership model. The alternative would
+require shared-record lifecycle and reference-counting rules.
 
-## Deployment topologies
-
-### Full Docker application
+## Full Docker installation
 
 ```mermaid
 flowchart TB
-    Browser --> Frontend[SvelteKit / adapter-node]
-    Frontend --> API[FastAPI / Gunicorn]
+    Browser --> Frontend[SvelteKit with adapter-node]
+    Frontend --> API[FastAPI with Gunicorn]
     API --> PG[(PostgreSQL 16)]
     API --> Redis[(Redis 7)]
-    Redis --> Worker[arq worker + hourly cron]
+    Redis --> Worker[arq worker and hourly scheduler]
     Worker --> PG
     Worker --> RSS[YouTube RSS]
     Worker --> YT[YouTube Data API]
     Migrate[Alembic migration service] --> PG
 ```
 
-This is the reference product: registration, CSV/OAuth import, channel mutation, manual refresh,
-hourly scheduling and quota-accounted Data API enrichment are enabled.
+This is the reference product configuration. It supports registration, CSV and OAuth imports,
+channel changes, manual refresh, hourly scheduling, and quota-accounted Data API metadata.
 
-### Hosted portfolio demo
+## Hosted demo
 
 ```mermaid
 flowchart TB
     Browser --> Frontend[SvelteKit on Vercel]
-    Frontend --> API[FastAPI Vercel Function]
+    Frontend --> API[FastAPI Vercel function]
     API --> Neon[(Neon PostgreSQL)]
     Cron[Vercel daily cron] -->|Bearer secret| API
     API -->|bounded maintenance| RSS[Public YouTube RSS]
 ```
 
-The shared demo has no Redis, persistent worker or YouTube API key. Registration, imports, channel
-mutation and manual external refresh are disabled by backend policy. Daily maintenance restores the
-seeded state and attempts a bounded RSS-only update while preserving the last good dataset on failure.
+The shared demo has no Redis service, persistent worker, or YouTube API key. Backend policy disables
+registration, imports, channel changes, and manual external refresh. Daily maintenance restores the
+seeded state and attempts a bounded RSS update. The last stored dataset remains available when a feed
+or maintenance request fails.
 
-Operational procedures are documented in [Deployment](deployment.md); the rationale for these
-boundaries is documented in [Engineering decisions](engineering-decisions.md).
+See [Deployment and self-hosting](deployment.md) for operational procedures and
+[Engineering decisions](engineering-decisions.md) for the trade-offs behind these boundaries.

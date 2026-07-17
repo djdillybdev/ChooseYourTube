@@ -1,182 +1,168 @@
 # ChooseYourTube
 
-**A self-hostable, distraction-free YouTube inbox for people who want to choose what they watch.**
+ChooseYourTube is a self-hosted YouTube inbox for people who want to follow channels without using
+YouTube's recommendation feed. It collects new videos from selected channels in a searchable personal
+library, with categories, tags, playlists, Watch Later, and watched-state tracking.
 
-[![Try the live demo](https://img.shields.io/badge/Try_the_live_demo-7c3aed?style=for-the-badge)](https://chooseyourtube-demo-tawny.vercel.app)
-[![Watch the 2-minute demo](https://img.shields.io/badge/Watch_the_2--minute_demo-334155?style=for-the-badge)](https://github.com/djdillybdev/ChooseYourTube/releases/download/v1.0.0/chooseyourtube-demo-v1.0.0.mp4)
+[Try the hosted demo](https://chooseyourtube-demo-tawny.vercel.app)
 
-![ChooseYourTube inbox showing a curated feed of followed channels](docs/screenshots/inbox-desktop.png)
+![ChooseYourTube inbox showing videos from followed channels](docs/screenshots/inbox-desktop.png)
 
 [![CI](https://github.com/djdillybdev/ChooseYourTube/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/djdillybdev/ChooseYourTube/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/djdillybdev/ChooseYourTube?display_name=tag)](https://github.com/djdillybdev/ChooseYourTube/releases/latest)
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue)](LICENSE)
 [![Accessibility: WCAG 2.2 AA target](https://img.shields.io/badge/accessibility-WCAG_2.2_AA_target-0f766e)](docs/accessibility.md)
 
-ChooseYourTube turns selected YouTube channels into a calm, searchable feed. It keeps the useful
-parts of subscriptions—new videos, playlists and playback—without recommendations, comments,
-trending content or an engagement-driven home page.
+## What you can do
 
-The project is also a production-oriented full-stack system: a SvelteKit application talks to a
-FastAPI API through a same-origin auth proxy, PostgreSQL stores user-owned state and durable job
-history, and Redis/arq runs idempotent synchronization work in the full Docker deployment.
+- Follow individual YouTube channels and browse their recent videos without recommendations,
+  comments, trending content, or engagement prompts.
+- Search video titles and descriptions, then combine channel, category, tag, date, duration, and
+  watched-state filters. Filter state stays in the URL.
+- Organize channels with categories, tags, and favorites.
+- Save videos to Watch Later or ordered custom playlists.
+- Import subscriptions from a Google Takeout CSV or through a one-time Google OAuth connection.
+- Review synchronization progress, partial results, retries, and YouTube API quota use.
+- Keep accounts and libraries separate through owner-scoped data access.
 
-## Live demo
+| Browse and combine filters                                                | Organize channels and tags                                              |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| ![Inbox with its filter panel open](docs/screenshots/filters-desktop.png) | ![Tag organization settings](docs/screenshots/organization-desktop.png) |
+| Watch Later and ordered playback                                          | Synchronization history                                                 |
+| ![Watch Later playlist](docs/screenshots/watch-later-desktop.png)         | ![Synchronization activity](docs/screenshots/sync-desktop.png)          |
 
-Open the [shared hosted demo](https://chooseyourtube-demo-tawny.vercel.app) and select **Try the
-demo**—no credentials are required. You can browse, search, filter, play videos, edit watched state,
-and use Watch Later and playlists. External imports, channel mutation and manual YouTube refreshes
-are disabled to protect quota and shared data. Mutable demo state resets daily.
+## Self-host with Docker
 
-The demo is intentionally lighter than the full self-hosted application: Vercel functions and Neon
-replace the long-running API/worker stack, and daily maintenance uses public RSS feeds only.
+You need:
 
-## What it demonstrates
+- Git
+- Docker Engine with Docker Compose
+- OpenSSL
+- a [YouTube Data API key](https://developers.google.com/youtube/v3/getting-started)
 
-- **Intentional viewing:** a subscription inbox with no recommendation or engagement surfaces.
-- **Flexible discovery:** PostgreSQL full-text search plus channel, tag, date, watched and duration
-  filters whose state is preserved in the URL.
-- **Organization:** icon-based channel categories, cross-cutting tags, favorite channels, ordered
-  playlists and a first-class Watch Later list.
-- **Subscription onboarding:** Google Takeout CSV and one-time Google OAuth imports with preview,
-  deduplication, partial-failure reporting and no retained Google tokens.
-- **Observable background work:** durable sync records, counters, safe errors, retry classification,
-  active-job deduplication and user-visible activity history.
-- **Quota-aware synchronization:** RSS-first change detection, conditional requests and centralized
-  YouTube Data API accounting.
-- **User-owned data:** every application entity is owner-scoped, with transactional account deletion,
-  backup/restore guidance and no persisted Google credentials.
-- **Accessible interaction:** keyboard-operable navigation and dialogs, visible focus, live status
-  announcements, reduced-motion support and automated axe coverage.
-
-## Product tour
-
-| Browse and combine filters                                                          | Organize a personal library                                                             |
-| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| ![Inbox with the filter panel open](docs/screenshots/filters-desktop.png)           | ![Tag organization settings](docs/screenshots/organization-desktop.png)                 |
-| **Watch Later and ordered playback**                                                | **Visible synchronization feedback**                                                    |
-| ![Watch Later playlist with saved videos](docs/screenshots/watch-later-desktop.png) | ![Durable synchronization activity and quota status](docs/screenshots/sync-desktop.png) |
-
-## Architecture
-
-[![ChooseYourTube architecture showing the full Docker application and hosted Vercel demo](docs/images/architecture-overview.svg)](docs/architecture.md)
-
-See [Architecture](docs/architecture.md) for request, worker and tenancy flows, and [Engineering
-decisions](docs/engineering-decisions.md) for the trade-offs behind them.
-
-## Five-minute Docker quick start
-
-Requirements: Git, Docker with Compose, OpenSSL and a YouTube Data API key.
+Clone the repository and start the application:
 
 ```bash
 git clone https://github.com/djdillybdev/ChooseYourTube.git
 cd ChooseYourTube
 YOUTUBE_API_KEY=your-key make quickstart
-make health
 ```
 
-Open <http://localhost:5173>, create an account and follow a channel. `make quickstart` creates the
-local `.env`, generates a strong auth secret, applies migrations and starts PostgreSQL, Redis, the
-API, worker and frontend. Google OAuth credentials are optional because Takeout CSV import is built
-in.
+The quick-start script creates `.env` if it is missing, generates a 64-character `AUTH_SECRET`, runs
+the database migrations, builds the containers, and waits for the application to become healthy.
 
-For pinned release images, backup, restore, upgrades, Vercel/Neon setup and rollback, use the
-[deployment guide](docs/deployment.md).
+Open <http://localhost:5173>, register an account, and follow a channel. The API is available at
+<http://localhost:8000>; its interactive documentation is at <http://localhost:8000/docs>.
+
+Useful commands:
+
+```bash
+make health    # Check the frontend, API, worker, PostgreSQL, and Redis
+make logs      # Follow service logs
+make down      # Stop the application without deleting stored data
+make backup    # Create a PostgreSQL backup in backups/
+```
+
+Google OAuth is optional. Google Takeout CSV import works without OAuth credentials. The
+[deployment guide](docs/deployment.md) covers production configuration, HTTPS, backups, restores,
+upgrades, release images, and troubleshooting.
+
+## Hosted demo
+
+The [shared demo](https://chooseyourtube-demo-tawny.vercel.app) requires no credentials. It supports
+browsing, search, filters, playback, watched state, Watch Later, and playlists. Mutable data resets
+each day.
+
+The demo protects shared data and YouTube quota by disabling registration, imports, channel changes,
+and manual refreshes. It uses Vercel and Neon with daily RSS maintenance instead of the Redis worker
+included in the Docker installation.
+
+## How it is built
+
+The frontend uses Svelte 5 and SvelteKit. FastAPI provides the API, PostgreSQL stores application data
+and job history, and Redis with arq runs synchronization and import work. SvelteKit proxies browser API
+requests so access and refresh tokens remain in HTTP-only, same-origin cookies.
+
+[![Diagram of the Docker application and hosted demo](docs/images/architecture-overview.svg)](docs/architecture.md)
+
+The implementation includes:
+
+- RSS checks with conditional requests before spending YouTube Data API quota;
+- idempotent background jobs with durable progress records in PostgreSQL;
+- rotating refresh sessions and owner-scoped database queries;
+- PostgreSQL full-text search with a GIN index;
+- generated TypeScript types checked against the FastAPI OpenAPI document;
+- deterministic Playwright environments for browser and accessibility tests;
+- separate full and restricted-demo runtime modes from one codebase.
+
+Read [Architecture](docs/architecture.md) for the request, synchronization, and ownership flows.
+[Engineering decisions](docs/engineering-decisions.md) explains the main trade-offs.
 
 ## Configuration
 
-| Variable                                    | Required   | Default                 | Purpose                                                             |
-| ------------------------------------------- | ---------- | ----------------------- | ------------------------------------------------------------------- |
-| `APP_ENV`                                   | No         | `local`                 | `local`, `test` or strict `production` validation.                  |
-| `APP_MODE`                                  | No         | `full`                  | Selects the complete self-hosted app or restricted shared demo.     |
-| `DATABASE_URL`                              | Yes        | Compose-provided        | Async PostgreSQL URL used by the API and worker.                    |
-| `DATABASE_POOL_MODE`                        | No         | `persistent`            | `persistent`, `serverless` or Neon `fluid` connection behavior.     |
-| `REDIS_URL`                                 | Full mode  | Compose-provided        | Queue and heartbeat storage when background jobs are enabled.       |
-| `YOUTUBE_API_KEY`                           | Full mode  | —                       | YouTube Data API key; deliberately absent from the hosted demo.     |
-| `AUTH_SECRET`                               | Yes        | Generated locally       | Session signing secret; production requires at least 32 characters. |
-| `API_ORIGIN`                                | No         | `http://localhost:5173` | Canonical browser-facing origin.                                    |
-| `API_CORS_ORIGINS`                          | No         | `API_ORIGIN`            | Comma-separated trusted frontend origins.                           |
-| `REGISTRATION_ENABLED`                      | No         | Mode-derived            | Enables account registration.                                       |
-| `BACKGROUND_JOBS_ENABLED`                   | No         | Mode-derived            | Enables Redis/arq scheduling and refresh commands.                  |
-| `YOUTUBE_DAILY_QUOTA_BUDGET`                | No         | `8000`                  | Stops optional API work at the configured daily unit budget.        |
-| `YOUTUBE_OAUTH_ENABLED`                     | No         | Credential-derived      | Enables one-time Google subscription discovery.                     |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth only | —                       | Google web OAuth client credentials.                                |
-| `GOOGLE_REDIRECT_URI`                       | OAuth only | —                       | Exact authorized callback URI.                                      |
-| `ALLOW_INSECURE_OAUTH_TRANSPORT`            | Local only | `false`                 | Allows an HTTP OAuth callback during local development.             |
-| `DEMO_LOGIN_ENABLED`                        | Demo only  | Mode-derived            | Exposes one-click login for the configured shared account.          |
-| `DEMO_USER_EMAIL`                           | Demo only  | —                       | Seeded non-superuser account used by demo sessions.                 |
-| `CRON_SECRET`                               | Demo only  | —                       | Protects Vercel daily maintenance; 32+ characters.                  |
-| `DEMO_MAINTENANCE_SECRET`                   | No         | —                       | Legacy non-Vercel fallback for `CRON_SECRET`.                       |
-| `ACCESS_TOKEN_TTL_SECONDS`                  | No         | `900`                   | Access-token lifetime.                                              |
-| `REFRESH_TOKEN_TTL_SECONDS`                 | No         | `2592000`               | Rotating refresh-session lifetime.                                  |
-| `SHORTS_MAX_SECONDS`                        | No         | `60`                    | Maximum duration classified as a Short.                             |
-| `ENABLE_STARTUP_SCHEMA_CHECK`               | No         | `true`                  | Verifies required migrations during persistent startup.             |
-| `ECHO_SQL` / `DEBUG_LOGS`                   | No         | `false`                 | Local diagnostics; avoid verbose production logging.                |
-| `WEB_CONCURRENCY` / `GUNICORN_TIMEOUT`      | No         | `2` / `60`              | Docker API process tuning.                                          |
+`make quickstart` supplies the database and Redis URLs used inside Compose. Most self-hosted
+installations only need to review these values in `.env`:
 
-Start with [`.env.example`](.env.example). Compose supplies internal database and Redis URLs; hosted
-deployments must provide them explicitly.
+| Variable                     | Required | Default                  | Purpose                                              |
+| ---------------------------- | -------- | ------------------------ | ---------------------------------------------------- |
+| `YOUTUBE_API_KEY`            | Yes      | none                     | Reads channel and video metadata from the Data API.  |
+| `AUTH_SECRET`                | Yes      | generated by quick start | Signs authentication tokens; use 32+ characters.     |
+| `API_ORIGIN`                 | No       | `http://localhost:5173`  | Public frontend origin, including scheme and port.   |
+| `API_CORS_ORIGINS`           | No       | `API_ORIGIN`             | Comma-separated frontend origins trusted by the API. |
+| `YOUTUBE_DAILY_QUOTA_BUDGET` | No       | `8000`                   | Daily unit limit for optional Data API work.         |
+| `YOUTUBE_OAUTH_ENABLED`      | No       | `false`                  | Enables one-time Google subscription discovery.      |
 
-## Development and testing
+See [`.env.example`](.env.example) for every setting and [Deployment](docs/deployment.md#configuration-reference)
+for the full configuration reference.
+
+## Local development
+
+The development Compose profile runs bind-mounted backend and frontend services:
 
 ```bash
-# Everything suitable for a normal local validation pass
-make test
-
-# Backend
-cd backend
-uv sync --frozen
-uv run ruff check app tests scripts
-uv run mypy app
-uv run pytest
-
-# Frontend
-cd frontend
-pnpm install --frozen-lockfile
-pnpm run api:check
-pnpm run check
-pnpm run lint
-pnpm run test:coverage
-pnpm run test:e2e
+cp .env.example .env
+# Set YOUTUBE_API_KEY and replace AUTH_SECRET.
+make dev-up
+make dev-logs
 ```
 
-GitHub Actions also builds both production containers, verifies migrations and the generated OpenAPI
-contract, runs Playwright against deterministic seeded environments, and scans principal routes with
-axe. Backend coverage is gated at 80%; frontend coverage is gated at 70%.
+The development frontend runs at <http://localhost:5174> and the API at
+<http://localhost:8001>. Component-specific setup is documented in the
+[frontend README](frontend/README.md) and [backend README](backend/README.md).
 
-## Engineering trade-offs
+Run the main validation suite from the repository root:
 
-- RSS detects likely changes cheaply; full mode uses the Data API for metadata, while the hosted demo
-  stays RSS-only to protect quota.
-- PostgreSQL is both the application source of truth and durable cache. Content is duplicated per
-  owner, favoring isolation and deletion simplicity over storage efficiency.
-- Redis/arq performs asynchronous work, but PostgreSQL sync records—not queue results—provide durable
-  progress and recovery evidence.
-- OAuth tokens are discarded immediately after subscription discovery. CSV remains the lower-trust,
-  privacy-friendly import path.
-- The Vercel demo trades hourly workers and write-heavy integrations for a reliable free-tier
-  showcase. It shares the same services, models and migrations as Docker rather than using a demo
-  branch.
-- PostgreSQL full-text search improves relevance and performance at the cost of database portability.
+```bash
+make test
+```
 
-The complete rationale is in [Engineering decisions](docs/engineering-decisions.md).
+Browser tests and other targeted checks are listed in [Contributing](CONTRIBUTING.md).
 
-## Security, privacy and ownership
+## Security, privacy, and accessibility
 
-Access and refresh tokens are held in HTTP-only cookies at the SvelteKit boundary. Refresh sessions
-rotate, application data is owner-scoped, user-visible errors omit upstream secrets, and structured
-logs carry correlation IDs. Google access tokens and uploaded CSV files are not retained after
-subscription discovery. Self-hosters control their database, API key and backups.
+Google OAuth credentials and uploaded Takeout files are discarded after subscription discovery.
+Application data is scoped to its owner, and user-visible errors omit secrets and upstream response
+bodies. Self-hosters control their database, YouTube API key, deployment, and backups.
 
-See [Security policy](SECURITY.md), [Accessibility](docs/accessibility.md), [Contributing](CONTRIBUTING.md)
-and [Changelog](CHANGELOG.md).
+ChooseYourTube targets WCAG 2.2 AA. Automated checks cover principal routes and interactive states,
+but the project does not claim complete conformance. See [Accessibility](docs/accessibility.md) for
+the evidence and outstanding manual checks.
+
+Report vulnerabilities through the private process in [SECURITY.md](SECURITY.md).
+
+## Project documentation
+
+- [Deployment and self-hosting](docs/deployment.md)
+- [Architecture](docs/architecture.md)
+- [Engineering decisions](docs/engineering-decisions.md)
+- [Contributing](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
 
 ## AI assistance
 
-Coding agents assisted with implementation, test generation, documentation and frontend iteration.
-I defined the product direction and architecture, reviewed and integrated the changes, made the final
-engineering decisions, and verified behavior through automated and manual testing. The commit history
-and release documentation preserve that reviewable engineering trail.
+Coding agents assisted with implementation, test generation, documentation, and frontend iteration.
+The product direction, architecture, integration decisions, and final review remained human-led.
+Automated and manual tests were used to verify the resulting behavior.
 
 ## License
 
-ChooseYourTube is distributed under the [GNU General Public License v3.0 only](LICENSE).
+ChooseYourTube is available under the [GNU General Public License v3.0 only](LICENSE).

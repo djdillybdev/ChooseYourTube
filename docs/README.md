@@ -1,22 +1,34 @@
 # ChooseYourTube documentation
 
-## Current documentation
+Start with the repository [README](../README.md) for a product overview and Docker quick start.
 
-- [Architecture](architecture.md) — components, data flows, synchronization and tenancy.
-- [Engineering decisions](engineering-decisions.md) — important design choices and trade-offs.
-- [Deployment](deployment.md) — Docker, Vercel/Neon, migrations, backup, restore and rollback.
-- [Demo and interview script](demo-script.md) — two-minute tour, transcript and discussion prompts.
-- [Accessibility](accessibility.md) — WCAG target, automated evidence and known limitations.
-- [Manual WCAG checklist](wcag-manual-checklist.md) — release audit procedure.
-- [Frontend UI guidelines](frontend-ui-guidelines.md) — supported interface conventions.
-- [Portfolio screenshots](screenshots/README.md) — deterministic capture instructions.
+## Run ChooseYourTube
 
-## Historical implementation records
+- [Deployment and self-hosting](deployment.md): production configuration, Docker, backups, upgrades,
+  rollback, troubleshooting, and hosted-demo operations.
+- [Frontend development](../frontend/README.md): SvelteKit setup, build targets, API types, and tests.
+- [Backend development](../backend/README.md): FastAPI setup, workers, migrations, and tests.
 
-These files explain how the current release was developed. They are not setup guides and may retain
-terminology from earlier stages of the project:
+## Understand the system
 
-- [Portfolio release implementation plan](portfolio-release-plan.md)
-- [Frontend UX and accessibility implementation plan](frontend-ux-accessibility-implementation-plan.md)
-- [Phase 1 baseline](phase-1-baseline.md)
-- [Phase 2 synchronization operations](phase-2-synchronization.md)
+- [Architecture](architecture.md): component boundaries, request flow, synchronization, ownership,
+  and deployment topologies.
+- [Engineering decisions](engineering-decisions.md): the reasons behind the main design choices and
+  their costs.
+- [Accessibility](accessibility.md): WCAG target, test evidence, limitations, and manual audit status.
+
+## Contribute and release
+
+- [Contributing](../CONTRIBUTING.md): project direction, development workflow, and pull request checks.
+- [Frontend UI guidelines](frontend-ui-guidelines.md): component, form, feedback, and interaction
+  conventions.
+- [Manual WCAG checklist](wcag-manual-checklist.md): release checks that require human testing.
+- [Security policy](../SECURITY.md): supported versions and private vulnerability reporting.
+- [Changelog](../CHANGELOG.md): user-visible changes by release.
+
+## Portfolio and release material
+
+- [Demo and interview guide](demo-script.md)
+- [Screenshot capture guide](screenshots/README.md)
+- [v1.0.0 release notes](releases/v1.0.0.md)
+- [v1.0.0 walkthrough transcript](releases/chooseyourtube-demo-v1.0.0-transcript.md)

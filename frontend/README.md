@@ -1,26 +1,30 @@
 # ChooseYourTube frontend
 
-Svelte 5 and SvelteKit frontend for the ChooseYourTube distraction-free YouTube inbox. The root
-[README](../README.md) is the primary product, architecture and self-hosting guide; this document
-covers frontend development.
+This directory contains the Svelte 5 and SvelteKit application. The root [README](../README.md) covers
+the product and Docker installation; this guide is for frontend development.
 
 ## Responsibilities
 
-- Server-rendered application routes for the inbox, channels, categories, playlists and settings.
-- Same-origin authentication and API proxy routes that keep access and refresh tokens in HTTP-only
-  cookies.
-- URL-backed search, watched, date, duration, channel and tag filters.
-- Accessible responsive navigation, dialogs, status feedback and media controls.
-- Node adapter builds for Docker and Vercel adapter builds for the hosted demo.
+The frontend provides:
 
-Shared UI, API clients, stores, server auth helpers and types live in `src/lib/`. Pages and SvelteKit
-server endpoints live in `src/routes/`. Vitest tests are split between server and component projects;
-Playwright covers browser workflows and full-stack contracts.
+- server-rendered pages for the inbox, channels, organization, playlists, imports, and settings;
+- same-origin authentication and API proxy routes that keep tokens in HTTP-only cookies;
+- URL-backed search, channel, category, tag, date, duration, and watched-state filters;
+- responsive navigation, dialogs, status announcements, and media controls;
+- Node builds for Docker and Vercel builds for the hosted demo.
 
-## Local development
+Application routes and SvelteKit server endpoints live in `src/routes/`. Shared components, API
+clients, stores, server helpers, and types live in `src/lib/`. Tests are grouped under `tests/` by
+unit, component, and browser scope.
 
-Requirements: Node.js 22 or newer, pnpm 10.33.0, and a running ChooseYourTube API. From this
-directory:
+## Requirements
+
+- Node.js 22 or newer
+- pnpm 10.33.0
+- a running ChooseYourTube API
+
+The complete development stack is available from the repository root with `make dev-up`. For a
+standalone frontend process, run these commands from this directory:
 
 ```bash
 pnpm install --frozen-lockfile
@@ -28,51 +32,67 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-The default backend is <http://localhost:8000>. Set `API_BASE_URL` or `VITE_API_BASE_URL` when it is
-available elsewhere; `API_BASE_URL` is preferred for server deployments. Browser requests still go
-through SvelteKit rather than calling FastAPI directly.
+The default API URL is <http://localhost:8000>. Set `API_BASE_URL` when the API runs elsewhere.
+`VITE_API_BASE_URL` remains available for local compatibility, but server deployments should use
+`API_BASE_URL`. Browser requests still pass through SvelteKit rather than calling FastAPI directly.
 
-For the complete development stack with PostgreSQL, Redis and a worker, run `make dev-up` from the
-repository root instead.
+## Project structure
+
+```text
+src/
+  lib/
+    api/          Backend client wrappers
+    components/   Shared Svelte components
+    server/       Server-only authentication and request helpers
+    stores/       Client state
+    types/        Generated API types and frontend aliases
+    utils/        Reusable utilities
+  routes/         Pages, layouts, form actions, and server endpoints
+static/           Public assets
+tests/
+  unit/           Server and utility tests
+  component/      Svelte component tests
+  e2e/            Playwright browser tests
+```
 
 ## Build targets
 
 ```bash
-pnpm build          # adapter-node production build used by Docker
+pnpm build          # adapter-node build used by Docker
 pnpm build:vercel   # adapter-vercel build used by the hosted demo
-pnpm preview        # preview the most recent production build
+pnpm preview        # preview the latest production build
 ```
 
-`svelte.config.js` selects the Vercel adapter when `VERCEL=1` or `DEPLOY_TARGET=vercel`; otherwise it
-uses the Node adapter.
+`svelte.config.js` selects the Vercel adapter when `VERCEL=1` or `DEPLOY_TARGET=vercel`. Other builds
+use the Node adapter.
 
 ## API contract
 
-The backend OpenAPI document is the source of truth. After changing a backend router or schema:
+The FastAPI OpenAPI document is the source of truth. After changing a backend router or schema:
 
 ```bash
 pnpm api:generate
 pnpm api:check
 ```
 
-The first command regenerates `openapi.json` and `src/lib/types/generated.ts`; the second verifies
-that both checked-in files are current without rewriting them. Do not edit generated files manually.
+`api:generate` refreshes `openapi.json` and `src/lib/types/generated.ts`. `api:check` confirms that
+both checked-in files match the backend without rewriting them. Do not edit generated files by hand.
 Frontend-only aliases and filter types belong in `src/lib/types/api.ts`.
 
 ## Validation
 
 ```bash
-pnpm check
-pnpm lint
-pnpm test:coverage
-pnpm test:e2e:fast   # deterministic browser suite with the fake backend
-pnpm test:e2e:full   # Docker-backed frontend/backend integration suite
-pnpm docs:check      # public documentation links and placeholders
+pnpm check             # Svelte and TypeScript checks
+pnpm lint              # Prettier and ESLint
+pnpm test:coverage     # Vitest with 70% coverage thresholds
+pnpm test:e2e:fast     # Playwright against the deterministic fake backend
+pnpm test:e2e:full     # Docker-backed frontend/API browser tests
+pnpm docs:check        # Markdown links and placeholders
 ```
 
-`pnpm test:e2e` runs both browser suites. Frontend coverage thresholds are 70%; principal browser
-routes also run automated axe checks for serious and critical accessibility violations.
+`pnpm test:e2e` runs both browser suites. Principal browser routes also run axe checks for serious and
+critical accessibility violations.
 
-Portfolio screenshots and video are reproducible workflows documented in
-[`docs/screenshots/README.md`](../docs/screenshots/README.md) and
-[`docs/demo-script.md`](../docs/demo-script.md).
+Use the [frontend UI guidelines](../docs/frontend-ui-guidelines.md) when changing shared interactions.
+Portfolio capture workflows are documented in the [screenshot guide](../docs/screenshots/README.md)
+and [demo guide](../docs/demo-script.md).

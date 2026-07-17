@@ -1,26 +1,22 @@
 # ChooseYourTube v1.0.0 video transcript
 
-ChooseYourTube is a self-hostable YouTube inbox for intentional viewing—without recommendations,
-comments or trending feeds.
+ChooseYourTube is a self-hosted YouTube inbox built for intentional viewing, without recommendations,
+comments, or trending.
 
-Users follow only the channels they choose. PostgreSQL stores a durable personal library, so browsing
-does not depend on a live YouTube request.
+Users follow selected channels. PostgreSQL keeps a personal library, so browsing does not depend on a
+live YouTube request.
 
-Search uses PostgreSQL full-text indexing, and URL-backed filters combine channel, tag, watched, date
-and duration state.
+Full-text search and URL-backed filters make larger subscription lists easier to browse and share.
 
-Safe interactions remain owner-scoped. Watch Later is an application-owned system playlist with
-ordered membership. The player preserves queue order and exposes failures instead of silently skipping
-content.
+User changes are owner-scoped. Watch Later is an ordered playlist stored by the application.
 
-Watch Later and custom playlists keep playback explicit and ordered. Playlists are durable, user-owned
-collections rather than recommendation feeds.
+The player preserves queue order and reports playback failures instead of hiding them.
 
-Full mode previews OAuth or Takeout imports, deduplicates candidates, and runs commits as durable jobs.
-Every refresh records progress, safe errors and retry state.
+Full mode previews OAuth or Takeout imports, removes duplicates, and records progress and safe
+failures for background work.
 
-Docker runs FastAPI, PostgreSQL, Redis and arq workers. The Vercel demo shares the same code and
-migrations but stays RSS-only to protect quota.
+Docker runs FastAPI, PostgreSQL, Redis, and arq. The public demo uses the same code with daily RSS
+maintenance.
 
-Try the live demo or follow the complete self-hosting guide at
+The live demo and self-hosting guide are linked from the project README at
 `github.com/djdillybdev/ChooseYourTube`.
