@@ -62,7 +62,7 @@ describe('player route layout', () => {
 		watchLater: null,
 		runtime: {
 			name: 'ChooseYourTube',
-			version: '0.1.0',
+			version: '1.0.0',
 			mode: 'full' as const,
 			features: {
 				registration: true,

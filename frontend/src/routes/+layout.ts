@@ -6,7 +6,7 @@ import type { RuntimeMetadata } from '$lib/types/runtime';
 
 const fallbackRuntime: RuntimeMetadata = {
 	name: 'ChooseYourTube',
-	version: '0.1.0',
+	version: '1.0.0',
 	mode: 'full',
 	features: {
 		registration: true,

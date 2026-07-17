@@ -14,6 +14,7 @@ from app.auth.schemas import UserCreate, UserRead
 from app.core.config import Settings, settings
 from app.core.errors import APIErrorBody, ApplicationError, safe_error_details
 from app.core.observability import RequestContextMiddleware, configure_logging
+from app.core.version import APP_VERSION
 from app.db.schema_guard import assert_required_playlist_schema
 from app.db.session import sessionmanager
 from app.routers import (
@@ -74,7 +75,7 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
     application = FastAPI(
         title="ChooseYourTube API",
         summary="Backend API for the ChooseYourTube distraction-free YouTube reader.",
-        version="0.1.0",
+        version=APP_VERSION,
         license_info={"name": "GPL-3.0-only", "identifier": "GPL-3.0-only"},
         responses={
             code: {"model": APIErrorBody, "description": "Safe API error"}
@@ -165,7 +166,7 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
     async def root() -> dict[str, object]:
         return {
             "name": "ChooseYourTube API",
-            "version": "0.1.0",
+            "version": APP_VERSION,
             "mode": app_settings.APP_MODE,
             "links": {
                 "docs": "/docs",

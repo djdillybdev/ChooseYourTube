@@ -1,290 +1,137 @@
 # ChooseYourTube API
 
-Backend API for managing YouTube channels, videos, playlists, folders, and tags with per-user data isolation and background synchronization jobs.
-
-## What This Service Does
-
-- Stores selected YouTube channels and their videos.
-- Lets users organize channels in folders and attach tags.
-- Supports manual and system playlists with ordered video positions.
-- Syncs channel videos and channel playlists in the background.
-- Imports subscriptions from Google Takeout CSV or one-time Google OAuth authorization.
-- Exposes JWT-based authentication and user management.
-
-## Tech Stack
-
-- Python 3.12+
-- FastAPI + Uvicorn
-- SQLAlchemy 2 (async) + Alembic
-- PostgreSQL 16
-- Redis 7 + arq worker/cron jobs
-- fastapi-users (JWT bearer auth)
-- YouTube Data API + YouTube RSS feed parsing
-- Tooling: `uv`, `pytest`, `ruff`, `mypy`
-
-## Architecture
-
-### Runtime Components
-
-- API process: FastAPI app in `app/main.py`
-- Worker process: arq worker in `app/worker.py`
-- Database: PostgreSQL
-- Queue backend: Redis
-
-API and worker both run on the host in local development and connect to Dockerized PostgreSQL/Redis over `localhost`.
-
-### Layered Backend Structure
-
-- `app/routers/`: HTTP endpoints and request parsing.
-- `app/services/`: orchestration/business rules.
-- `app/db/crud/`: query-focused data access.
-- `app/db/models/`: SQLAlchemy models and relationships.
-- `app/schemas/`: Pydantic request/response schemas.
-- `app/auth/`: fastapi-users integration, auth backend, user model.
-- `app/clients/`: external integrations (YouTube API client).
-
-### Data and Execution Flow
-
-1. Channel creation flow
-- `POST /channels` creates a channel in DB (scoped to current user).
-- API enqueues background jobs:
-  - `fetch_and_store_all_channel_videos_task`
-  - `sync_channel_playlists_task`
-- Worker executes jobs and writes channel/video/playlist data.
-
-2. Periodic refresh flow
-- Worker cron runs hourly (`enqueue_channel_refreshes`).
-- One refresh job per saved channel is enqueued with staggered delay.
-- Job checks RSS/API and updates latest videos.
-
-### Tenancy Model
-
-- Core entities include `owner_id`.
-- Routers resolve current authenticated user and pass `owner_id` into services.
-- Queries are scoped by `owner_id` for user-level isolation.
-
-### Search
-
-- Video full-text search uses a PostgreSQL functional GIN index added in migration `20260217_add_video_fts`.
-
-## Prerequisites
-
-- Docker + Docker Compose
-- Python 3.12+
-- `uv` installed
-- YouTube Data API key
-
-## Environment Configuration
-
-Create local environment file:
-
-```bash
-cp .env.example .env
-```
-
-Required variables:
-
-- `DATABASE_URL`: async SQLAlchemy PostgreSQL DSN
-- `REDIS_URL`: Redis DSN
-- `API_ORIGIN`: frontend origin (for CORS/context)
-- `YOUTUBE_API_KEY`: key for YouTube API calls
-- `AUTH_SECRET`: JWT signing secret
-
-Use a strong `AUTH_SECRET` outside local development.
-
-Google OAuth import is optional. When enabled, configure a web OAuth client with an exact redirect URI of `http://localhost:8000/imports/youtube/oauth/callback` for the default Docker stack. Imported Google credentials are discarded after subscription discovery.
-
-## Local Setup (First Run)
-
-1. Install dependencies:
-
-```bash
-uv sync
-```
-
-2. Start infrastructure:
-
-```bash
-docker compose up -d
-```
-
-3. Apply database migrations:
-
-```bash
-uv run alembic upgrade head
-```
-
-4. Run API server (terminal 1):
-
-```bash
-uv run uvicorn app.main:app --reload
-```
-
-5. Run worker (terminal 2):
-
-```bash
-uv run arq app.worker.WorkerSettings
-```
-
-Default API URL: `http://127.0.0.1:8000`
-
-## Daily Development Workflow
-
-Start everything:
-
-```bash
-docker compose up -d
-uv run uvicorn app.main:app --reload
-uv run arq app.worker.WorkerSettings
-```
-
-Stop infrastructure:
-
-```bash
-docker compose down
-```
-
-Useful commands:
-
-```bash
-# Check service state
-docker compose ps
-
-# Follow infra logs
-docker compose logs -f postgres
-docker compose logs -f redis
-
-# PostgreSQL shell
-docker compose exec postgres psql -U postgres -d chooseyourtube
-```
-
-Reset local DB (destructive):
-
-```bash
-docker compose down -v
-docker compose up -d
-uv run alembic upgrade head
-```
-
-## API Usage
-
-OpenAPI docs:
-
-- Swagger UI: `http://127.0.0.1:8000/docs`
-- ReDoc: `http://127.0.0.1:8000/redoc`
-
-Auth routes:
-
-- `POST /auth/register`
-- `POST /auth/jwt/login`
-- `POST /auth/jwt/logout`
-- `POST /auth/forgot-password`
-- `POST /auth/reset-password`
-- `GET /users/me`
-
-Send bearer token:
-
-```http
-Authorization: Bearer <token>
-```
-
-Main route groups:
-
-- `/channels`
-- `/videos`
-- `/playlists`
-- `/folders`
-- `/tags`
-- `/health`
-
-## Background Jobs and Scheduling
-
-Worker functions:
-
-- `fetch_and_store_all_channel_videos_task`
-- `refresh_latest_channel_videos_task`
-- `sync_channel_playlists_task`
-
-Scheduler:
-
-- Hourly cron enqueues channel refresh jobs.
-- Redis is required for enqueueing and worker execution.
-
-## Testing and Quality Checks
-
-Run all tests:
-
-```bash
-uv run pytest
-```
-
-Run subsets:
-
-```bash
-uv run pytest -m unit
-uv run pytest -m integration
-```
-
-Lint and type check:
-
-```bash
-uv run ruff check
-uv run mypy app
-```
-
-## Database Migrations
-
-Apply latest migrations:
-
-```bash
-uv run alembic upgrade head
-```
-
-Create a new migration after model changes:
-
-```bash
-uv run alembic revision --autogenerate -m "describe_change"
-```
-
-Include migration files with schema changes in commits.
-
-## Production Basics
-
-- Provide secure values for secrets and all required env vars.
-- Run API and worker as separate processes/services.
-- Use managed PostgreSQL and Redis.
-- Run `alembic upgrade head` during deployment.
-- Restrict CORS to trusted frontend origins.
-- Monitor health endpoints and worker process health.
-
-This README intentionally focuses on local development and production essentials, not a full deployment runbook.
-
-## Troubleshooting
-
-- `DATABASE_URL` connection errors:
-  - ensure `docker compose up -d` is running and port `5432` is available.
-- Redis/queue errors:
-  - verify Redis container is up and `REDIS_URL` matches local port `6379`.
-- Auth errors:
-  - check `AUTH_SECRET` is set and stable between restarts.
-- YouTube sync failures:
-  - confirm `YOUTUBE_API_KEY` is valid and has quota.
-- Migration mismatch:
-  - run `uv run alembic upgrade head` and verify migration chain.
-
-## Project Layout
+This directory contains the FastAPI API, database models, services, and arq worker. The root
+[README](../README.md) covers the product and Docker installation; this guide is for backend
+development.
+
+## Responsibilities
+
+The backend owns:
+
+- accounts and owner-scoped channels, videos, categories, tags, and playlists;
+- Watch Later, ordered playlist membership, and watched state;
+- Google Takeout CSV and one-time Google OAuth subscription imports;
+- durable synchronization records, retries, and YouTube API quota accounting;
+- RSS-first channel refresh with optional Data API metadata;
+- Redis-backed jobs, worker health, and hourly scheduling in full mode;
+- shared-demo login and daily RSS-only maintenance in demo mode.
+
+## Project structure
 
 ```text
 app/
-  auth/         # Authentication and user management
-  clients/      # External API clients (YouTube)
-  core/         # Settings/config
-  db/           # Models, session, CRUD
-  routers/      # FastAPI route handlers
-  schemas/      # Pydantic schemas
-  services/     # Business logic orchestration
-  main.py       # FastAPI app entrypoint
-  worker.py     # arq worker + cron configuration
-migration/      # Alembic env and migration versions
-tests/          # Unit, CRUD, services, routers, integration, worker, property tests
+  auth/        Authentication and rotating sessions
+  clients/     YouTube RSS and Data API clients
+  core/        Settings, errors, and observability
+  db/          SQLAlchemy models, sessions, and owner-scoped CRUD
+  routers/     HTTP request and response handling
+  schemas/     Pydantic API contracts
+  services/    Application orchestration
+  main.py      FastAPI entry point
+  worker.py    arq worker and hourly scheduler
+migration/     Alembic configuration and revisions
+scripts/       OpenAPI, migration, coverage, and demo utilities
+tests/         Unit, CRUD, service, router, worker, and integration tests
 ```
+
+Routers validate HTTP input and delegate work to services. Services coordinate external clients and
+CRUD modules. Database and network boundaries are asynchronous.
+
+## Requirements
+
+- Python 3.12
+- `uv`
+- PostgreSQL 16
+- Redis 7 for full-mode background work
+
+The root Compose stack is the shortest way to start PostgreSQL and Redis. From the repository root:
+
+```bash
+cp .env.example .env
+# Set YOUTUBE_API_KEY and replace AUTH_SECRET.
+docker compose --env-file .env up -d postgres redis
+
+cd backend
+uv sync --frozen
+uv run --env-file ../.env alembic upgrade head
+uv run --env-file ../.env uvicorn app.main:app --reload
+```
+
+Run the worker in a second terminal:
+
+```bash
+cd backend
+uv run --env-file ../.env arq app.worker.WorkerSettings
+```
+
+The API documentation is available at <http://localhost:8000/docs>. Liveness and dependency checks
+are exposed at `/health/live` and `/health/ready`.
+
+## Runtime modes
+
+`APP_MODE=full` enables registration, imports, channel changes, Redis jobs, scheduled refresh, and
+quota-accounted Data API work. Full mode requires PostgreSQL, Redis, a YouTube API key, and a stable
+authentication secret.
+
+`APP_MODE=demo` supports the restricted Vercel deployment through `app.index:app`. It uses the same
+routers, services, models, and migrations, but backend policy disables registration, external imports,
+channel mutation, and API-key-dependent refreshes.
+
+Google OAuth is optional in full mode. For the default Docker stack, the registered callback is
+`http://localhost:8000/imports/youtube/oauth/callback`. Credentials are used for subscription
+discovery and are not stored.
+
+See the root [configuration overview](../README.md#configuration) and the complete
+[deployment reference](../docs/deployment.md#configuration-reference).
+
+## API contract
+
+The checked-in OpenAPI document generates the frontend TypeScript types. After changing a router or
+schema, run from this directory:
+
+```bash
+cd ../frontend
+pnpm api:generate
+pnpm api:check
+```
+
+Public errors use this shape:
+
+```json
+{
+  "code": "ERROR_CODE",
+  "message": "Safe user-facing message.",
+  "request_id": "correlation-id",
+  "retryable": false
+}
+```
+
+Public error bodies must not contain connection strings, credentials, SQL, stack traces, or upstream
+response bodies.
+
+## Database migrations
+
+```bash
+uv run alembic upgrade head
+uv run alembic revision --autogenerate -m "describe change"
+uv run alembic check
+```
+
+Review every generated revision before committing it. Production migrations use a direct PostgreSQL
+connection and run before application code that depends on the new schema. See the
+[migration guide](migration/README) and [deployment guide](../docs/deployment.md#upgrades-and-rollback)
+for operational details.
+
+## Validation
+
+```bash
+uv run ruff check app tests scripts
+uv run mypy app
+uv run pytest
+uv run python scripts/check_coverage.py
+uv run alembic check
+```
+
+Pytest measures line and branch coverage. The release gate requires at least 80% backend coverage.
+Authentication, ownership, imports, quota accounting, and worker behavior still require direct tests
+when aggregate coverage passes.

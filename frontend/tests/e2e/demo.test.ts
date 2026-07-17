@@ -269,9 +269,9 @@ test('filters and video actions close when clicking outside', async ({ page, con
 	const pageHeading = page.getByRole('heading', { name: 'Inbox' });
 
 	await page.getByText('Filters', { exact: true }).click();
-	await expect(page.getByLabel('Length')).toBeVisible();
+	await expect(page.getByRole('group', { name: 'Duration' })).toBeVisible();
 	await pageHeading.click();
-	await expect(page.getByLabel('Length')).toBeHidden();
+	await expect(page.getByRole('group', { name: 'Duration' })).toBeHidden();
 
 	const videoCard = page.getByRole('article', { name: 'Phase 3 portfolio video' });
 	await videoCard.getByText('More', { exact: true }).click();
@@ -539,7 +539,9 @@ test('open video filters have accessible names and contrast', async ({ page, con
 	await page.goto('/inbox');
 	await page.getByText('Filters', { exact: true }).click();
 
-	await expect(page.getByLabel('Length')).toBeVisible();
+	await expect(page.getByRole('group', { name: 'Duration' })).toBeVisible();
+	await expect(page.getByRole('slider', { name: 'Minimum duration' })).toBeVisible();
+	await expect(page.getByRole('slider', { name: 'Maximum duration' })).toBeVisible();
 	await expect(page.getByLabel('Channel')).toBeVisible();
 	await expect(page.getByLabel('Tag')).toBeVisible();
 	await expect(page.getByLabel('Published after')).toBeVisible();

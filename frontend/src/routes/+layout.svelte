@@ -42,6 +42,7 @@
 <svelte:head>
 	<title>ChooseYourTube</title>
 	<link rel="icon" href={favicon} />
+	<meta name="theme-color" content="#7c3aed" />
 	<meta
 		name="description"
 		content="ChooseYourTube is a distraction-free feed reader for selected YouTube channels."

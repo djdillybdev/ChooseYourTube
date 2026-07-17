@@ -16,6 +16,7 @@ from arq import cron
 from .clients.youtube import YouTubeAPI
 from .core.config import settings
 from .core.errors import ApplicationError
+from .core.version import APP_VERSION
 from .db.crud import crud_channel, crud_sync_run
 from .db.session import sessionmanager
 from .routers.health import WORKER_HEARTBEAT_KEY
@@ -42,7 +43,7 @@ async def maintain_worker_heartbeat(ctx: dict) -> None:
         payload = json.dumps(
             {
                 "worker": socket.gethostname(),
-                "version": "0.1.0",
+                "version": APP_VERSION,
                 "seen_at": datetime.now(timezone.utc).isoformat(),
             }
         )

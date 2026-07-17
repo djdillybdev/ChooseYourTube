@@ -53,7 +53,7 @@
 	<legend class="sr-only">Duration</legend>
 	<div class="flex items-center justify-between gap-2">
 		<span class="text-xs font-medium text-base-content" aria-hidden="true">Duration</span>
-		<output id="duration-summary" class="text-xs text-base-content/70" aria-live="polite">
+		<output id="duration-summary" class="text-xs text-base-content" aria-live="polite">
 			{summary}
 		</output>
 	</div>
