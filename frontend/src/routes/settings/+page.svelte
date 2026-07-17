@@ -83,7 +83,7 @@
 	<section class="rounded-box border border-base-300 bg-base-100 p-5">
 		<div class="mb-4">
 			<h2 class="text-xl font-semibold">Tags</h2>
-			<p class="text-sm text-base-content">Tags organize channels and videos across folders.</p>
+			<p class="text-sm text-base-content">Tags organize channels and videos across categories.</p>
 		</div>
 
 		<form class="mb-5 flex max-w-xl gap-2" onsubmit={createTag}>

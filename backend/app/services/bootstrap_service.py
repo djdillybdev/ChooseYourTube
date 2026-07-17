@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.auth.schemas import UserRead
+from app.core.version import APP_VERSION
 from app.core.config import settings
 from app.schemas.bootstrap import AppBootstrapOut, RuntimeFeaturesOut, RuntimeMetadataOut
 from app.schemas.channel import ChannelOut
@@ -61,7 +62,7 @@ async def get_app_bootstrap(
         watch_later=watch_later,
         runtime=RuntimeMetadataOut(
             name="ChooseYourTube",
-            version="0.1.0",
+            version=APP_VERSION,
             mode=settings.APP_MODE,
             features=RuntimeFeaturesOut(**settings.public_features),
         ),

@@ -1,5 +1,8 @@
 # ChooseYourTube Portfolio-Ready v1.0 Implementation Plan
 
+> Historical implementation record. For current project documentation, start at
+> [`docs/README.md`](README.md).
+
 ## 1. Purpose and release outcome
 
 ChooseYourTube is a self-hostable YouTube feed reader that lets users follow selected channels, organize them, find videos, and watch without YouTube's recommendation-driven interface. The portfolio release must be understandable and demonstrable to a recruiter in a few minutes while remaining a credible, usable self-hosted application.

@@ -1,5 +1,8 @@
 # Phase 1 baseline
 
+> Historical release-baseline record. Current setup and validation commands are in the root
+> [`README.md`](../README.md).
+
 Baseline captured on 2026-07-14 before and during Phase 1 implementation.
 
 ## Initial state

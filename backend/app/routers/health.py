@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from ..core.config import settings
+from ..core.version import APP_VERSION
 from ..dependencies import DBSessionDep
 
 router = APIRouter(prefix="/health", tags=["Health"])
@@ -23,7 +24,7 @@ WORKER_HEARTBEAT_KEY = "chooseyourtube:worker:heartbeat"
 def _identity() -> dict[str, str]:
     return {
         "name": "ChooseYourTube API",
-        "version": "0.1.0",
+        "version": APP_VERSION,
         "mode": settings.APP_MODE,
     }
 

@@ -16,7 +16,7 @@ should reserve approximately 2 CPU cores, 2 GB RAM, and 10 GB of persistent disk
 stored in `postgres_data`; Redis queue state is stored in `redis_data`.
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/djdillybdev/ChooseYourTube.git
 cd ChooseYourTube
 YOUTUBE_API_KEY=your-key make quickstart
 make health
@@ -171,8 +171,9 @@ same-origin through SvelteKit's `/api/backend/*` proxy.
    ```
 
 The v2 seed pins six real RSS entries for each of these seven channels: Kurzgesagt, Nightshift, PBS
-Eons, Fireship, NPR Music, PBS Space Time, and IGN. It also supplies deterministic folders, tags,
-favorites, watched state, Watch Later entries, custom playlists, and a representative import history.
+Eons, Fireship, NPR Music, PBS Space Time, and IGN. It also supplies deterministic categories, retained
+folder-compatibility data, tags, favorites, watched state, Watch Later entries, custom playlists, and
+a representative import history.
 Video durations remain unknown because YouTube RSS does not provide them.
 
 Daily maintenance has a deterministic per-day run ID, refreshes only those seven catalog channels for

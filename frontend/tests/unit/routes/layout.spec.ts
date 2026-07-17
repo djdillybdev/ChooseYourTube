@@ -49,7 +49,7 @@ describe('root layout load', () => {
 			],
 			tags: [{ id: 'tag-1', name: 'science' }],
 			watch_later: { id: 'watch-later', video_ids: [] },
-			runtime: { name: 'ChooseYourTube', version: '0.1.0', mode: 'demo', features: {} }
+			runtime: { name: 'ChooseYourTube', version: '1.0.0', mode: 'demo', features: {} }
 		};
 		const categories = [
 			{

@@ -1,5 +1,8 @@
 # Phase 2 synchronization operations
 
+> Historical implementation record. Current architecture and operational guidance are in
+> [`architecture.md`](architecture.md) and [`deployment.md`](deployment.md).
+
 ChooseYourTube records every background synchronization in `sync_runs`. Manual channel
 and playlist refresh endpoints return the durable run with HTTP 202; clients can poll
 `GET /sync-runs/{id}` or review recent activity under **Settings → Sync Activity**.

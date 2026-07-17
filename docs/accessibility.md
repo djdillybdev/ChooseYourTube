@@ -36,7 +36,8 @@ Automated validation was run in Chromium against the deterministic fake backend:
 - The isolated seeded full-stack suite covered password login/logout, persisted Watch Later state,
   owner-scoped API resources, and refresh-token rotation.
 
-The following checks still require a human before a tagged accessibility-conformance statement:
+The following checks require a human before any accessibility-conformance statement. Until they are
+recorded, public project material describes WCAG 2.2 AA as a target rather than a certification:
 
 - VoiceOver with Safari and at least one second screen reader/browser combination.
 - A real 200% browser-zoom and text-only enlargement pass; viewport emulation is not equivalent.

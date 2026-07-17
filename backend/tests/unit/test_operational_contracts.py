@@ -24,7 +24,7 @@ def test_liveness_is_cheap_and_identified() -> None:
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
-    assert response.json()["service"]["version"] == "0.1.0"
+    assert response.json()["service"]["version"] == "1.0.0"
 
 
 def test_unknown_route_uses_safe_error_contract() -> None:

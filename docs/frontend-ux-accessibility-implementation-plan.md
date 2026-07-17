@@ -1,5 +1,8 @@
 # ChooseYourTube Frontend UX and Accessibility Implementation Plan
 
+> Historical implementation record. For current UI guidance and accessibility evidence, see
+> [`frontend-ui-guidelines.md`](frontend-ui-guidelines.md) and [`accessibility.md`](accessibility.md).
+
 **Status:** Proposed implementation plan  
 **Audit date:** 2026-07-16  
 **Scope:** SvelteKit frontend, with narrowly scoped backend contract work where the frontend cannot
@@ -56,18 +59,18 @@ The authenticated application is composed by `frontend/src/routes/+layout.svelte
 `frontend/src/routes/+layout.ts`. The root layout loads bootstrap data, renders global navigation and
 modals, and redirects unauthenticated users through the existing auth flow.
 
-| User area | Routes | Current purpose |
-| --- | --- | --- |
-| Authentication | `/login`, `/register` | Password account entry and account creation |
-| Main feed | `/inbox` | Recently synchronized videos; currently defaults to unwatched |
-| Saved views | `/favorites`, `/watch-later` | Favorite videos and the Watch Later system list |
-| Playlists | `/playlists`, `/playlists/[playlistId]` | Manual playlist browsing and playback |
-| Channels | `/channels/[id]` | Channel videos and channel actions |
-| Channel playlists | `/channels/[id]/playlists`, `/channels/[id]/playlists/[playlistId]` | Synced YouTube playlist browsing |
-| Organization | `/categories/[id]`, `/folders/[id]` | Category and folder-scoped content |
-| Playback | `/player` | YouTube embed and application queue |
-| Settings | `/settings`, `/settings/account`, `/settings/sync`, `/settings/imports`, `/settings/imports/[id]` | Account, synchronization, and import management |
-| Server endpoints | `/api/auth/*`, `/api/backend/[...path]`, `/api/bootstrap`, `/api/meta` | Same-origin auth, backend proxying, bootstrap, and runtime metadata |
+| User area         | Routes                                                                                            | Current purpose                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Authentication    | `/login`, `/register`                                                                             | Password account entry and account creation                         |
+| Main feed         | `/inbox`                                                                                          | Recently synchronized videos; currently defaults to unwatched       |
+| Saved views       | `/favorites`, `/watch-later`                                                                      | Favorite videos and the Watch Later system list                     |
+| Playlists         | `/playlists`, `/playlists/[playlistId]`                                                           | Manual playlist browsing and playback                               |
+| Channels          | `/channels/[id]`                                                                                  | Channel videos and channel actions                                  |
+| Channel playlists | `/channels/[id]/playlists`, `/channels/[id]/playlists/[playlistId]`                               | Synced YouTube playlist browsing                                    |
+| Organization      | `/categories/[id]`, `/folders/[id]`                                                               | Category and folder-scoped content                                  |
+| Playback          | `/player`                                                                                         | YouTube embed and application queue                                 |
+| Settings          | `/settings`, `/settings/account`, `/settings/sync`, `/settings/imports`, `/settings/imports/[id]` | Account, synchronization, and import management                     |
+| Server endpoints  | `/api/auth/*`, `/api/backend/[...path]`, `/api/bootstrap`, `/api/meta`                            | Same-origin auth, backend proxying, bootstrap, and runtime metadata |
 
 ### 2.2 Shared layout and navigation
 
@@ -83,14 +86,14 @@ modals, and redirects unauthenticated users through the existing auth flow.
 
 ### 2.3 Major reusable components
 
-| Area | Components |
-| --- | --- |
-| Video browsing | `VideoList.svelte`, `VideoCard.svelte`, `WatchLaterButton.svelte` |
-| Channel browsing | `ChannelCard.svelte`, `ChannelContentTabs.svelte`, `ChannelFavoriteButton.svelte`, `SyncStatus.svelte` |
-| Layout | `Sidebar.svelte`, `TopBar.svelte`, `CategoryTree.svelte`, `ChannelTreeItem.svelte`, `FolderTree.svelte`, `DemoBanner.svelte` |
-| Player | `YouTubePlayer.svelte`, `QueueList.svelte` |
-| Dialogs | `AddChannelModal.svelte`, create/edit category and folder modals, `EditChannelModal.svelte`, `SaveVideoModal.svelte`, `ConfirmDialog.svelte` |
-| Common UI | `SearchBar.svelte`, `PaginationControls.svelte`, `EmptyState.svelte`, `ErrorState.svelte`, `SkeletonCard.svelte`, category icon controls |
+| Area             | Components                                                                                                                                   |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Video browsing   | `VideoList.svelte`, `VideoCard.svelte`, `WatchLaterButton.svelte`                                                                            |
+| Channel browsing | `ChannelCard.svelte`, `ChannelContentTabs.svelte`, `ChannelFavoriteButton.svelte`, `SyncStatus.svelte`                                       |
+| Layout           | `Sidebar.svelte`, `TopBar.svelte`, `CategoryTree.svelte`, `ChannelTreeItem.svelte`, `FolderTree.svelte`, `DemoBanner.svelte`                 |
+| Player           | `YouTubePlayer.svelte`, `QueueList.svelte`                                                                                                   |
+| Dialogs          | `AddChannelModal.svelte`, create/edit category and folder modals, `EditChannelModal.svelte`, `SaveVideoModal.svelte`, `ConfirmDialog.svelte` |
+| Common UI        | `SearchBar.svelte`, `PaginationControls.svelte`, `EmptyState.svelte`, `ErrorState.svelte`, `SkeletonCard.svelte`, category icon controls     |
 
 ### 2.4 Styling and design tokens
 
@@ -272,14 +275,14 @@ tests and copy stay consistent.
 
 Keep backend query names to minimize contract churn, but represent tri-state UI explicitly:
 
-| UI state | URL | Backend filter |
-| --- | --- | --- |
-| All watched states | `is_watched=all` | omit `is_watched` |
-| Unwatched | `is_watched=false` | `is_watched=false` |
-| Watched | `is_watched=true` | `is_watched=true` |
-| All lengths | `is_short=all` | omit `is_short` |
-| Standard videos | `is_short=false` | `is_short=false` |
-| Shorts only | `is_short=true` | `is_short=true` |
+| UI state           | URL                | Backend filter     |
+| ------------------ | ------------------ | ------------------ |
+| All watched states | `is_watched=all`   | omit `is_watched`  |
+| Unwatched          | `is_watched=false` | `is_watched=false` |
+| Watched            | `is_watched=true`  | `is_watched=true`  |
+| All lengths        | `is_short=all`     | omit `is_short`    |
+| Standard videos    | `is_short=false`   | `is_short=false`   |
+| Shorts only        | `is_short=true`    | `is_short=true`    |
 
 For `/inbox`, absence of `is_watched` remains the backward-compatible default of Unwatched. Selecting
 **All** must write `is_watched=all`; deleting the parameter must not be used for All on this route.
@@ -363,21 +366,21 @@ Use these labels consistently:
 The IDs below are used throughout the phases. “Objective” indicates directly observed or
 standards-based problems; “Design judgment” indicates a recommended consistency improvement.
 
-| ID | Severity | Type | Finding | Primary evidence |
-| --- | --- | --- | --- | --- |
-| F-01 | High | Objective | Playback and most video actions are hover/focus-revealed; title and thumbnail are inert | `VideoCard.svelte`, `VideoList.svelte`; touch-width runtime review |
-| F-02 | High | Objective | Filter surface leaves the viewport at 320 px | `TopBar.svelte` fixed `w-80 dropdown-end`; measured runtime bounds |
-| F-03 | High | Objective | Filter and search controls lack programmatic labels/state; contrast failures occur in the open state | `TopBar.svelte`, `SearchBar.svelte`; Axe open-state results |
-| F-04 | High | Objective | Channel header and top bar overlap or clip at 375/768 px; header markup is duplicated | Channel route components and `TopBar.svelte`; runtime review |
-| F-05 | High | Objective | Inbox All cannot be represented because removing `is_watched` reapplies the Unwatched default | `videoFilterQuery.ts`, `inbox/+page.ts`, `TopBar.svelte` |
-| F-06 | High | Objective | Add Channel conflates record creation with initial sync and overpromises URL support | `AddChannelModal.svelte`; `backend/app/routers/channels.py`; channel service normalization |
-| F-07 | High | Objective | Several mutations and page loads fail silently or without retry/recovery | `VideoCard.svelte`, player state, Inbox/Playlists routes, `+error.svelte` |
-| F-08 | High | Objective | Global dialogs do not consistently set initial focus or restore the trigger | Global modal components versus `ConfirmDialog.svelte`; runtime focus review |
-| F-09 | High | Objective | Nested/custom interactions and drag-only reordering create keyboard barriers | `ChannelCard.svelte`, `QueueList.svelte`, Watch Later/playlist reorder UI |
-| F-10 | High | Objective/product mismatch | Shorts appear by default despite the product's stated “without Shorts” purpose | Filter defaults, Inbox screenshot, fake-backend runtime |
-| F-11 | Medium | Objective | Active navigation, settings semantics, organization labels, and growing channel navigation are inconsistent | `Sidebar.svelte`, settings layout, dormant folder flow |
-| F-12 | Medium | Objective | Auth forms require JavaScript and provide incomplete validation/error association | Login/register pages and auth server endpoints |
-| F-13 | Low | Design judgment | Shared page widths, headers, fields, statuses, and card proportions are visually inconsistent | Route-level utility classes and duplicated markup |
+| ID   | Severity | Type                       | Finding                                                                                                     | Primary evidence                                                                           |
+| ---- | -------- | -------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| F-01 | High     | Objective                  | Playback and most video actions are hover/focus-revealed; title and thumbnail are inert                     | `VideoCard.svelte`, `VideoList.svelte`; touch-width runtime review                         |
+| F-02 | High     | Objective                  | Filter surface leaves the viewport at 320 px                                                                | `TopBar.svelte` fixed `w-80 dropdown-end`; measured runtime bounds                         |
+| F-03 | High     | Objective                  | Filter and search controls lack programmatic labels/state; contrast failures occur in the open state        | `TopBar.svelte`, `SearchBar.svelte`; Axe open-state results                                |
+| F-04 | High     | Objective                  | Channel header and top bar overlap or clip at 375/768 px; header markup is duplicated                       | Channel route components and `TopBar.svelte`; runtime review                               |
+| F-05 | High     | Objective                  | Inbox All cannot be represented because removing `is_watched` reapplies the Unwatched default               | `videoFilterQuery.ts`, `inbox/+page.ts`, `TopBar.svelte`                                   |
+| F-06 | High     | Objective                  | Add Channel conflates record creation with initial sync and overpromises URL support                        | `AddChannelModal.svelte`; `backend/app/routers/channels.py`; channel service normalization |
+| F-07 | High     | Objective                  | Several mutations and page loads fail silently or without retry/recovery                                    | `VideoCard.svelte`, player state, Inbox/Playlists routes, `+error.svelte`                  |
+| F-08 | High     | Objective                  | Global dialogs do not consistently set initial focus or restore the trigger                                 | Global modal components versus `ConfirmDialog.svelte`; runtime focus review                |
+| F-09 | High     | Objective                  | Nested/custom interactions and drag-only reordering create keyboard barriers                                | `ChannelCard.svelte`, `QueueList.svelte`, Watch Later/playlist reorder UI                  |
+| F-10 | High     | Objective/product mismatch | Shorts appear by default despite the product's stated “without Shorts” purpose                              | Filter defaults, Inbox screenshot, fake-backend runtime                                    |
+| F-11 | Medium   | Objective                  | Active navigation, settings semantics, organization labels, and growing channel navigation are inconsistent | `Sidebar.svelte`, settings layout, dormant folder flow                                     |
+| F-12 | Medium   | Objective                  | Auth forms require JavaScript and provide incomplete validation/error association                           | Login/register pages and auth server endpoints                                             |
+| F-13 | Low      | Design judgment            | Shared page widths, headers, fields, statuses, and card proportions are visually inconsistent               | Route-level utility classes and duplicated markup                                          |
 
 ## 6. Delivery strategy
 
@@ -1085,18 +1088,18 @@ Rules for that contract change:
 
 ## 16. Risks and mitigations
 
-| Risk | Mitigation |
-| --- | --- |
-| Filter URL changes break old links | Continue accepting existing `true`/`false` and absent values; add explicit `all` rather than renaming backend parameters |
-| Video card becomes visually busy | Keep only play, Watch Later, and watched state persistent; group low-frequency actions in a labelled menu |
-| Shared components become over-general | Extract only repeated, stable patterns after behavior phases; keep data loading in routes |
-| Live regions become noisy during polling | Announce lifecycle transitions and user-triggered results, not every poll |
-| Dialog refactor causes focus regressions | Build one primitive with component tests before migrating each modal |
-| Channel create API change introduces partial-commit ambiguity | Make committed channel plus durable sync outcome one explicit success response; test retry idempotency |
-| Shorts default surprises existing users | Preserve an explicit All lengths/Shorts option, document the product-aligned default, and retain old deep-link parsing |
-| Removing folder UI hides user data | Keep backend routes/data, verify no supported navigation before frontend cleanup, and treat restoration as separate scope |
-| DaisyUI theme updates reintroduce contrast issues | Test open/disabled/selected states with contrast enabled and centralize adjusted tokens |
-| Fake backend masks integration behavior | Pair API/auth/sync contract PRs with the full-stack suite and targeted manual failure injection |
+| Risk                                                          | Mitigation                                                                                                                |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Filter URL changes break old links                            | Continue accepting existing `true`/`false` and absent values; add explicit `all` rather than renaming backend parameters  |
+| Video card becomes visually busy                              | Keep only play, Watch Later, and watched state persistent; group low-frequency actions in a labelled menu                 |
+| Shared components become over-general                         | Extract only repeated, stable patterns after behavior phases; keep data loading in routes                                 |
+| Live regions become noisy during polling                      | Announce lifecycle transitions and user-triggered results, not every poll                                                 |
+| Dialog refactor causes focus regressions                      | Build one primitive with component tests before migrating each modal                                                      |
+| Channel create API change introduces partial-commit ambiguity | Make committed channel plus durable sync outcome one explicit success response; test retry idempotency                    |
+| Shorts default surprises existing users                       | Preserve an explicit All lengths/Shorts option, document the product-aligned default, and retain old deep-link parsing    |
+| Removing folder UI hides user data                            | Keep backend routes/data, verify no supported navigation before frontend cleanup, and treat restoration as separate scope |
+| DaisyUI theme updates reintroduce contrast issues             | Test open/disabled/selected states with contrast enabled and centralize adjusted tokens                                   |
+| Fake backend masks integration behavior                       | Pair API/auth/sync contract PRs with the full-stack suite and targeted manual failure injection                           |
 
 ## 17. Definition of done for every phase
 

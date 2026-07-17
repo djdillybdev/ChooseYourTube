@@ -122,7 +122,7 @@ createServer(async (request, response) => {
 	if (path === '/')
 		return send(response, 200, {
 			name: 'ChooseYourTube API',
-			version: '0.1.0',
+			version: '1.0.0',
 			mode: 'full',
 			features: {
 				registration: true,
@@ -178,7 +178,7 @@ createServer(async (request, response) => {
 			},
 			runtime: {
 				name: 'ChooseYourTube',
-				version: '0.1.0',
+				version: '1.0.0',
 				mode: 'full',
 				features: {
 					registration: true,

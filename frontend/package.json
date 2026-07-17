@@ -1,7 +1,7 @@
 {
 	"name": "chooseyourtube",
 	"private": true,
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"license": "GPL-3.0-only",
 	"packageManager": "pnpm@10.33.0",
 	"engines": {
@@ -30,6 +30,8 @@
 		"test:e2e:full": "../scripts/run_e2e.sh",
 		"test:e2e": "pnpm run test:e2e:fast && pnpm run test:e2e:full",
 		"portfolio:screenshots": "CAPTURE_PORTFOLIO=1 playwright test portfolio-screenshots.test.ts",
+		"portfolio:video": "../scripts/build_portfolio_video.sh",
+		"docs:check": "node ../scripts/check-docs.mjs",
 		"test:ci": "pnpm run api:check && pnpm run test:coverage && pnpm run test:e2e",
 		"test": "pnpm run test:ci"
 	},

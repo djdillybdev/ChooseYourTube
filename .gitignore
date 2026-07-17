@@ -1,6 +1,7 @@
 .env
 .pnpm-store
 backups/
+.portfolio-artifacts/
 __pycache__/
 *.py[cod]
 .vercel
