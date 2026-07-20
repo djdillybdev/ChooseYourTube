@@ -15,6 +15,7 @@ from app.db.models.video import Video
 from app.db.session import get_db_session
 from app.main import app
 from app.clients.youtube import get_youtube_api
+from app.core.config import settings
 from app.queue import get_arq_redis
 from app.routers.auth_session import (
     SessionLoginRequest,
@@ -66,6 +67,26 @@ def _auth_headers(token: str) -> dict[str, str]:
 
 @pytest.mark.asyncio
 class TestMultiUserAuth:
+    async def test_registration_email_allowlist_blocks_unlisted_accounts(
+        self, auth_client, monkeypatch
+    ):
+        monkeypatch.setattr(
+            settings, "REGISTRATION_EMAIL_ALLOWLIST", "allowed@example.com"
+        )
+
+        blocked = auth_client.post(
+            "/auth/register",
+            json={"email": "blocked@example.com", "password": "testpassword123"},
+        )
+        allowed = auth_client.post(
+            "/auth/register",
+            json={"email": "Allowed@Example.com", "password": "testpassword123"},
+        )
+
+        assert blocked.status_code == 403
+        assert blocked.json()["code"] == "REGISTRATION_EMAIL_NOT_ALLOWED"
+        assert allowed.status_code == 201
+
     async def test_protected_routes_require_auth(self, auth_client):
         response = auth_client.get("/channels/")
         assert response.status_code == 401

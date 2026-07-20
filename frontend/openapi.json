@@ -2928,7 +2928,7 @@
 								}
 							}
 						},
-						"description": "Safe API error"
+						"description": "Email address is not permitted to register"
 					},
 					"404": {
 						"content": {

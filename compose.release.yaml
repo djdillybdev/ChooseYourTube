@@ -1,16 +1,16 @@
 services:
   migrate:
     image: ghcr.io/djdillybdev/chooseyourtube-backend:${CHOOSEYOURTUBE_VERSION:-1.0.0}
-    pull_policy: always
+    pull_policy: missing
 
   backend:
     image: ghcr.io/djdillybdev/chooseyourtube-backend:${CHOOSEYOURTUBE_VERSION:-1.0.0}
-    pull_policy: always
+    pull_policy: missing
 
   worker:
     image: ghcr.io/djdillybdev/chooseyourtube-backend:${CHOOSEYOURTUBE_VERSION:-1.0.0}
-    pull_policy: always
+    pull_policy: missing
 
   frontend:
     image: ghcr.io/djdillybdev/chooseyourtube-frontend:${CHOOSEYOURTUBE_VERSION:-1.0.0}
-    pull_policy: always
+    pull_policy: missing

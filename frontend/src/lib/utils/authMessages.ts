@@ -3,6 +3,7 @@ const AUTH_MESSAGES: Record<string, string> = {
 	EMAIL_ALREADY_REGISTERED: 'An account with this email already exists.',
 	EMAIL_ALREADY_EXISTS: 'An account with this email already exists.',
 	REGISTER_USER_ALREADY_EXISTS: 'An account with this email already exists.',
+	REGISTRATION_EMAIL_NOT_ALLOWED: 'This email address is not permitted to register.',
 	INVALID_PASSWORD: 'Choose a stronger password and try again.',
 	CURRENT_PASSWORD_INVALID: 'The current password is incorrect.',
 	DEMO_ACCOUNT_UNAVAILABLE: 'The demo account is temporarily unavailable. Please try again.',

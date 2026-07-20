@@ -13,11 +13,12 @@ if [ -z "${BACKUP_FILE:-}" ] || [ ! -f "$BACKUP_FILE" ]; then
 fi
 
 docker compose --env-file "$ENV_FILE" stop frontend backend worker
-docker compose --env-file "$ENV_FILE" exec -T postgres psql --username postgres --dbname postgres \
-  --command "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'chooseyourtube' AND pid <> pg_backend_pid();"
-docker compose --env-file "$ENV_FILE" exec -T postgres dropdb --username postgres --if-exists chooseyourtube
-docker compose --env-file "$ENV_FILE" exec -T postgres createdb --username postgres chooseyourtube
-docker compose --env-file "$ENV_FILE" exec -T postgres pg_restore --username postgres --dbname chooseyourtube --no-owner < "$BACKUP_FILE"
+docker compose --env-file "$ENV_FILE" exec -T postgres sh -c \
+  'dropdb --username "$POSTGRES_USER" --force --if-exists "$POSTGRES_DB"'
+docker compose --env-file "$ENV_FILE" exec -T postgres sh -c \
+  'createdb --username "$POSTGRES_USER" "$POSTGRES_DB"'
+docker compose --env-file "$ENV_FILE" exec -T postgres sh -c \
+  'pg_restore --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --no-owner' < "$BACKUP_FILE"
 docker compose --env-file "$ENV_FILE" run --rm migrate
 docker compose --env-file "$ENV_FILE" up -d backend worker frontend
 ./scripts/health.sh

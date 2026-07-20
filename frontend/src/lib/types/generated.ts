@@ -2397,7 +2397,7 @@ export interface operations {
 					'application/json': components['schemas']['APIErrorBody'];
 				};
 			};
-			/** @description Safe API error */
+			/** @description Email address is not permitted to register */
 			403: {
 				headers: {
 					[name: string]: unknown;

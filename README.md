@@ -152,6 +152,7 @@ Report vulnerabilities through the private process in [SECURITY.md](SECURITY.md)
 ## Project documentation
 
 - [Deployment and self-hosting](docs/deployment.md)
+- [Oracle Cloud VM deployment](docs/oracle-vm.md)
 - [Architecture](docs/architecture.md)
 - [Engineering decisions](docs/engineering-decisions.md)
 - [Contributing](CONTRIBUTING.md)

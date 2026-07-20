@@ -153,11 +153,28 @@ jobs:
           cp .env.example .env
           echo 'YOUTUBE_API_KEY=ci-fixture-key' >> .env
           echo 'AUTH_SECRET=ci-auth-secret-with-at-least-thirty-two-characters' >> .env
+          echo 'REGISTRATION_EMAIL_ALLOWLIST=compose-smoke@example.com' >> .env
       - run: docker compose --env-file .env config --quiet
       - run: docker compose --env-file .env -f compose.yaml -f compose.release.yaml config --quiet
+      - name: Validate deployment shell scripts
+        run: |
+          shellcheck -e SC1091,SC2016 deploy/oracle/bin/*.sh scripts/backup.sh scripts/restore.sh
+          for file in deploy/oracle/bin/*.sh scripts/backup.sh scripts/restore.sh; do
+            sh -n "$file"
+          done
+      - run: python3 scripts/check_oracle_compose.py
+      - name: Validate Oracle Caddy configuration
+        run: >-
+          APP_DOMAIN=tube.example.com ACME_EMAIL=admin@example.com
+          docker compose --env-file .env
+          -f compose.yaml -f compose.release.yaml -f deploy/oracle/compose.yaml
+          run --rm --no-deps caddy caddy validate
+          --config /etc/caddy/Caddyfile --adapter caddyfile
       - run: docker compose --env-file .env build backend worker frontend migrate
       - run: docker compose --env-file .env up -d postgres redis migrate backend worker frontend
       - run: python3 scripts/compose_smoke.py
+        env:
+          SMOKE_DISALLOWED_EMAIL: blocked@example.com
       - name: Capture Compose diagnostics
         if: failure()
         run: docker compose --env-file .env ps && docker compose --env-file .env logs --no-color

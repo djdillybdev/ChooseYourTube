@@ -1,0 +1,65 @@
+x-logging: &bounded-logging
+  driver: json-file
+  options:
+    max-size: ${CONTAINER_LOG_MAX_SIZE:-10m}
+    max-file: ${CONTAINER_LOG_MAX_FILES:-5}
+
+services:
+  postgres:
+    cpus: ${POSTGRES_CPUS:-0.75}
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-1g}
+    logging: *bounded-logging
+
+  redis:
+    cpus: ${REDIS_CPUS:-0.25}
+    mem_limit: ${REDIS_MEMORY_LIMIT:-256m}
+    logging: *bounded-logging
+
+  migrate:
+    cpus: ${MIGRATE_CPUS:-1.0}
+    mem_limit: ${MIGRATE_MEMORY_LIMIT:-768m}
+    logging: *bounded-logging
+
+  backend:
+    cpus: ${BACKEND_CPUS:-0.75}
+    mem_limit: ${BACKEND_MEMORY_LIMIT:-768m}
+    ports: !override []
+    logging: *bounded-logging
+
+  worker:
+    cpus: ${WORKER_CPUS:-1.0}
+    mem_limit: ${WORKER_MEMORY_LIMIT:-768m}
+    logging: *bounded-logging
+
+  frontend:
+    cpus: ${FRONTEND_CPUS:-0.50}
+    mem_limit: ${FRONTEND_MEMORY_LIMIT:-384m}
+    ports: !override []
+    logging: *bounded-logging
+
+  caddy:
+    image: caddy:${CADDY_VERSION:-2.11.4}-alpine
+    pull_policy: missing
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/oracle/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    cpus: ${CADDY_CPUS:-0.25}
+    mem_limit: ${CADDY_MEMORY_LIMIT:-128m}
+    logging: *bounded-logging
+
+volumes:
+  caddy_data:
+  caddy_config:

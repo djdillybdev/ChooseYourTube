@@ -1,0 +1,19 @@
+[Unit]
+Description=ChooseYourTube production stack
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/chooseyourtube
+EnvironmentFile=/opt/chooseyourtube/.env
+ExecStart=/opt/chooseyourtube/deploy/oracle/bin/start.sh
+ExecReload=/opt/chooseyourtube/deploy/oracle/bin/start.sh
+ExecStop=/opt/chooseyourtube/deploy/oracle/bin/stop.sh
+TimeoutStartSec=300
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target
