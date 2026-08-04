@@ -2,23 +2,28 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    JSON,
     CheckConstraint,
     DateTime,
     ForeignKeyConstraint,
     Index,
     Integer,
     String,
+    ForeignKey,
     Text,
     UniqueConstraint,
     text,
 )
-from sqlalchemy.ext.mutable import MutableList
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, synonym, validates
 
 from ..base import Base
+from ..tenancy import user_uuid
+from .association_tables import subscription_import_tags
+
+if TYPE_CHECKING:
+    from .tag import Tag
 
 
 def _now() -> datetime:
@@ -37,9 +42,9 @@ class SubscriptionImport(Base):
             "'succeeded', 'partial', 'failed')",
             name="ck_subscription_imports_status",
         ),
-        UniqueConstraint("owner_id", "id", name="uq_subscription_import_owner_id"),
-        Index("ix_subscription_imports_owner_created", "owner_id", "created_at"),
-        Index("ix_subscription_imports_status", "owner_id", "status"),
+        UniqueConstraint("user_id", "id", name="uq_subscription_import_user_id"),
+        Index("ix_subscription_imports_user_created", "user_id", "created_at"),
+        Index("ix_subscription_imports_status", "user_id", "status"),
         Index(
             "ix_subscription_imports_oauth_state",
             "oauth_state_hash",
@@ -50,7 +55,14 @@ class SubscriptionImport(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    owner_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    owner_id = synonym("user_id")
+
+    @validates("user_id")
+    def _validate_user_id(self, key, value):
+        return user_uuid(value)
     source: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="collecting")
 
@@ -63,9 +75,6 @@ class SubscriptionImport(Base):
     failed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     destination_folder_id: Mapped[str | None] = mapped_column(String(36))
-    destination_tag_ids: Mapped[list[str]] = mapped_column(
-        MutableList.as_mutable(JSON), nullable=False, default=list
-    )
     error_code: Mapped[str | None] = mapped_column(String(64))
     error_message: Mapped[str | None] = mapped_column(Text)
 
@@ -91,6 +100,13 @@ class SubscriptionImport(Base):
         lazy="noload",
         overlaps="channel,sync_runs",
     )
+    destination_tags: Mapped[list["Tag"]] = relationship(
+        secondary=subscription_import_tags, lazy="selectin"
+    )
+
+    @property
+    def destination_tag_ids(self) -> list[str]:
+        return [tag.id for tag in self.destination_tags]
 
 
 class SubscriptionImportCandidate(Base):
@@ -101,13 +117,13 @@ class SubscriptionImportCandidate(Base):
             name="ck_subscription_import_candidates_state",
         ),
         ForeignKeyConstraint(
-            ["owner_id", "import_id"],
-            ["subscription_imports.owner_id", "subscription_imports.id"],
+            ["import_id"],
+            ["subscription_imports.id"],
             ondelete="CASCADE",
             name="fk_subscription_import_candidates_import",
         ),
         UniqueConstraint("import_id", "source_index", name="uq_import_candidate_source_index"),
-        Index("ix_import_candidates_import_state", "owner_id", "import_id", "state"),
+        Index("ix_import_candidates_import_state", "import_id", "state"),
         Index(
             "uq_import_candidates_channel",
             "import_id",
@@ -120,7 +136,6 @@ class SubscriptionImportCandidate(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     import_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
-    owner_id: Mapped[str] = mapped_column(String(36), nullable=False)
     channel_id: Mapped[str | None] = mapped_column(String(32))
     channel_title: Mapped[str | None] = mapped_column(String(255))
     channel_url: Mapped[str | None] = mapped_column(String(512))

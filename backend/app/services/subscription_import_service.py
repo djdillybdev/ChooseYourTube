@@ -24,6 +24,7 @@ from app.db.models.subscription_import import (
     SubscriptionImportCandidate,
 )
 from app.db.models.tag import Tag
+from app.db.tenancy import user_uuid
 from app.schemas.base import PaginatedResponse
 from app.schemas.subscription_import import (
     CandidateSelectionUpdate,
@@ -136,7 +137,7 @@ async def collect_csv(
         )
 
     record = SubscriptionImport(
-        owner_id=owner_id,
+        user_id=user_uuid(owner_id),
         source=SubscriptionImportSource.YOUTUBE_TAKEOUT_CSV.value,
         status="collecting",
     )
@@ -167,7 +168,6 @@ async def collect_csv(
             ) + "An unsafe spreadsheet-style display value was omitted."
         candidate = SubscriptionImportCandidate(
             import_id=record.id,
-            owner_id=owner_id,
             channel_id=channel_id,
             channel_title=safe_title,
             channel_url=safe_url,
@@ -193,7 +193,7 @@ async def create_oauth_import(
 ) -> tuple[SubscriptionImport, str]:
     raw_state = secrets.token_urlsafe(32)
     record = SubscriptionImport(
-        owner_id=owner_id,
+        user_id=user_uuid(owner_id),
         source=SubscriptionImportSource.YOUTUBE_OAUTH.value,
         status="collecting",
         oauth_state_hash=hashlib.sha256(raw_state.encode()).hexdigest(),
@@ -380,7 +380,7 @@ async def prepare_commit(
     if payload.folder_id is not None:
         folder = await db.scalar(
             select(Folder).where(
-                Folder.id == payload.folder_id, Folder.owner_id == owner_id
+                Folder.id == payload.folder_id, Folder.user_id == user_uuid(owner_id)
             )
         )
         if folder is None:
@@ -392,7 +392,7 @@ async def prepare_commit(
         tag_count = int(
             await db.scalar(
                 select(func.count(Tag.id)).where(
-                    Tag.owner_id == owner_id, Tag.id.in_(unique_tag_ids)
+                    Tag.user_id == user_uuid(owner_id), Tag.id.in_(unique_tag_ids)
                 )
             )
             or 0
@@ -444,7 +444,11 @@ async def prepare_commit(
             "IMPORT_SELECTION_EMPTY", "Select at least one new channel to import.", 422
         )
     record.destination_folder_id = payload.folder_id
-    record.destination_tag_ids = unique_tag_ids
+    record.destination_tags = list(
+        (await db.scalars(select(Tag).where(
+            Tag.user_id == user_uuid(owner_id), Tag.id.in_(unique_tag_ids)
+        ))).all()
+    )
     record.status = "queued"
     record.queued_at = _now()
     record.started_at = None

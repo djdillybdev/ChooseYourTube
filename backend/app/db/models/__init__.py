@@ -10,9 +10,12 @@ from .subscription_import import (
     SubscriptionImportCandidate as SubscriptionImportCandidate,
 )
 from app.auth.models import RefreshSession, User
+from .user_state import UserChannel, UserVideoState
 
 __all__ = [
     "User",
+    "UserChannel",
+    "UserVideoState",
     "RefreshSession",
     "Channel",
     "Video",

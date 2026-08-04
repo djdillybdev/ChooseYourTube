@@ -3,6 +3,7 @@ from sqlalchemy import delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.tag import Tag
 from ..models.association_tables import channel_tags, video_tags
+from ..tenancy import user_uuid
 from .crud_base import (
     base_get,
     _validate_pagination,
@@ -81,7 +82,7 @@ async def get_tags(
 
     filters: dict[str, Any] = {}
     if owner_id is not None:
-        filters["owner_id"] = owner_id
+        filters["user_id"] = user_uuid(owner_id)
     if id is not None:
         filters["id"] = id
     if name is not None:
@@ -120,7 +121,7 @@ async def count_tags(
     """
     filters: dict[str, Any] = {}
     if owner_id is not None:
-        filters["owner_id"] = owner_id
+        filters["user_id"] = user_uuid(owner_id)
     if id is not None:
         filters["id"] = id
     if name is not None:
@@ -152,7 +153,7 @@ async def get_tag_usage_counts(
     channel_rows = await db.execute(
         select(channel_tags.c.tag_id, func.count(channel_tags.c.channel_id))
         .where(
-            channel_tags.c.owner_id == owner_id,
+            channel_tags.c.user_id == user_uuid(owner_id),
             channel_tags.c.tag_id.in_(tag_ids),
         )
         .group_by(channel_tags.c.tag_id)
@@ -160,7 +161,7 @@ async def get_tag_usage_counts(
     video_rows = await db.execute(
         select(video_tags.c.tag_id, func.count(video_tags.c.video_id))
         .where(
-            video_tags.c.owner_id == owner_id,
+            video_tags.c.user_id == user_uuid(owner_id),
             video_tags.c.tag_id.in_(tag_ids),
         )
         .group_by(video_tags.c.tag_id)
@@ -196,7 +197,7 @@ async def create_tag(db_session: AsyncSession, tag_to_create: Tag) -> Tag:
 
 
 async def get_or_create_tag(
-    db_session: AsyncSession, name: str, owner_id: str = "test-user"
+    db_session: AsyncSession, name: str, owner_id: str
 ) -> Tag:
     """
     Get an existing tag by name, or create it if it doesn't exist.
@@ -218,7 +219,7 @@ async def get_or_create_tag(
     # Create new tag if it doesn't exist
     import uuid
 
-    new_tag = Tag(id=str(uuid.uuid4()), owner_id=owner_id, name=name)
+    new_tag = Tag(id=str(uuid.uuid4()), user_id=user_uuid(owner_id), name=name)
     return await create_tag(db_session, new_tag)
 
 
@@ -250,7 +251,7 @@ async def delete_all_tags(db_session: AsyncSession, owner_id: str | None = None)
     """
     stmt = delete(Tag)
     if owner_id is not None:
-        stmt = stmt.where(Tag.owner_id == owner_id)
+        stmt = stmt.where(Tag.user_id == user_uuid(owner_id))
     result = await db_session.execute(stmt)
     await db_session.commit()
     return result.rowcount

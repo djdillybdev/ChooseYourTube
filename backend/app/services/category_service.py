@@ -1,14 +1,16 @@
 import uuid
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, insert, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from ..db.crud import crud_category
 from ..db.models.category import Category
 from ..db.models.channel import Channel
+from ..db.models.user_state import UserChannel
+from ..db.models.association_tables import channel_categories
+from ..db.tenancy import user_uuid
 from ..schemas.category import (
     CategoryChannelsUpdate,
     CategoryCreate,
@@ -60,7 +62,7 @@ async def create_category(
 ) -> CategoryOut:
     category = Category(
         id=str(uuid.uuid4()),
-        owner_id=owner_id,
+        user_id=user_uuid(owner_id),
         name=payload.name,
         normalized_name=_normalized_name(payload.name),
         icon_key=payload.icon_key,
@@ -107,9 +109,9 @@ async def _owned_channels(
     if not channel_ids:
         return []
     result = await db.execute(
-        select(Channel).where(
-            Channel.owner_id == owner_id, Channel.id.in_(channel_ids)
-        )
+        select(Channel)
+        .join(UserChannel, UserChannel.channel_id == Channel.id)
+        .where(UserChannel.user_id == user_uuid(owner_id), Channel.id.in_(channel_ids))
     )
     channels = list(result.scalars().all())
     if {channel.id for channel in channels} != channel_ids:
@@ -126,6 +128,15 @@ async def replace_category_channels(
 ) -> CategoryOut:
     category = await get_category(category_id, db, owner_id=owner_id)
     channels = await _owned_channels(db, owner_id, set(payload.channel_ids))
+    uid = user_uuid(owner_id)
+    await db.execute(delete(channel_categories).where(
+        channel_categories.c.user_id == uid,
+        channel_categories.c.category_id == category.id,
+    ))
+    for channel in channels:
+        await db.execute(insert(channel_categories).values(
+            user_id=uid, channel_id=channel.id, category_id=category.id
+        ))
     category.channels = channels
     await db.commit()
     return _to_out(category)
@@ -138,10 +149,11 @@ async def replace_channel_categories(
     *,
     owner_id: str,
 ) -> ChannelCategoriesOut:
+    uid = user_uuid(owner_id)
     result = await db.execute(
-        select(Channel)
-        .where(Channel.owner_id == owner_id, Channel.id == channel_id)
-        .options(selectinload(Channel.categories))
+        select(Channel).join(UserChannel, UserChannel.channel_id == Channel.id).where(
+            UserChannel.user_id == uid, Channel.id == channel_id
+        )
     )
     channel = result.scalar_one_or_none()
     if channel is None:
@@ -152,7 +164,7 @@ async def replace_channel_categories(
     if category_ids:
         category_result = await db.execute(
             select(Category).where(
-                Category.owner_id == owner_id, Category.id.in_(category_ids)
+                Category.user_id == uid, Category.id.in_(category_ids)
             )
         )
         categories = list(category_result.scalars().all())
@@ -161,7 +173,14 @@ async def replace_channel_categories(
                 status_code=400, detail="One or more categories do not exist"
             )
 
-    channel.categories = categories
+    await db.execute(delete(channel_categories).where(
+        channel_categories.c.user_id == uid,
+        channel_categories.c.channel_id == channel.id,
+    ))
+    for category in categories:
+        await db.execute(insert(channel_categories).values(
+            user_id=uid, channel_id=channel.id, category_id=category.id
+        ))
     await db.commit()
     return ChannelCategoriesOut(
         channel_id=channel.id,

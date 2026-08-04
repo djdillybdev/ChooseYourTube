@@ -6,6 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 REQUIRED_PLAYLIST_COLUMNS: tuple[str, ...] = (
+    "user_id",
     "system_key",
     "thumbnail_url",
     "source_type",
@@ -15,13 +16,27 @@ REQUIRED_PLAYLIST_COLUMNS: tuple[str, ...] = (
     "source_last_synced_at",
 )
 REQUIRED_IMPORT_COLUMNS: dict[str, tuple[str, ...]] = {
-    "subscription_imports": ("id", "owner_id", "source", "status"),
+    "subscription_imports": ("id", "user_id", "source", "status"),
     "subscription_import_candidates": (
         "id",
         "import_id",
-        "owner_id",
         "channel_id",
         "state",
+    ),
+}
+REQUIRED_USER_STATE_COLUMNS: dict[str, tuple[str, ...]] = {
+    "user_channels": (
+        "user_id",
+        "channel_id",
+        "folder_id",
+        "is_favorited",
+        "followed_at",
+    ),
+    "user_video_states": (
+        "user_id",
+        "video_id",
+        "is_favorited",
+        "is_watched",
     ),
 }
 
@@ -53,7 +68,11 @@ async def _get_table_columns(db_session: AsyncSession, table_name: str) -> set[s
 
 
 async def assert_required_playlist_schema(db_session: AsyncSession) -> None:
-    required = {"playlists": REQUIRED_PLAYLIST_COLUMNS, **REQUIRED_IMPORT_COLUMNS}
+    required = {
+        "playlists": REQUIRED_PLAYLIST_COLUMNS,
+        **REQUIRED_IMPORT_COLUMNS,
+        **REQUIRED_USER_STATE_COLUMNS,
+    }
     for table_name, expected_columns in required.items():
         columns = await _get_table_columns(db_session, table_name)
         missing = sorted(set(expected_columns) - columns)

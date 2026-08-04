@@ -17,7 +17,9 @@ from .clients.youtube import YouTubeAPI
 from .core.config import settings
 from .core.errors import ApplicationError
 from .core.version import APP_VERSION
-from .db.crud import crud_channel, crud_sync_run
+from .db.crud import crud_sync_run
+from .db.models.user_state import UserChannel
+from sqlalchemy import select
 from .db.session import sessionmanager
 from .routers.health import WORKER_HEARTBEAT_KEY
 from .schemas.sync_run import SyncRunKind, SyncRunStatus
@@ -88,34 +90,32 @@ async def enqueue_channel_refreshes(ctx: dict) -> None:
         batch_size = 200
         async with sessionmanager.session() as db:
             while True:
-                channels = await crud_channel.get_channels(
-                    db,
-                    owner_id=None,
-                    limit=batch_size,
-                    offset=offset,
-                    order_by="owner_id",
-                    order_direction="asc",
-                )
-                if not channels:
+                rows = list((await db.execute(
+                    select(UserChannel.channel_id, UserChannel.user_id)
+                    .distinct(UserChannel.channel_id)
+                    .order_by(UserChannel.channel_id, UserChannel.user_id)
+                    .limit(batch_size).offset(offset)
+                )).all())
+                if not rows:
                     break
-                for channel in channels:
+                for channel_id, user_id in rows:
                     try:
                         await sync_service.enqueue_run(
                             db,
                             redis,
-                            owner_id=channel.owner_id,
+                            owner_id=str(user_id),
                             kind=SyncRunKind.CHANNEL_REFRESH,
-                            channel_id=channel.id,
+                            channel_id=channel_id,
                             defer_seconds=_stagger_seconds(
-                                channel.owner_id, channel.id
+                                str(user_id), channel_id
                             ),
                         )
                     except Exception:
                         logger.exception(
                             "scheduled_sync_enqueue_failed",
                             extra={
-                                "owner_id": channel.owner_id,
-                                "channel_id": channel.id,
+                                "owner_id": str(user_id),
+                                "channel_id": channel_id,
                                 "task_kind": SyncRunKind.CHANNEL_REFRESH.value,
                                 "outcome": "failed",
                             },
@@ -123,7 +123,7 @@ async def enqueue_channel_refreshes(ctx: dict) -> None:
                     # enqueue_run may roll back after an error; continue with a clean session.
                     if not db.is_active:
                         await db.rollback()
-                if len(channels) < batch_size:
+                if len(rows) < batch_size:
                     break
                 offset += batch_size
     finally:

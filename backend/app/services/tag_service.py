@@ -9,11 +9,17 @@ from typing import Protocol, cast
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import delete, insert
 
 from app.schemas.base import PaginatedResponse
 
 from ..db.crud import crud_tag
 from ..db.models.tag import Tag
+from ..db.models.channel import Channel
+from ..db.models.association_tables import channel_tags, video_tags
+from ..db.tenancy import user_uuid
+from ..db.crud import crud_channel, crud_video
+from sqlalchemy import select
 from ..schemas.tag import TagCreate, TagUpdate, TagOut
 
 
@@ -21,6 +27,8 @@ class TaggableEntity(Protocol):
     """Protocol for entities that can have tags."""
 
     tags: list  # Relationship to Tag model
+    id: str
+    tag_ids: list[str]
 
 
 async def _serialize_tags_with_counts(
@@ -45,7 +53,7 @@ async def sync_entity_tags(
     entity: TaggableEntity,
     tag_ids: list[str],
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> None:
     """
     Synchronize tags for any entity (Channel or Video).
@@ -67,37 +75,33 @@ async def sync_entity_tags(
 
     # Load all requested tags from database
     requested_tag_ids = set(tag_ids)
+    uid = user_uuid(owner_id)
     requested_tags = []
 
     for tag_id in requested_tag_ids:
         tag = await db_session.get(Tag, tag_id)
-        if tag is None or tag.owner_id != owner_id:
+        if tag is None or tag.user_id != uid:
             raise HTTPException(
                 status_code=400, detail=f"Tag with id {tag_id} does not exist"
             )
         requested_tags.append(tag)
 
-    # Calculate current tags
-    current_tag_ids = {tag.id for tag in entity.tags}
-
-    # Find tags to add and remove
-    tags_to_add_ids = requested_tag_ids - current_tag_ids
-    tags_to_remove_ids = current_tag_ids - requested_tag_ids
-
-    # Remove tags that are no longer needed
-    for tag in list(entity.tags):
-        if tag.id in tags_to_remove_ids:
-            entity.tags.remove(tag)
-
-    # Add new tags
+    table = channel_tags if isinstance(entity, Channel) else video_tags
+    entity_column = table.c.channel_id if isinstance(entity, Channel) else table.c.video_id
+    await db_session.execute(
+        delete(table).where(table.c.user_id == uid, entity_column == entity.id)
+    )
     for tag in requested_tags:
-        if tag.id in tags_to_add_ids:
-            entity.tags.append(tag)
+        await db_session.execute(
+            insert(table).values(user_id=uid, **{entity_column.key: entity.id}, tag_id=tag.id)
+        )
+    entity.tags = requested_tags
+    entity.tag_ids = [tag.id for tag in requested_tags]
 
 
 async def get_all_tags(
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
     limit: int = 50,
     offset: int = 0,
 ) -> PaginatedResponse[TagOut]:
@@ -137,7 +141,7 @@ async def get_all_tags(
 
 
 async def get_tag_by_id(
-    tag_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+    tag_id: str, db_session: AsyncSession, owner_id: str
 ) -> Tag:
     """
     Get a tag by its ID.
@@ -159,14 +163,14 @@ async def get_tag_by_id(
 
 
 async def get_tag_out_by_id(
-    tag_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+    tag_id: str, db_session: AsyncSession, owner_id: str
 ) -> TagOut:
     tag = await get_tag_by_id(tag_id, db_session, owner_id=owner_id)
     return (await _serialize_tags_with_counts([tag], db_session, owner_id))[0]
 
 
 async def create_new_tag(
-    payload: TagCreate, db_session: AsyncSession, owner_id: str = "test-user"
+    payload: TagCreate, db_session: AsyncSession, owner_id: str
 ) -> Tag:
     """
     Create a new tag.
@@ -192,7 +196,7 @@ async def create_new_tag(
 
     # Generate UUID for new tag
     tag_id = str(uuid.uuid4())
-    new_tag = Tag(id=tag_id, owner_id=owner_id, name=payload.name)
+    new_tag = Tag(id=tag_id, user_id=user_uuid(owner_id), name=payload.name)
     try:
         return await crud_tag.create_tag(db_session, new_tag)
     except IntegrityError:
@@ -206,7 +210,7 @@ async def update_tag(
     tag_id: str,
     payload: TagUpdate,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> TagOut:
     """
     Update a tag's name.
@@ -245,7 +249,7 @@ async def update_tag(
 
 
 async def delete_tag_by_id(
-    tag_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+    tag_id: str, db_session: AsyncSession, owner_id: str
 ) -> None:
     """
     Delete a tag by its ID.
@@ -267,7 +271,7 @@ async def delete_tag_by_id(
 async def get_videos_for_tag(
     tag_id: str,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
     limit: int = 50,
     offset: int = 0,
 ):
@@ -287,18 +291,16 @@ async def get_videos_for_tag(
         HTTPException: If tag not found
     """
     # Get tag with videos relationship
-    tag = await get_tag_by_id(tag_id, db_session, owner_id=owner_id)
-
-    # Return videos (already loaded via selectin)
-    # Note: This doesn't use limit/offset on the videos themselves
-    # For proper pagination, we'd need a more complex query
-    return tag.videos[offset : offset + limit] if limit else tag.videos[offset:]
+    await get_tag_by_id(tag_id, db_session, owner_id=owner_id)
+    return await crud_video.get_videos(
+        db_session, owner_id=owner_id, tag_id=tag_id, limit=limit, offset=offset
+    )
 
 
 async def get_channels_for_tag(
     tag_id: str,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
     limit: int = 50,
     offset: int = 0,
 ):
@@ -318,7 +320,13 @@ async def get_channels_for_tag(
         HTTPException: If tag not found
     """
     # Get tag with channels relationship
-    tag = await get_tag_by_id(tag_id, db_session, owner_id=owner_id)
-
-    # Return channels (already loaded via selectin)
-    return tag.channels[offset : offset + limit] if limit else tag.channels[offset:]
+    await get_tag_by_id(tag_id, db_session, owner_id=owner_id)
+    uid = user_uuid(owner_id)
+    ids = list((await db_session.scalars(
+        select(channel_tags.c.channel_id).where(
+            channel_tags.c.user_id == uid, channel_tags.c.tag_id == tag_id
+        )
+    )).all())
+    return await crud_channel.get_channels(
+        db_session, owner_id=owner_id, id=ids, limit=limit, offset=offset
+    )

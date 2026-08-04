@@ -4,6 +4,8 @@ import uuid
 from datetime import date, datetime
 from enum import StrEnum
 
+from pydantic import field_validator
+
 from .base import BaseSchema
 
 
@@ -53,6 +55,13 @@ class SyncRunOut(BaseSchema):
     next_retry_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("owner_id", mode="before")
+    @classmethod
+    def serialize_owner_id(cls, value: object) -> object:
+        if isinstance(value, uuid.UUID):
+            return str(value)
+        return value
 
 
 class LatestSyncSummary(BaseSchema):

@@ -2219,6 +2219,11 @@
 			},
 			"UserRead": {
 				"properties": {
+					"created_at": {
+						"format": "date-time",
+						"title": "Created At",
+						"type": "string"
+					},
 					"email": {
 						"format": "email",
 						"title": "Email",
@@ -2243,9 +2248,14 @@
 						"default": false,
 						"title": "Is Verified",
 						"type": "boolean"
+					},
+					"updated_at": {
+						"format": "date-time",
+						"title": "Updated At",
+						"type": "string"
 					}
 				},
-				"required": ["id", "email"],
+				"required": ["id", "email", "created_at", "updated_at"],
 				"title": "UserRead",
 				"type": "object"
 			},

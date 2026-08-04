@@ -9,6 +9,7 @@ from app.db.models.subscription_import import (
     SubscriptionImport,
     SubscriptionImportCandidate,
 )
+from app.db.tenancy import user_uuid
 
 
 async def get_import(
@@ -16,7 +17,7 @@ async def get_import(
 ) -> SubscriptionImport | None:
     stmt = select(SubscriptionImport).where(SubscriptionImport.id == import_id)
     if owner_id is not None:
-        stmt = stmt.where(SubscriptionImport.owner_id == owner_id)
+        stmt = stmt.where(SubscriptionImport.user_id == user_uuid(owner_id))
     return await db.scalar(stmt)
 
 
@@ -43,7 +44,6 @@ async def list_candidates(
 ) -> tuple[list[SubscriptionImportCandidate], int]:
     stmt = select(SubscriptionImportCandidate).where(
         SubscriptionImportCandidate.import_id == import_id,
-        SubscriptionImportCandidate.owner_id == owner_id,
     )
     if state is not None:
         stmt = stmt.where(SubscriptionImportCandidate.state == state)
@@ -74,7 +74,6 @@ async def get_candidates_by_ids(
     rows = await db.scalars(
         select(SubscriptionImportCandidate).where(
             SubscriptionImportCandidate.import_id == import_id,
-            SubscriptionImportCandidate.owner_id == owner_id,
             SubscriptionImportCandidate.id.in_(candidate_ids),
         )
     )
@@ -88,7 +87,6 @@ async def candidates_for_processing(
         select(SubscriptionImportCandidate)
         .where(
             SubscriptionImportCandidate.import_id == import_id,
-            SubscriptionImportCandidate.owner_id == owner_id,
             SubscriptionImportCandidate.state == "selected",
         )
         .order_by(SubscriptionImportCandidate.source_index)
@@ -107,7 +105,6 @@ async def replace_selection(
         update(SubscriptionImportCandidate)
         .where(
             SubscriptionImportCandidate.import_id == import_id,
-            SubscriptionImportCandidate.owner_id == owner_id,
             SubscriptionImportCandidate.state == "selected",
         )
         .values(state="new")
@@ -117,7 +114,6 @@ async def replace_selection(
             update(SubscriptionImportCandidate)
             .where(
                 SubscriptionImportCandidate.import_id == import_id,
-                SubscriptionImportCandidate.owner_id == owner_id,
                 SubscriptionImportCandidate.id.in_(selected_ids),
                 SubscriptionImportCandidate.state.in_(("new", "failed")),
             )
@@ -148,7 +144,6 @@ async def refresh_counts(db: AsyncSession, import_record: SubscriptionImport) ->
                 ),
             ).where(
                 SubscriptionImportCandidate.import_id == import_record.id,
-                SubscriptionImportCandidate.owner_id == import_record.owner_id,
             )
         )
     ).one()

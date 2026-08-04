@@ -4,11 +4,14 @@ import pytest
 
 from app.db.models.sync_run import SyncRun
 
+TEST_USER_ID = uuid.UUID("10000000-0000-0000-0000-000000000099")
+OTHER_USER_ID = uuid.UUID("20000000-0000-0000-0000-000000000099")
+
 
 @pytest.mark.asyncio
 async def test_sync_run_list_and_detail_are_owner_scoped(test_client, db_session):
-    owned = SyncRun(owner_id="test-user", kind="demo_maintenance")
-    other = SyncRun(owner_id="other-user", kind="demo_maintenance")
+    owned = SyncRun(owner_id=TEST_USER_ID, kind="demo_maintenance")
+    other = SyncRun(owner_id=OTHER_USER_ID, kind="demo_maintenance")
     db_session.add_all([owned, other])
     await db_session.commit()
 
@@ -23,8 +26,8 @@ async def test_sync_run_list_and_detail_are_owner_scoped(test_client, db_session
 async def test_sync_run_filters(test_client, db_session):
     db_session.add_all(
         [
-            SyncRun(owner_id="test-user", kind="channel_refresh", status="failed"),
-            SyncRun(owner_id="test-user", kind="playlist_sync", status="succeeded"),
+            SyncRun(owner_id=TEST_USER_ID, kind="channel_refresh", status="failed"),
+            SyncRun(owner_id=TEST_USER_ID, kind="playlist_sync", status="succeeded"),
         ]
     )
     await db_session.commit()
@@ -37,7 +40,7 @@ async def test_sync_run_filters(test_client, db_session):
 async def test_retry_rejects_nonretryable_run(test_client, db_session):
     run = SyncRun(
         id=uuid.uuid4(),
-        owner_id="test-user",
+        owner_id=TEST_USER_ID,
         kind="demo_maintenance",
         status="failed",
         error_code="YOUTUBE_QUOTA_EXHAUSTED",

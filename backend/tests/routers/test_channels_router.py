@@ -112,6 +112,7 @@ class TestChannelsRouter:
         assert data["channel"]["id"] == "UC_new_channel"
         assert data["channel"]["handle"] == "newchannel"  # @ stripped
         assert data["initial_sync"]["status"] == "queued"
+        assert data["initial_sync"]["owner_id"] == "10000000-0000-0000-0000-000000000099"
 
         # Verify only initial video fetch is enqueued from the route.
         # Playlist sync is chained by the worker task after ingestion completes.

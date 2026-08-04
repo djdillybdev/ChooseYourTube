@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import ApplicationError
 from app.db.crud import crud_sync_run
 from app.db.models.sync_run import SyncRun
+from app.db.tenancy import user_uuid
 from app.schemas.base import PaginatedResponse
 from app.schemas.sync_run import (
     LatestSyncSummary,
@@ -93,7 +94,7 @@ async def create_or_get_active_run(
             return existing, False
 
     run = SyncRun(
-        owner_id=owner_id,
+        user_id=user_uuid(owner_id),
         kind=kind.value,
         status=SyncRunStatus.QUEUED.value,
         channel_id=channel_id,

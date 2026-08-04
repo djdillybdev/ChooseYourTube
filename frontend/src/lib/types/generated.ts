@@ -1908,6 +1908,11 @@ export interface components {
 		/** UserRead */
 		UserRead: {
 			/**
+			 * Created At
+			 * Format: date-time
+			 */
+			created_at: string;
+			/**
 			 * Email
 			 * Format: email
 			 */
@@ -1932,6 +1937,11 @@ export interface components {
 			 * @default false
 			 */
 			is_verified: boolean;
+			/**
+			 * Updated At
+			 * Format: date-time
+			 */
+			updated_at: string;
 		};
 		/**
 		 * VideoOut

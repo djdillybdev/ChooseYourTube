@@ -12,12 +12,15 @@ from app.db.models.subscription_import import SubscriptionImport
 from app.schemas.sync_run import SyncRunKind, SyncRunStatus
 from app.services import sync_service
 
+OWNER_1 = "10000000-0000-0000-0000-000000000001"
+OWNER_2 = "10000000-0000-0000-0000-000000000002"
+
 
 @pytest.fixture
 async def channel(db_session):
     row = Channel(
         id="UC_sync_run",
-        owner_id="owner-1",
+        owner_id=OWNER_1,
         handle="sync-run",
         title="Sync Run",
         uploads_playlist_id="UU_sync_run",
@@ -31,13 +34,13 @@ async def channel(db_session):
 async def test_create_or_get_active_run_deduplicates(db_session, channel):
     first, created = await sync_service.create_or_get_active_run(
         db_session,
-        owner_id=channel.owner_id,
+        owner_id=OWNER_1,
         channel_id=channel.id,
         kind=SyncRunKind.CHANNEL_REFRESH,
     )
     second, created_again = await sync_service.create_or_get_active_run(
         db_session,
-        owner_id=channel.owner_id,
+        owner_id=OWNER_1,
         channel_id=channel.id,
         kind=SyncRunKind.CHANNEL_REFRESH,
     )
@@ -51,7 +54,7 @@ async def test_enqueue_uses_run_id_as_job_id(db_session, channel, mock_arq_redis
     run = await sync_service.enqueue_run(
         db_session,
         mock_arq_redis,
-        owner_id=channel.owner_id,
+        owner_id=OWNER_1,
         channel_id=channel.id,
         kind=SyncRunKind.PLAYLIST_SYNC,
     )
@@ -62,18 +65,18 @@ async def test_enqueue_uses_run_id_as_job_id(db_session, channel, mock_arq_redis
 
 @pytest.mark.asyncio
 async def test_import_runs_are_deduplicated_by_import(db_session):
-    import_record = SubscriptionImport(owner_id="owner-1", source="youtube_takeout_csv")
+    import_record = SubscriptionImport(owner_id=OWNER_1, source="youtube_takeout_csv")
     db_session.add(import_record)
     await db_session.commit()
     first, created = await sync_service.create_or_get_active_run(
         db_session,
-        owner_id="owner-1",
+        owner_id=OWNER_1,
         subscription_import_id=import_record.id,
         kind=SyncRunKind.SUBSCRIPTION_IMPORT,
     )
     second, created_again = await sync_service.create_or_get_active_run(
         db_session,
-        owner_id="owner-1",
+        owner_id=OWNER_1,
         subscription_import_id=import_record.id,
         kind=SyncRunKind.SUBSCRIPTION_IMPORT,
     )
@@ -86,7 +89,7 @@ async def test_import_runs_are_deduplicated_by_import(db_session):
 async def test_claim_is_atomic_and_increments_attempt(db_session, channel):
     run, _ = await sync_service.create_or_get_active_run(
         db_session,
-        owner_id=channel.owner_id,
+        owner_id=OWNER_1,
         channel_id=channel.id,
         kind=SyncRunKind.CHANNEL_REFRESH,
     )
@@ -102,14 +105,14 @@ async def test_claim_is_atomic_and_increments_attempt(db_session, channel):
 async def test_list_runs_is_owner_scoped(db_session, channel):
     db_session.add_all(
         [
-            SyncRun(owner_id="owner-1", channel_id=channel.id, kind="channel_refresh"),
-            SyncRun(owner_id="owner-2", kind="demo_maintenance"),
+            SyncRun(owner_id=OWNER_1, channel_id=channel.id, kind="channel_refresh"),
+            SyncRun(owner_id=OWNER_2, kind="demo_maintenance"),
         ]
     )
     await db_session.commit()
     response = await sync_service.list_runs(
         db_session,
-        owner_id="owner-1",
+        owner_id=OWNER_1,
         status=None,
         kind=None,
         channel_id=None,
@@ -117,13 +120,14 @@ async def test_list_runs_is_owner_scoped(db_session, channel):
         offset=0,
     )
     assert response.total == 1
-    assert response.items[0].owner_id == "owner-1"
+    assert response.items[0].owner_id == OWNER_1
 
 
 def test_safe_retryability_is_derived_from_classified_code():
+    owner_id = uuid.uuid4()
     run = SyncRun(
         id=uuid.uuid4(),
-        owner_id="owner",
+        owner_id=owner_id,
         kind="channel_refresh",
         status="failed",
         error_code="RSS_FETCH_FAILED",
@@ -139,7 +143,9 @@ def test_safe_retryability_is_derived_from_classified_code():
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
-    assert sync_service.to_sync_run_out(run).retryable is True
+    output = sync_service.to_sync_run_out(run)
+    assert output.owner_id == str(owner_id)
+    assert output.retryable is True
     run.error_code = "YOUTUBE_QUOTA_EXHAUSTED"
     assert sync_service.to_sync_run_out(run).retryable is False
 
@@ -172,7 +178,7 @@ async def test_quota_totals_aggregate_all_outcomes(db_session):
 @pytest.mark.asyncio
 async def test_unscoped_maintenance_run_is_created(db_session):
     run, created = await sync_service.create_or_get_active_run(
-        db_session, owner_id="owner", kind=SyncRunKind.DEMO_MAINTENANCE
+        db_session, owner_id=OWNER_1, kind=SyncRunKind.DEMO_MAINTENANCE
     )
     assert created is True
     assert run.channel_id is None
@@ -186,7 +192,7 @@ async def test_enqueue_supports_defer_deduplication_and_queue_failure(
     deferred = await sync_service.enqueue_run(
         db_session,
         mock_arq_redis,
-        owner_id=channel.owner_id,
+        owner_id=OWNER_1,
         channel_id=channel.id,
         kind=SyncRunKind.CHANNEL_REFRESH,
         defer_seconds=42,
@@ -198,7 +204,7 @@ async def test_enqueue_supports_defer_deduplication_and_queue_failure(
     duplicate = await sync_service.enqueue_run(
         db_session,
         mock_arq_redis,
-        owner_id=channel.owner_id,
+        owner_id=OWNER_1,
         channel_id=channel.id,
         kind=SyncRunKind.CHANNEL_REFRESH,
     )
@@ -212,14 +218,14 @@ async def test_enqueue_supports_defer_deduplication_and_queue_failure(
         await sync_service.enqueue_run(
             db_session,
             mock_arq_redis,
-            owner_id=channel.owner_id,
+            owner_id=OWNER_1,
             channel_id=channel.id,
             kind=SyncRunKind.PLAYLIST_SYNC,
         )
     assert error.value.code == "QUEUE_UNAVAILABLE"
     failed = await crud_sync_run.get_active_sync_run(
         db_session,
-        owner_id=channel.owner_id,
+        owner_id=OWNER_1,
         channel_id=channel.id,
         subscription_import_id=None,
         kind=SyncRunKind.PLAYLIST_SYNC.value,
@@ -239,7 +245,7 @@ async def test_integrity_race_returns_winner_or_reraises():
     ):
         run, created = await sync_service.create_or_get_active_run(
             db,
-            owner_id="owner",
+            owner_id=OWNER_1,
             channel_id="channel",
             kind=SyncRunKind.CHANNEL_REFRESH,
         )
@@ -256,7 +262,7 @@ async def test_integrity_race_returns_winner_or_reraises():
     ):
         await sync_service.create_or_get_active_run(
             db,
-            owner_id="owner",
+            owner_id=OWNER_1,
             channel_id="channel",
             kind=SyncRunKind.CHANNEL_REFRESH,
         )
@@ -264,18 +270,18 @@ async def test_integrity_race_returns_winner_or_reraises():
     db.commit.side_effect = IntegrityError("insert", {}, RuntimeError("duplicate"))
     with pytest.raises(IntegrityError):
         await sync_service.create_or_get_active_run(
-            db, owner_id="owner", kind=SyncRunKind.DEMO_MAINTENANCE
+            db, owner_id=OWNER_1, kind=SyncRunKind.DEMO_MAINTENANCE
         )
 
 
 @pytest.mark.asyncio
 async def test_owned_lookup_and_retry_success(db_session, channel, mock_arq_redis):
     with pytest.raises(sync_service.ApplicationError) as missing:
-        await sync_service.get_owned_run(db_session, uuid.uuid4(), "owner-1")
+        await sync_service.get_owned_run(db_session, uuid.uuid4(), OWNER_1)
     assert missing.value.code == "NOT_FOUND"
 
     previous = SyncRun(
-        owner_id=channel.owner_id,
+        owner_id=OWNER_1,
         channel_id=channel.id,
         kind=SyncRunKind.CHANNEL_REFRESH.value,
         status=SyncRunStatus.FAILED.value,
@@ -287,7 +293,7 @@ async def test_owned_lookup_and_retry_success(db_session, channel, mock_arq_redi
         db_session,
         mock_arq_redis,
         sync_run_id=previous.id,
-        owner_id=channel.owner_id,
+        owner_id=OWNER_1,
     )
     assert retried.status == SyncRunStatus.QUEUED.value
     mock_arq_redis.enqueue_job.assert_awaited_once()

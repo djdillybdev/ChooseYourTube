@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 from datetime import datetime, timezone
+import uuid
 
 import sqlalchemy as sa
 from sqlalchemy import (
@@ -11,10 +12,12 @@ from sqlalchemy import (
     Integer,
     Index,
     ForeignKeyConstraint,
+    ForeignKey,
     UniqueConstraint,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, synonym, validates
 from ..base import Base
+from ..tenancy import user_uuid
 from .association_tables import playlist_videos
 
 if TYPE_CHECKING:
@@ -25,20 +28,21 @@ if TYPE_CHECKING:
 class Playlist(Base):
     __tablename__ = "playlists"
     __table_args__ = (
+        UniqueConstraint("user_id", "id", name="uq_playlist_user_id"),
         UniqueConstraint(
-            "owner_id",
+            "user_id",
             "source_type",
             "source_youtube_playlist_id",
-            name="uq_playlist_owner_source_playlist",
+            name="uq_playlist_user_source_playlist",
         ),
         ForeignKeyConstraint(
-            ["owner_id", "source_channel_id"],
-            ["channels.owner_id", "channels.id"],
+            ["user_id", "source_channel_id"],
+            ["user_channels.user_id", "user_channels.channel_id"],
             ondelete="CASCADE",
         ),
         Index(
             "uq_playlist_owner_system_key",
-            "owner_id",
+            "user_id",
             "system_key",
             unique=True,
             postgresql_where=sa.text("system_key IS NOT NULL"),
@@ -49,9 +53,14 @@ class Playlist(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, comment="UUID as string"
     )
-    owner_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True, default="test-user"
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    owner_id = synonym("user_id")
+
+    @validates("user_id")
+    def _validate_user_id(self, key, value):
+        return user_uuid(value)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     thumbnail_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
@@ -82,12 +91,13 @@ class Playlist(Base):
     # Many-to-many relationship with Videos
     videos: Mapped[list["Video"]] = relationship(
         secondary=playlist_videos,
-        primaryjoin="and_(Playlist.owner_id == playlist_videos.c.owner_id, Playlist.id == playlist_videos.c.playlist_id)",
-        secondaryjoin="and_(Video.owner_id == playlist_videos.c.owner_id, Video.id == playlist_videos.c.video_id)",
-        back_populates="playlists",
+        primaryjoin="and_(Playlist.user_id == playlist_videos.c.user_id, Playlist.id == playlist_videos.c.playlist_id)",
+        secondaryjoin="Video.id == playlist_videos.c.video_id",
         lazy="selectin",
     )
-    source_channel: Mapped["Channel | None"] = relationship(lazy="selectin")
+    source_channel: Mapped["Channel | None"] = relationship(
+        secondary="user_channels", viewonly=True, lazy="selectin"
+    )
 
     def __repr__(self) -> str:
         return f"<Playlist(id={self.id}, name='{self.name}')>"

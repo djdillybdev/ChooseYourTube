@@ -1,38 +1,32 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
 from datetime import datetime, timezone
+import uuid
 
-from sqlalchemy import String, DateTime, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, synonym, validates
 from ..base import Base
-from .association_tables import channel_tags, video_tags
-
-if TYPE_CHECKING:
-    from .channel import Channel
-    from .video import Video
-
-
+from ..tenancy import user_uuid
 class Tag(Base):
     __tablename__ = "tags"
-    __table_args__ = (UniqueConstraint("owner_id", "name", name="uq_tag_owner_name"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "id", name="uq_tag_user_id"),
+        UniqueConstraint("user_id", "name", name="uq_tag_user_name"),
+    )
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, index=True, comment="UUID as string"
     )
-    owner_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True, default="test-user"
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    owner_id = synonym("user_id")
+
+    @validates("user_id")
+    def _validate_user_id(self, key, value):
+        return user_uuid(value)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
-
-    # Many-to-many relationships
-    channels: Mapped[list["Channel"]] = relationship(
-        secondary=channel_tags, back_populates="tags", lazy="selectin"
-    )
-    videos: Mapped[list["Video"]] = relationship(
-        secondary=video_tags, back_populates="tags", lazy="selectin"
     )
 
     def __init__(self, **kwargs):

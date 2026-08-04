@@ -13,6 +13,7 @@ from app.schemas.base import PaginatedResponse
 from ..db.crud import crud_playlist
 from ..db.crud.crud_video import get_videos
 from ..db.models.playlist import Playlist
+from ..db.tenancy import user_uuid
 from ..schemas.playlist import (
     PlaylistCreate,
     PlaylistUpdate,
@@ -56,7 +57,7 @@ def _dedupe_video_ids_keep_first(video_ids: list[str]) -> list[str]:
 
 async def get_all_playlists(
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
     limit: int = 50,
     offset: int = 0,
     is_system: bool | None = None,
@@ -101,7 +102,7 @@ async def get_all_playlists(
 
 
 async def get_playlist_by_id(
-    playlist_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+    playlist_id: str, db_session: AsyncSession, owner_id: str
 ) -> Playlist:
     playlist = await crud_playlist.get_playlists(
         db_session, owner_id=owner_id, id=playlist_id, first=True
@@ -112,7 +113,7 @@ async def get_playlist_by_id(
 
 
 async def _build_detail_out(
-    playlist: Playlist, db_session: AsyncSession, owner_id: str = "test-user"
+    playlist: Playlist, db_session: AsyncSession, owner_id: str
 ) -> PlaylistDetailOut:
     video_ids = await crud_playlist.get_playlist_video_ids(
         db_session, playlist.id, owner_id=owner_id
@@ -137,7 +138,7 @@ async def _build_detail_out(
 
 
 async def ensure_watch_later(
-    db_session: AsyncSession, owner_id: str = "test-user"
+    db_session: AsyncSession, owner_id: str
 ) -> Playlist:
     """Return the owner's Watch Later playlist, creating it when needed."""
     existing = await crud_playlist.get_playlists(
@@ -151,7 +152,7 @@ async def ensure_watch_later(
 
     playlist = Playlist(
         id=str(uuid.uuid4()),
-        owner_id=owner_id,
+        user_id=user_uuid(owner_id),
         name="Watch Later",
         description="Videos saved to watch later",
         is_system=True,
@@ -177,7 +178,7 @@ async def ensure_watch_later(
 
 
 async def get_watch_later_detail(
-    db_session: AsyncSession, owner_id: str = "test-user"
+    db_session: AsyncSession, owner_id: str
 ) -> PlaylistDetailOut:
     playlist = await ensure_watch_later(db_session, owner_id=owner_id)
     return await _build_detail_out(playlist, db_session, owner_id=owner_id)
@@ -186,7 +187,7 @@ async def get_watch_later_detail(
 async def add_video_to_watch_later(
     video_id: str,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> PlaylistDetailOut:
     playlist = await ensure_watch_later(db_session, owner_id=owner_id)
     video = await get_videos(db_session, owner_id=owner_id, id=video_id, first=True)
@@ -206,7 +207,7 @@ async def add_video_to_watch_later(
 async def remove_video_from_watch_later(
     video_id: str,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> None:
     playlist = await ensure_watch_later(db_session, owner_id=owner_id)
     video_ids = await crud_playlist.get_playlist_video_ids(
@@ -220,19 +221,19 @@ async def remove_video_from_watch_later(
 
 
 async def get_playlist_detail(
-    playlist_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+    playlist_id: str, db_session: AsyncSession, owner_id: str
 ) -> PlaylistDetailOut:
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
     return await _build_detail_out(playlist, db_session, owner_id=owner_id)
 
 
 async def create_new_playlist(
-    payload: PlaylistCreate, db_session: AsyncSession, owner_id: str = "test-user"
+    payload: PlaylistCreate, db_session: AsyncSession, owner_id: str
 ) -> Playlist:
     playlist_id = str(uuid.uuid4())
     new_playlist = Playlist(
         id=playlist_id,
-        owner_id=owner_id,
+        user_id=user_uuid(owner_id),
         name=payload.name,
         description=payload.description,
         is_system=payload.is_system,
@@ -244,7 +245,7 @@ async def update_playlist(
     playlist_id: str,
     payload: PlaylistUpdate,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> Playlist:
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
     _assert_playlist_metadata_is_mutable(playlist)
@@ -261,7 +262,7 @@ async def update_playlist(
 
 
 async def delete_playlist_by_id(
-    playlist_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+    playlist_id: str, db_session: AsyncSession, owner_id: str
 ) -> None:
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
     _assert_playlist_metadata_is_mutable(playlist)
@@ -272,7 +273,7 @@ async def set_playlist_videos(
     playlist_id: str,
     payload: PlaylistSetVideos,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> PlaylistDetailOut:
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
     _assert_playlist_is_mutable(playlist)
@@ -322,7 +323,7 @@ async def add_video_to_playlist(
     playlist_id: str,
     payload: PlaylistAddVideo,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> PlaylistDetailOut:
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
     _assert_playlist_is_mutable(playlist)
@@ -337,7 +338,11 @@ async def add_video_to_playlist(
         )
 
     await crud_playlist.add_video_to_playlist(
-        db_session, playlist_id, payload.video_id, payload.position, owner_id=owner_id
+        db_session,
+        playlist_id,
+        payload.video_id,
+        owner_id=owner_id,
+        position=payload.position,
     )
 
     return await _build_detail_out(playlist, db_session, owner_id=owner_id)
@@ -347,7 +352,7 @@ async def add_videos_to_playlist(
     playlist_id: str,
     payload: PlaylistAddVideos,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> PlaylistDetailOut:
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
     _assert_playlist_is_mutable(playlist)
@@ -365,7 +370,11 @@ async def add_videos_to_playlist(
         )
 
     await crud_playlist.bulk_add_videos_to_playlist(
-        db_session, playlist_id, payload.video_ids, payload.position, owner_id=owner_id
+        db_session,
+        playlist_id,
+        payload.video_ids,
+        owner_id=owner_id,
+        start_position=payload.position,
     )
 
     return await _build_detail_out(playlist, db_session, owner_id=owner_id)
@@ -375,7 +384,7 @@ async def move_video_in_playlist(
     playlist_id: str,
     payload: PlaylistMoveVideo,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> PlaylistDetailOut:
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
     _assert_playlist_is_mutable(playlist)
@@ -398,7 +407,7 @@ async def set_playlist_position(
     playlist_id: str,
     payload: PlaylistSetPosition,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> PlaylistDetailOut:
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
 
@@ -427,7 +436,7 @@ async def remove_video_from_playlist(
     playlist_id: str,
     video_id: str,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> None:
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
     _assert_playlist_is_mutable(playlist)
@@ -464,7 +473,7 @@ async def remove_video_from_playlist(
 
 
 async def clear_playlist(
-    playlist_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+    playlist_id: str, db_session: AsyncSession, owner_id: str
 ) -> PlaylistDetailOut:
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
     _assert_playlist_is_mutable(playlist)
@@ -482,7 +491,7 @@ async def clear_playlist(
 
 
 async def shuffle_playlist(
-    playlist_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+    playlist_id: str, db_session: AsyncSession, owner_id: str
 ) -> PlaylistDetailOut:
     playlist = await get_playlist_by_id(playlist_id, db_session, owner_id=owner_id)
     _assert_playlist_is_mutable(playlist)
