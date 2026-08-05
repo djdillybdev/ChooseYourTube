@@ -9,9 +9,32 @@ import pytest
 import pytest_asyncio
 from fastapi import HTTPException
 
-from app.services.folder_service import get_tree, create_folder, update_folder
+from app.services.folder_service import (
+    create_folder as _create_folder,
+    get_tree as _get_tree,
+    update_folder as _update_folder,
+)
 from app.schemas.folder import FolderCreate, FolderUpdate
-from app.db.models.folder import Folder
+from app.db.models.folder import Folder as FolderModel
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+
+
+def Folder(**kwargs):
+    kwargs.setdefault("user_id", TEST_OWNER_ID)
+    return FolderModel(**kwargs)
+
+
+async def get_tree(db_session):
+    return await _get_tree(db_session, TEST_OWNER_ID)
+
+
+async def create_folder(payload, db_session):
+    return await _create_folder(payload, db_session, TEST_OWNER_ID)
+
+
+async def update_folder(folder_id, payload, db_session):
+    return await _update_folder(folder_id, payload, db_session, TEST_OWNER_ID)
 
 
 @pytest_asyncio.fixture

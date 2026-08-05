@@ -7,8 +7,18 @@ Tests create() and delete() methods from crud_folder.
 import uuid
 
 import pytest
-from app.db.crud.crud_folder import create_folder, delete_folder, get_folders
-from app.db.models.folder import Folder
+from app.db.crud.crud_folder import create_folder, delete_folder, get_folders as _get_folders
+from app.db.models.folder import Folder as FolderModel
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000001"
+
+
+def Folder(**kwargs):
+    return FolderModel(owner_id=TEST_OWNER_ID, **kwargs)
+
+
+async def get_folders(db_session, **kwargs):
+    return await _get_folders(db_session, owner_id=TEST_OWNER_ID, **kwargs)
 
 
 @pytest.mark.asyncio

@@ -78,6 +78,8 @@ access to the host account that runs Docker.
 | `API_ORIGIN`                                | No         | `http://localhost:5173` | Browser-facing frontend origin.                                    |
 | `API_CORS_ORIGINS`                          | No         | `API_ORIGIN`            | Comma-separated frontend origins trusted by FastAPI.               |
 | `REGISTRATION_ENABLED`                      | No         | mode-derived            | Allows new account registration.                                   |
+| `REGISTRATION_EMAIL_ALLOWLIST`              | No         | empty                   | Comma-separated exact emails; empty allows any email to register.  |
+| `REGISTRATION_ALLOWLIST_REQUIRED`           | No         | `false`                 | Refuses to start with enabled, open registration.                  |
 | `BACKGROUND_JOBS_ENABLED`                   | No         | mode-derived            | Enables Redis jobs and scheduled refreshes.                        |
 | `YOUTUBE_DAILY_QUOTA_BUDGET`                | No         | `8000`                  | Stops optional API work at this daily unit count.                  |
 | `YOUTUBE_OAUTH_ENABLED`                     | No         | credential-derived      | Enables one-time Google subscription discovery.                    |
@@ -130,6 +132,9 @@ API hostname such as `api.tube.example.com`. Do not expose the unencrypted conta
 Do not expose PostgreSQL or Redis. Keep `.env`, backups, API keys, and OAuth credentials readable only
 by administrators. Use a unique `AUTH_SECRET` for each installation and retain off-host database
 backups.
+
+For an HTTPS deployment on an Oracle Cloud Ubuntu VM, including Caddy, systemd, resource limits, and
+scheduled backups, follow [Deploy on an Oracle Cloud VM](oracle-vm.md).
 
 After changing the public origin, recreate the affected containers:
 

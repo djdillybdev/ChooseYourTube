@@ -1,7 +1,10 @@
 import pytest
 from pydantic import ValidationError
 
+from app.auth.schemas import UserCreate
 from app.core.config import PLACEHOLDER_AUTH_SECRET, Settings
+from app.core.errors import ApplicationError
+from app.main import registration_email_guard
 
 
 def full_settings(**overrides) -> Settings:
@@ -32,6 +35,71 @@ def test_full_mode_accepts_blank_optional_demo_email() -> None:
     configured = full_settings(DEMO_USER_EMAIL="")
 
     assert configured.DEMO_USER_EMAIL is None
+
+
+@pytest.mark.unit
+def test_registration_email_allowlist_is_normalized() -> None:
+    configured = full_settings(
+        REGISTRATION_EMAIL_ALLOWLIST=" Person@Example.com,second@example.com,person@example.com "
+    )
+
+    assert configured.registration_email_allowlist == frozenset(
+        {"person@example.com", "second@example.com"}
+    )
+
+
+@pytest.mark.unit
+def test_empty_registration_email_allowlist_is_open() -> None:
+    configured = full_settings(REGISTRATION_EMAIL_ALLOWLIST=" , ")
+
+    assert configured.registration_email_allowlist == frozenset()
+
+
+@pytest.mark.unit
+def test_required_registration_allowlist_rejects_open_registration() -> None:
+    with pytest.raises(ValidationError, match="must contain at least one email"):
+        full_settings(REGISTRATION_ALLOWLIST_REQUIRED=True)
+
+
+@pytest.mark.unit
+def test_required_registration_allowlist_allows_closed_registration() -> None:
+    configured = full_settings(
+        REGISTRATION_ENABLED=False,
+        REGISTRATION_ALLOWLIST_REQUIRED=True,
+    )
+
+    assert configured.REGISTRATION_ENABLED is False
+
+
+@pytest.mark.unit
+def test_invalid_registration_email_allowlist_is_rejected() -> None:
+    with pytest.raises(ValidationError, match="REGISTRATION_EMAIL_ALLOWLIST"):
+        full_settings(REGISTRATION_EMAIL_ALLOWLIST="not-an-email")
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_registration_email_guard_allows_open_and_listed_registration() -> None:
+    user = UserCreate(email="Person@example.com", password="valid-password")
+
+    await registration_email_guard(full_settings())(user)
+    await registration_email_guard(
+        full_settings(REGISTRATION_EMAIL_ALLOWLIST="person@example.com")
+    )(user)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_registration_email_guard_rejects_unlisted_registration() -> None:
+    guard = registration_email_guard(
+        full_settings(REGISTRATION_EMAIL_ALLOWLIST="allowed@example.com")
+    )
+
+    with pytest.raises(ApplicationError) as error:
+        await guard(UserCreate(email="blocked@example.com", password="valid-password"))
+
+    assert error.value.status_code == 403
+    assert error.value.code == "REGISTRATION_EMAIL_NOT_ALLOWED"
 
 
 @pytest.mark.unit

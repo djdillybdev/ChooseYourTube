@@ -1,31 +1,36 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+import uuid
+from typing import Any
 
-from sqlalchemy import DateTime, String, UniqueConstraint, and_
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, synonym, validates
 
 from ..base import Base
-from .association_tables import channel_categories
-
-if TYPE_CHECKING:
-    from .channel import Channel
-
-
+from ..tenancy import user_uuid
 class Category(Base):
     __tablename__ = "categories"
+    __allow_unmapped__ = True
+    channels: list[Any]
     __table_args__ = (
-        UniqueConstraint("owner_id", "id", name="uq_category_owner_id"),
+        UniqueConstraint("user_id", "id", name="uq_category_user_id"),
         UniqueConstraint(
-            "owner_id", "normalized_name", name="uq_category_owner_normalized_name"
+            "user_id", "normalized_name", name="uq_category_user_normalized_name"
         ),
     )
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, index=True, comment="UUID as string"
     )
-    owner_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    owner_id = synonym("user_id")
+
+    @validates("user_id")
+    def _validate_user_id(self, key, value):
+        return user_uuid(value)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     normalized_name: Mapped[str] = mapped_column(String(255), nullable=False)
     icon_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -33,17 +38,6 @@ class Category(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
-    )
-
-    channels: Mapped[list["Channel"]] = relationship(
-        secondary=channel_categories,
-        primaryjoin=and_(
-            owner_id == channel_categories.c.owner_id,
-            id == channel_categories.c.category_id,
-        ),
-        secondaryjoin="and_(Channel.owner_id == channel_categories.c.owner_id, Channel.id == channel_categories.c.channel_id)",
-        back_populates="categories",
-        lazy="selectin",
     )
 
     def __repr__(self) -> str:

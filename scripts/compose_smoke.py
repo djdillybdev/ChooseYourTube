@@ -13,6 +13,7 @@ import urllib.request
 BASE_URL = os.getenv("SMOKE_API_URL", "http://127.0.0.1:8000").rstrip("/")
 EMAIL = os.getenv("SMOKE_EMAIL", "compose-smoke@example.com")
 PASSWORD = os.getenv("SMOKE_PASSWORD", "Compose-Smoke-Password-2026!")
+DISALLOWED_EMAIL = os.getenv("SMOKE_DISALLOWED_EMAIL")
 
 
 def request(path: str, *, method: str = "GET", body: object | None = None, token: str | None = None):
@@ -52,6 +53,21 @@ def wait_until_ready() -> None:
 
 def main() -> int:
     wait_until_ready()
+    if DISALLOWED_EMAIL:
+        blocked_status, blocked_payload = request(
+            "/auth/register",
+            method="POST",
+            body={"email": DISALLOWED_EMAIL, "password": PASSWORD},
+        )
+        if (
+            blocked_status != 403
+            or not isinstance(blocked_payload, dict)
+            or blocked_payload.get("code") != "REGISTRATION_EMAIL_NOT_ALLOWED"
+        ):
+            raise RuntimeError(
+                f"Registration allowlist failed: {blocked_status}, {blocked_payload}"
+            )
+
     register_status, _ = request(
         "/auth/register", method="POST", body={"email": EMAIL, "password": PASSWORD}
     )
@@ -67,7 +83,7 @@ def main() -> int:
     me_status, user = request("/users/me", token=session["access_token"])
     if me_status != 200 or not isinstance(user, dict) or user.get("email") != EMAIL:
         raise RuntimeError(f"Authenticated request failed with status {me_status}: {user}")
-    print("Compose smoke test passed: ready, registered, logged in, authenticated")
+    print("Compose smoke test passed: ready, registration policy, login, authentication")
     return 0
 
 

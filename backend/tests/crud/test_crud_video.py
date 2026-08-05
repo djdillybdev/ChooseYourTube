@@ -4,17 +4,41 @@ Comprehensive tests for flexible get_videos() CRUD method.
 Tests dynamic filtering, pagination, ordering, and edge cases using TDD approach.
 """
 
+import uuid
+
 import pytest
 import pytest_asyncio
 from datetime import datetime, timezone, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
+from sqlalchemy import func, select
 from sqlalchemy.dialects import postgresql
 
-from app.db.crud.crud_video import get_videos, count_videos
-from app.db.models.video import Video
-from app.db.models.tag import Tag
+from app.db.crud.crud_video import get_videos as _get_videos, count_videos as _count_videos
+from app.db.models.video import Video as VideoModel
+from app.db.models.channel import Channel
+from app.db.models.tag import Tag as TagModel
 from app.db.models.association_tables import video_tags
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000001"
+
+
+def Video(**kwargs):
+    return VideoModel(owner_id=TEST_OWNER_ID, **kwargs)
+
+
+def Tag(**kwargs):
+    return TagModel(owner_id=TEST_OWNER_ID, **kwargs)
+
+
+async def get_videos(db_session, **kwargs):
+    kwargs.setdefault("owner_id", TEST_OWNER_ID)
+    return await _get_videos(db_session, **kwargs)
+
+
+async def count_videos(db_session, **kwargs):
+    kwargs.setdefault("owner_id", TEST_OWNER_ID)
+    return await _count_videos(db_session, **kwargs)
 
 
 @pytest_asyncio.fixture
@@ -30,6 +54,18 @@ async def sample_videos(db_session):
     - Various publish dates
     """
     now = datetime.now(timezone.utc)
+
+    db_session.add_all(
+        [
+            Channel(
+                id=channel_id,
+                owner_id=TEST_OWNER_ID,
+                title=channel_id,
+                uploads_playlist_id=f"uploads-{channel_id}",
+            )
+            for channel_id in ("ch001", "ch002", "ch003")
+        ]
+    )
 
     videos = [
         Video(
@@ -153,7 +189,7 @@ class TestGetVideosBasicFiltering:
         result = await get_videos(db_session, id="vid001", first=True)
 
         assert result is not None
-        assert isinstance(result, Video)
+        assert isinstance(result, VideoModel)
         assert result.id == "vid001"
         assert result.title == "Introduction to Python"
 
@@ -434,7 +470,7 @@ class TestGetVideosReturnTypes:
         """first=True should return Video | None, not a list."""
         result = await get_videos(db_session, id="vid001", first=True)
 
-        assert isinstance(result, Video)
+        assert isinstance(result, VideoModel)
         assert not isinstance(result, list)
 
     async def test_first_false_returns_list(self, db_session, sample_videos):
@@ -442,7 +478,7 @@ class TestGetVideosReturnTypes:
         results = await get_videos(db_session, first=False)
 
         assert isinstance(results, list)
-        assert all(isinstance(v, Video) for v in results)
+        assert all(isinstance(v, VideoModel) for v in results)
 
     async def test_default_returns_list(self, db_session, sample_videos):
         """Default behavior (no first param) should return list."""
@@ -593,9 +629,26 @@ class TestGetVideosSearch:
         await db_session.flush()
 
         await db_session.execute(
-            video_tags.insert().values(video_id="vid005", tag_id="tag-search-1")
+            video_tags.insert().values(
+                user_id=uuid.UUID(TEST_OWNER_ID),
+                video_id="vid005",
+                tag_id="tag-search-1",
+            )
         )
         await db_session.commit()
+
+        assert await db_session.scalar(
+            select(func.count()).select_from(video_tags).where(
+                video_tags.c.user_id == uuid.UUID(TEST_OWNER_ID),
+                video_tags.c.video_id == "vid005",
+            )
+        ) == 1
+        assert await db_session.scalar(
+            select(func.count()).select_from(TagModel).where(
+                TagModel.user_id == uuid.UUID(TEST_OWNER_ID),
+                func.lower(TagModel.name).like("%machine learning%"),
+            )
+        ) == 1
 
         results = await get_videos(db_session, q="machine learning")
 
@@ -617,10 +670,18 @@ class TestGetVideosTagIdFilter:
 
         # Associate tag with vid001 and vid003
         await db_session.execute(
-            video_tags.insert().values(video_id="vid001", tag_id="tag-filter-1")
+            video_tags.insert().values(
+                user_id=uuid.UUID(TEST_OWNER_ID),
+                video_id="vid001",
+                tag_id="tag-filter-1",
+            )
         )
         await db_session.execute(
-            video_tags.insert().values(video_id="vid003", tag_id="tag-filter-1")
+            video_tags.insert().values(
+                user_id=uuid.UUID(TEST_OWNER_ID),
+                video_id="vid003",
+                tag_id="tag-filter-1",
+            )
         )
         await db_session.commit()
 
@@ -702,13 +763,25 @@ class TestCountVideosExtendedFilters:
         await db_session.flush()
 
         await db_session.execute(
-            video_tags.insert().values(video_id="vid001", tag_id="tag-count-1")
+            video_tags.insert().values(
+                user_id=uuid.UUID(TEST_OWNER_ID),
+                video_id="vid001",
+                tag_id="tag-count-1",
+            )
         )
         await db_session.execute(
-            video_tags.insert().values(video_id="vid002", tag_id="tag-count-1")
+            video_tags.insert().values(
+                user_id=uuid.UUID(TEST_OWNER_ID),
+                video_id="vid002",
+                tag_id="tag-count-1",
+            )
         )
         await db_session.execute(
-            video_tags.insert().values(video_id="vid003", tag_id="tag-count-1")
+            video_tags.insert().values(
+                user_id=uuid.UUID(TEST_OWNER_ID),
+                video_id="vid003",
+                tag_id="tag-count-1",
+            )
         )
         await db_session.commit()
 
@@ -779,14 +852,15 @@ class TestGetVideosRelevanceOrdering:
 
         await get_videos(
             db,
-            owner_id="user-1",
+            owner_id=TEST_OWNER_ID,
             q="Python",
             order_by="relevance",
         )
 
         statement = db.execute.await_args.args[0]
         sql = str(statement.compile(dialect=postgresql.dialect()))
-        assert "GROUP BY videos.owner_id, videos.id" in sql
+        assert "user_channels.user_id" in sql
+        assert "videos.owner_id" not in sql
 
     async def test_postgresql_duration_filter_does_not_distinct_json_row(self):
         """Duration predicates must not apply DISTINCT to Video's JSON column."""
@@ -797,7 +871,7 @@ class TestGetVideosRelevanceOrdering:
         result.unique.return_value.scalars.return_value.all.return_value = []
         db.execute.return_value = result
 
-        await get_videos(db, owner_id="user-1", min_duration_seconds=360)
+        await get_videos(db, owner_id=TEST_OWNER_ID, min_duration_seconds=360)
 
         statement = db.execute.await_args.args[0]
         sql = str(statement.compile(dialect=postgresql.dialect()))
@@ -813,15 +887,14 @@ class TestGetVideosRelevanceOrdering:
         result.unique.return_value.scalars.return_value.all.return_value = []
         db.execute.return_value = result
 
-        await get_videos(db, owner_id="user-1", tag_id="tag-1")
+        await get_videos(db, owner_id=TEST_OWNER_ID, tag_id="tag-1")
 
         statement = db.execute.await_args.args[0]
         sql = str(statement.compile(dialect=postgresql.dialect()))
         assert not sql.lstrip().startswith("SELECT DISTINCT")
-        distinct_ids = sql[sql.index("SELECT DISTINCT") : sql.index(") AS anon_1")]
-        assert "videos.owner_id" in distinct_ids
-        assert "videos.id" in distinct_ids
-        assert "videos.yt_tags" not in distinct_ids
+        assert "video_tags.user_id" in sql
+        assert "videos.owner_id" not in sql
+        assert "videos.yt_tags" in sql
 
     async def test_relevance_order_by_without_q(self, db_session, sample_videos):
         """order_by='relevance' without q should fall back to published_at."""

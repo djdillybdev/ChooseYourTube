@@ -14,6 +14,8 @@ from app.db.models.channel import Channel
 from app.db.models.video import Video
 from app.db.crud.crud_playlist import set_playlist_videos as crud_set_videos
 
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+
 
 @pytest_asyncio.fixture
 async def sample_channel(db_session):
@@ -23,6 +25,7 @@ async def sample_channel(db_session):
         handle="routertest",
         title="Router Test Channel",
         uploads_playlist_id="UU_router_test",
+        owner_id=TEST_OWNER_ID,
     )
     db_session.add(channel)
     await db_session.commit()
@@ -57,6 +60,7 @@ async def sample_playlist(db_session):
         name="Router Test Playlist",
         description="Router test",
         is_system=False,
+        owner_id=TEST_OWNER_ID,
     )
     db_session.add(playlist)
     await db_session.commit()
@@ -71,6 +75,7 @@ async def sample_playlist_with_videos(db_session, sample_channel):
         id="PL_router_vids",
         name="Router Playlist With Videos",
         is_system=False,
+        owner_id=TEST_OWNER_ID,
     )
     db_session.add(playlist)
 
@@ -120,8 +125,12 @@ class TestListPlaylists:
     async def test_filter_by_is_system(self, test_client, db_session):
         """Should filter by is_system query parameter."""
         # Create system and non-system playlists
-        system_pl = Playlist(id="PL_sys", name="System", is_system=True)
-        user_pl = Playlist(id="PL_user", name="User", is_system=False)
+        system_pl = Playlist(
+            id="PL_sys", name="System", is_system=True, owner_id=TEST_OWNER_ID
+        )
+        user_pl = Playlist(
+            id="PL_user", name="User", is_system=False, owner_id=TEST_OWNER_ID
+        )
         db_session.add(system_pl)
         db_session.add(user_pl)
         await db_session.commit()

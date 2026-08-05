@@ -7,27 +7,49 @@ from app.db.models.channel import Channel
 from app.db.models.video import Video
 from app.schemas.playlist import PlaylistUpdate
 from app.services.playlist_service import (
-    add_video_to_watch_later,
-    delete_playlist_by_id,
-    ensure_watch_later,
-    get_watch_later_detail,
-    remove_video_from_watch_later,
-    update_playlist,
+    add_video_to_watch_later as _add_video_to_watch_later,
+    delete_playlist_by_id as _delete_playlist_by_id,
+    ensure_watch_later as _ensure_watch_later,
+    get_watch_later_detail as _get_watch_later_detail,
+    remove_video_from_watch_later as _remove_video_from_watch_later,
+    update_playlist as _update_playlist,
 )
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+OTHER_OWNER_ID = "20000000-0000-0000-0000-000000000099"
+
+
+def _owned_service(function):
+    async def call(*args, **kwargs):
+        owner_id = kwargs.get("owner_id", TEST_OWNER_ID)
+        kwargs["owner_id"] = (
+            OTHER_OWNER_ID if owner_id == "other-owner" else owner_id
+        )
+        return await function(*args, **kwargs)
+
+    return call
+
+
+add_video_to_watch_later = _owned_service(_add_video_to_watch_later)
+delete_playlist_by_id = _owned_service(_delete_playlist_by_id)
+ensure_watch_later = _owned_service(_ensure_watch_later)
+get_watch_later_detail = _owned_service(_get_watch_later_detail)
+remove_video_from_watch_later = _owned_service(_remove_video_from_watch_later)
+update_playlist = _owned_service(_update_playlist)
 
 
 @pytest.fixture
 async def watch_later_video(db_session):
     channel = Channel(
         id="CH_watch_later",
-        owner_id="test-user",
+        owner_id=TEST_OWNER_ID,
         title="Watch Later Channel",
         handle="watchlater",
         uploads_playlist_id="UU_watch_later",
     )
     video = Video(
         id="WLVIDEO001",
-        owner_id="test-user",
+        owner_id=TEST_OWNER_ID,
         channel_id=channel.id,
         title="Saved video",
         published_at=datetime.now(timezone.utc),

@@ -1,0 +1,4 @@
+---
+chooseyourtube_manage_ufw: false
+chooseyourtube_admin_cidrs: []
+chooseyourtube_ssh_port: 22

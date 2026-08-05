@@ -2,7 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -64,6 +64,21 @@ async def check_database_schema_on_startup() -> None:
         await assert_required_playlist_schema(db_session)
 
 
+def registration_email_guard(app_settings: Settings):
+    """Build the registration dependency for this application instance."""
+
+    async def enforce_registration_email(user_create: UserCreate) -> None:
+        allowlist = app_settings.registration_email_allowlist
+        if allowlist and str(user_create.email).casefold() not in allowlist:
+            raise ApplicationError(
+                "REGISTRATION_EMAIL_NOT_ALLOWED",
+                "This email address is not permitted to register.",
+                403,
+            )
+
+    return enforce_registration_email
+
+
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     await check_database_schema_on_startup()
@@ -114,6 +129,13 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
             fastapi_users.get_register_router(UserRead, UserCreate),
             prefix="/auth",
             tags=["auth"],
+            dependencies=[Depends(registration_email_guard(app_settings))],
+            responses={
+                403: {
+                    "model": APIErrorBody,
+                    "description": "Email address is not permitted to register",
+                }
+            },
         )
     application.include_router(accounts.router)
     if app_settings.APP_MODE == "demo" and app_settings.DEMO_LOGIN_ENABLED:

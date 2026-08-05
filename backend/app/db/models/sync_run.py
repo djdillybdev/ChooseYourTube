@@ -14,13 +14,22 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     text,
+    ForeignKey,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, synonym, validates
 
 from ..base import Base
+from ..tenancy import user_uuid
 
 
-ACTIVE_SYNC_PREDICATE = "status IN ('queued', 'running') AND channel_id IS NOT NULL"
+ACTIVE_REFRESH_PREDICATE = (
+    "status IN ('queued', 'running') AND channel_id IS NOT NULL "
+    "AND kind = 'channel_refresh'"
+)
+ACTIVE_USER_SYNC_PREDICATE = (
+    "status IN ('queued', 'running') AND channel_id IS NOT NULL "
+    "AND kind IN ('initial_channel_sync', 'playlist_sync')"
+)
 ACTIVE_IMPORT_PREDICATE = (
     "status IN ('queued', 'running') AND subscription_import_id IS NOT NULL"
 )
@@ -39,27 +48,35 @@ class SyncRun(Base):
             name="ck_sync_runs_status",
         ),
         ForeignKeyConstraint(
-            ["owner_id", "channel_id"],
-            ["channels.owner_id", "channels.id"],
+            ["channel_id"],
+            ["channels.id"],
             name="fk_sync_runs_channel",
             ondelete="CASCADE",
         ),
-        Index("ix_sync_runs_owner_queued", "owner_id", "queued_at"),
+        Index("ix_sync_runs_user_queued", "user_id", "queued_at"),
         Index("ix_sync_runs_status", "status"),
-        Index("ix_sync_runs_channel", "owner_id", "channel_id"),
-        Index("ix_sync_runs_import", "owner_id", "subscription_import_id"),
+        Index("ix_sync_runs_channel", "channel_id"),
+        Index("ix_sync_runs_import", "user_id", "subscription_import_id"),
         Index(
-            "uq_sync_runs_active_channel_kind",
-            "owner_id",
+            "uq_sync_runs_active_channel_refresh",
             "channel_id",
             "kind",
             unique=True,
-            postgresql_where=text(ACTIVE_SYNC_PREDICATE),
-            sqlite_where=text(ACTIVE_SYNC_PREDICATE),
+            postgresql_where=text(ACTIVE_REFRESH_PREDICATE),
+            sqlite_where=text(ACTIVE_REFRESH_PREDICATE),
+        ),
+        Index(
+            "uq_sync_runs_active_user_channel_kind",
+            "user_id",
+            "channel_id",
+            "kind",
+            unique=True,
+            postgresql_where=text(ACTIVE_USER_SYNC_PREDICATE),
+            sqlite_where=text(ACTIVE_USER_SYNC_PREDICATE),
         ),
         Index(
             "uq_sync_runs_active_import_kind",
-            "owner_id",
+            "user_id",
             "subscription_import_id",
             "kind",
             unique=True,
@@ -67,15 +84,22 @@ class SyncRun(Base):
             sqlite_where=text(ACTIVE_IMPORT_PREDICATE),
         ),
         ForeignKeyConstraint(
-            ["owner_id", "subscription_import_id"],
-            ["subscription_imports.owner_id", "subscription_imports.id"],
+            ["user_id", "subscription_import_id"],
+            ["subscription_imports.user_id", "subscription_imports.id"],
             name="fk_sync_runs_subscription_import",
             ondelete="CASCADE",
         ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    owner_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    owner_id = synonym("user_id")
+
+    @validates("user_id")
+    def _validate_user_id(self, key, value):
+        return user_uuid(value) if value is not None else None
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="queued", server_default="queued"

@@ -3,6 +3,7 @@ import re
 from urllib.parse import urlparse
 
 from fastapi import HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.base import PaginatedResponse
@@ -10,6 +11,8 @@ from app.schemas.base import PaginatedResponse
 from ..clients.youtube import YouTubeAPI
 from ..db.crud import crud_channel, crud_sync_run
 from ..db.models.channel import Channel
+from ..db.models.user_state import UserChannel
+from ..db.tenancy import user_uuid
 from ..schemas.channel import ChannelCreate, ChannelUpdate, ChannelOut
 from . import sync_service
 from .video_service import refresh_latest_channel_videos
@@ -45,7 +48,7 @@ def _normalize_channel_handle(channel_input: str) -> str:
 
 
 async def get_channel_by_id(
-    channel_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+    channel_id: str, db_session: AsyncSession, owner_id: str
 ) -> Channel:
     """
     Retrieves a channel by its ID, raising a 404 error if not found.
@@ -60,7 +63,7 @@ async def get_channel_by_id(
 
 async def get_all_channels(
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
     is_favorited: bool | None = None,
     folder_id: str | None = None,
     tag_id: str | None = None,
@@ -111,6 +114,8 @@ async def get_all_channels(
     items = []
     for channel in paginated_channels:
         output = ChannelOut.model_validate(channel)
+        if hasattr(channel, "followed_at"):
+            output.created_at = channel.followed_at
         run = latest.get(channel.id)
         if run is not None:
             output.latest_sync = sync_service.to_latest_summary(
@@ -134,6 +139,8 @@ async def get_channel_out(
         db_session, owner_id=owner_id, channel_ids=[channel.id]
     )
     output = ChannelOut.model_validate(channel)
+    if hasattr(channel, "followed_at"):
+        output.created_at = channel.followed_at
     run = latest.get(channel.id)
     if run is not None:
         output.latest_sync = sync_service.to_latest_summary(
@@ -146,7 +153,7 @@ async def refresh_channel_by_id(
     channel_id: str,
     db_session: AsyncSession,
     youtube_client: YouTubeAPI,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> Channel:
     """Compatibility service for callers predating durable queued refreshes."""
     channel = await get_channel_by_id(channel_id, db_session, owner_id)
@@ -160,7 +167,7 @@ async def create_channel(
     channel_data: ChannelCreate,
     db_session: AsyncSession,
     youtube_client: YouTubeAPI,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> Channel:
     """Fetch YouTube metadata and create an owned channel."""
     from app.core.demo_policy import DemoOperation, require_demo_safe
@@ -240,23 +247,40 @@ async def create_channel_from_metadata(
             502,
         )
 
-    new_channel = Channel(
-        owner_id=owner_id,
-        id=channel_id,
-        title=snippet.get("title"),
-        handle=handle or snippet.get("customUrl") or channel_id,
-        description=snippet.get("description"),
-        thumbnail_url=_get_best_thumbnail_url(snippet.get("thumbnails", {})),
-        uploads_playlist_id=uploads_playlist_id,
-        folder_id=folder_id,
+    new_channel = await db_session.scalar(
+        select(Channel).where(Channel.id == channel_id).with_for_update()
     )
-    db_session.add(new_channel)
+    if new_channel is None:
+        new_channel = Channel(
+            id=channel_id,
+            title=snippet.get("title"),
+            handle=handle or snippet.get("customUrl") or channel_id,
+            description=snippet.get("description"),
+            thumbnail_url=_get_best_thumbnail_url(snippet.get("thumbnails", {})),
+            uploads_playlist_id=uploads_playlist_id,
+        )
+        db_session.add(new_channel)
+    else:
+        new_channel.title = snippet.get("title")
+        new_channel.handle = handle or snippet.get("customUrl") or channel_id
+        new_channel.description = snippet.get("description")
+        new_channel.thumbnail_url = _get_best_thumbnail_url(snippet.get("thumbnails", {}))
+        new_channel.uploads_playlist_id = uploads_playlist_id
+    await db_session.flush()
+    link = UserChannel(
+        user_id=user_uuid(owner_id), channel_id=channel_id, folder_id=folder_id
+    )
+    db_session.add(link)
+    new_channel.user_link = link
+    new_channel.folder_id = folder_id
+    new_channel.is_favorited = False
     if tag_ids:
         from .tag_service import sync_entity_tags
 
         await sync_entity_tags(new_channel, tag_ids, db_session, owner_id=owner_id)
     await db_session.commit()
     await db_session.refresh(new_channel)
+    new_channel.followed_at = link.followed_at
     return new_channel
 
 
@@ -264,7 +288,7 @@ async def update_channel(
     channel_id: str,
     payload: ChannelUpdate,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> Channel:
     """
     Updates a channel by its ID. Allows favoriting a channel, changing its folder, and managing tags.
@@ -277,10 +301,12 @@ async def update_channel(
 
     # Update simple fields
     if payload.is_favorited is not None:
+        channel.user_link.is_favorited = payload.is_favorited
         channel.is_favorited = payload.is_favorited
 
     # Distinguish omitted field from explicit null.
     if "folder_id" in payload.model_fields_set:
+        channel.user_link.folder_id = payload.folder_id
         channel.folder_id = payload.folder_id
 
     # Handle tag synchronization
@@ -293,7 +319,7 @@ async def update_channel(
 
 
 async def delete_channel_by_id(
-    channel_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+    channel_id: str, db_session: AsyncSession, owner_id: str
 ) -> None:
     """Delete a channel by ID after verifying ownership."""
     from app.core.demo_policy import DemoOperation, require_demo_safe
@@ -305,11 +331,11 @@ async def delete_channel_by_id(
     )
 
     # Now, pass the object to the CRUD layer for deletion
-    await crud_channel.delete_channel(db_session, channel_to_delete)
+    await crud_channel.delete_channel(db_session, channel_to_delete, owner_id)
 
 
 async def delete_all_channels(
-    db_session: AsyncSession, owner_id: str = "test-user"
+    db_session: AsyncSession, owner_id: str
 ) -> int:
     """Delete all channels owned by one user."""
     from app.core.demo_policy import DemoOperation, require_demo_safe

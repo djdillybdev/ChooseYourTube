@@ -17,6 +17,7 @@ from app.db.models.subscription_import import (
 )
 from app.db.models.tag import Tag
 from app.db.models.video import Video
+from app.db.models.user_state import UserChannel, UserVideoState
 from app.services import demo_service
 
 
@@ -76,17 +77,15 @@ async def test_seed_demo_is_idempotent_and_restores_mutable_state(db_session):
     catalog = demo_service.load_demo_seed()
     favorite_id = catalog["favorite_ids"][0]
 
-    video = await db_session.scalar(
-        select(Video).where(Video.owner_id == owner_id, Video.id == favorite_id)
-    )
-    assert video is not None
-    video.is_favorited = False
+    uid = uuid.UUID(owner_id)
+    state = await db_session.get(UserVideoState, (uid, favorite_id))
+    assert state is not None
+    state.is_favorited = False
     db_session.add(
         Folder(id="user-folder", owner_id=owner_id, name="Change", position=99)
     )
     db_session.add(
         Channel(
-            owner_id=owner_id,
             id="UC-retired-demo-channel",
             title="Retired demo channel",
             handle="retired-demo-channel",
@@ -94,8 +93,10 @@ async def test_seed_demo_is_idempotent_and_restores_mutable_state(db_session):
         )
     )
     db_session.add(
+        UserChannel(user_id=uid, channel_id="UC-retired-demo-channel")
+    )
+    db_session.add(
         Video(
-            owner_id=owner_id,
             id="retiredVid1",
             channel_id="UC-retired-demo-channel",
             title="Retired demo video",
@@ -109,14 +110,17 @@ async def test_seed_demo_is_idempotent_and_restores_mutable_state(db_session):
     assert (
         await db_session.scalar(
             select(func.count())
-            .select_from(Channel)
-            .where(Channel.owner_id == owner_id)
+            .select_from(UserChannel)
+            .where(UserChannel.user_id == uid)
         )
         == 7
     )
     assert (
         await db_session.scalar(
-            select(func.count()).select_from(Video).where(Video.owner_id == owner_id)
+            select(func.count())
+            .select_from(Video)
+            .join(UserChannel, UserChannel.channel_id == Video.channel_id)
+            .where(UserChannel.user_id == uid)
         )
         == 42
     )
@@ -143,16 +147,14 @@ async def test_seed_demo_is_idempotent_and_restores_mutable_state(db_session):
     assert await db_session.get(Folder, "user-folder") is None
     assert (
         await db_session.scalar(
-            select(Channel).where(
-                Channel.owner_id == owner_id,
-                Channel.id == "UC-retired-demo-channel",
+            select(UserChannel).where(
+                UserChannel.user_id == uid,
+                UserChannel.channel_id == "UC-retired-demo-channel",
             )
         )
         is None
     )
-    restored = await db_session.scalar(
-        select(Video).where(Video.owner_id == owner_id, Video.id == favorite_id)
-    )
+    restored = await db_session.get(UserVideoState, (uid, favorite_id))
     assert restored is not None and restored.is_favorited is True
 
     imported = await db_session.get(SubscriptionImport, demo_service.IMPORT_ID)
@@ -177,15 +179,15 @@ async def test_daily_reset_preserves_last_refreshed_video_metadata(db_session):
     catalog = demo_service.load_demo_seed()
     favorite_id = catalog["favorite_ids"][0]
     channel_id = catalog["channels"][0]["id"]
-    video = await db_session.scalar(
-        select(Video).where(Video.owner_id == owner_id, Video.id == favorite_id)
-    )
+    uid = uuid.UUID(owner_id)
+    video = await db_session.get(Video, favorite_id)
     assert video is not None
     video.title = "Metadata from the last successful RSS refresh"
-    video.is_favorited = False
+    state = await db_session.get(UserVideoState, (uid, favorite_id))
+    assert state is not None
+    state.is_favorited = False
     db_session.add(
         Video(
-            owner_id=owner_id,
             id="rssAddedVid",
             channel_id=channel_id,
             title="A video discovered after the pinned snapshot",
@@ -193,7 +195,6 @@ async def test_daily_reset_preserves_last_refreshed_video_metadata(db_session):
     )
     db_session.add(
         Channel(
-            owner_id=owner_id,
             id="UC-uncatalogued-channel",
             title="Uncatalogued channel",
             handle="uncatalogued-channel",
@@ -201,8 +202,10 @@ async def test_daily_reset_preserves_last_refreshed_video_metadata(db_session):
         )
     )
     db_session.add(
+        UserChannel(user_id=uid, channel_id="UC-uncatalogued-channel")
+    )
+    db_session.add(
         Video(
-            owner_id=owner_id,
             id="uncatalogued",
             channel_id="UC-uncatalogued-channel",
             title="This content should be removed",
@@ -212,23 +215,24 @@ async def test_daily_reset_preserves_last_refreshed_video_metadata(db_session):
 
     await demo_service.reset_demo_state(db_session, owner_id=owner_id)
 
-    refreshed = await db_session.scalar(
-        select(Video).where(Video.owner_id == owner_id, Video.id == favorite_id)
-    )
+    refreshed = await db_session.get(Video, favorite_id)
     assert refreshed is not None
     assert refreshed.title == "Metadata from the last successful RSS refresh"
-    assert refreshed.is_favorited is True
+    refreshed_state = await db_session.get(UserVideoState, (uid, favorite_id))
+    assert refreshed_state is not None and refreshed_state.is_favorited is True
     assert (
         await db_session.scalar(
-            select(Video).where(Video.owner_id == owner_id, Video.id == "rssAddedVid")
+            select(Video)
+            .join(UserChannel, UserChannel.channel_id == Video.channel_id)
+            .where(UserChannel.user_id == uid, Video.id == "rssAddedVid")
         )
         is not None
     )
     assert (
         await db_session.scalar(
-            select(Channel).where(
-                Channel.owner_id == owner_id,
-                Channel.id == "UC-uncatalogued-channel",
+            select(UserChannel).where(
+                UserChannel.user_id == uid,
+                UserChannel.channel_id == "UC-uncatalogued-channel",
             )
         )
         is None

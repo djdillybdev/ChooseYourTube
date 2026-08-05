@@ -5,25 +5,44 @@ Tests create_channel(), delete_channel(), and delete_all_channels() methods.
 """
 
 import uuid
+from datetime import datetime
 
 import pytest
 import pytest_asyncio
-from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 from app.db.crud.crud_channel import (
     create_channel,
-    delete_channel,
-    delete_all_channels,
-    get_channels,
+    delete_channel as _delete_channel,
+    delete_all_channels as _delete_all_channels,
+    get_channels as _get_channels,
 )
-from app.db.models.channel import Channel
+from app.db.models.channel import Channel as ChannelModel
 from app.db.models.folder import Folder
+
+TEST_OWNER_ID = "00000000-0000-0000-0000-000000000001"
+
+
+def Channel(**kwargs):
+    kwargs.setdefault("owner_id", TEST_OWNER_ID)
+    return ChannelModel(**kwargs)
+
+
+async def get_channels(db_session, **kwargs):
+    return await _get_channels(db_session, owner_id=TEST_OWNER_ID, **kwargs)
+
+
+async def delete_channel(db_session, channel):
+    return await _delete_channel(db_session, channel, TEST_OWNER_ID)
+
+
+async def delete_all_channels(db_session):
+    return await _delete_all_channels(db_session, TEST_OWNER_ID)
 
 
 @pytest_asyncio.fixture
 async def sample_folder(db_session):
     """Creates a test folder for testing folder_id foreign key relationships."""
-    folder = Folder(id=str(uuid.uuid4()), name="Test Folder")
+    folder = Folder(id=str(uuid.uuid4()), name="Test Folder", user_id=TEST_OWNER_ID)
     db_session.add(folder)
     await db_session.commit()
     await db_session.refresh(folder)

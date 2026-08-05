@@ -16,6 +16,8 @@ async def test_bootstrap_returns_owned_navigation_data_and_watch_later(db_sessio
         is_superuser=False,
         is_verified=True,
     )
+    db_session.add(user)
+    await db_session.commit()
 
     result = await get_app_bootstrap(db_session, user)
 

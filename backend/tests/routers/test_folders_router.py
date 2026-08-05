@@ -9,6 +9,8 @@ import pytest
 
 from app.db.models.folder import Folder
 
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+
 
 @pytest.mark.asyncio
 class TestFoldersRouter:
@@ -28,9 +30,9 @@ class TestFoldersRouter:
         # root1/
         #   child1/
         # root2/
-        root1 = Folder(id="1", name="Root 1", parent_id=None)
-        child1 = Folder(id="2", name="Child 1", parent_id="1")
-        root2 = Folder(id="3", name="Root 2", parent_id=None)
+        root1 = Folder(id="1", name="Root 1", parent_id=None, user_id=TEST_OWNER_ID)
+        child1 = Folder(id="2", name="Child 1", parent_id="1", user_id=TEST_OWNER_ID)
+        root2 = Folder(id="3", name="Root 2", parent_id=None, user_id=TEST_OWNER_ID)
 
         db_session.add(root1)
         db_session.add(child1)
@@ -74,7 +76,7 @@ class TestFoldersRouter:
     async def test_create_folder_with_parent(self, test_client, db_session):
         """Test POST /folders/ creates folder with parent."""
         # Create parent folder
-        parent = Folder(id="1", name="Parent", parent_id=None)
+        parent = Folder(id="1", name="Parent", parent_id=None, user_id=TEST_OWNER_ID)
         db_session.add(parent)
         await db_session.commit()
 
@@ -101,7 +103,7 @@ class TestFoldersRouter:
     async def test_update_folder_self_parent_raises_400(self, test_client, db_session):
         """Test PATCH /folders/{id} with self as parent returns 400."""
 
-        folder = Folder(id="1", name="Test Folder", parent_id=None)
+        folder = Folder(id="1", name="Test Folder", parent_id=None, user_id=TEST_OWNER_ID)
         db_session.add(folder)
         await db_session.commit()
 
@@ -114,9 +116,11 @@ class TestFoldersRouter:
         """Test PATCH /folders/{id} creating cycle returns 400."""
 
         # Create hierarchy: root -> child -> grandchild
-        root = Folder(id="1", name="Root", parent_id=None)
-        child = Folder(id="2", name="Child", parent_id="1")
-        grandchild = Folder(id="3", name="Grandchild", parent_id="2")
+        root = Folder(id="1", name="Root", parent_id=None, user_id=TEST_OWNER_ID)
+        child = Folder(id="2", name="Child", parent_id="1", user_id=TEST_OWNER_ID)
+        grandchild = Folder(
+            id="3", name="Grandchild", parent_id="2", user_id=TEST_OWNER_ID
+        )
 
         db_session.add(root)
         db_session.add(child)
@@ -132,7 +136,7 @@ class TestFoldersRouter:
     async def test_read_folder_by_id_found(self, test_client, db_session):
         """Test GET /folders/{id} returns the folder when it exists."""
 
-        folder = Folder(id="10", name="Lookup Folder", parent_id=None)
+        folder = Folder(id="10", name="Lookup Folder", parent_id=None, user_id=TEST_OWNER_ID)
         db_session.add(folder)
         await db_session.commit()
 
@@ -170,7 +174,13 @@ class TestFoldersRouter:
         assert "id" in data
 
     async def test_update_folder_icon_key(self, test_client, db_session):
-        folder = Folder(id="1", name="Test Folder", parent_id=None, icon_key=None)
+        folder = Folder(
+            id="1",
+            name="Test Folder",
+            parent_id=None,
+            icon_key=None,
+            user_id=TEST_OWNER_ID,
+        )
         db_session.add(folder)
         await db_session.commit()
 

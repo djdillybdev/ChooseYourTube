@@ -7,16 +7,23 @@ Tests create_videos_bulk() method with ON CONFLICT DO NOTHING handling.
 import pytest
 import pytest_asyncio
 from datetime import datetime, timezone, timedelta
-from app.db.crud.crud_video import create_videos_bulk, get_videos
+from app.db.crud.crud_video import create_videos_bulk, get_videos as _get_videos
 from app.db.crud.crud_channel import create_channel
 from app.db.models.channel import Channel
 from app.schemas.video import VideoCreate
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000001"
+
+
+async def get_videos(db_session, **kwargs):
+    return await _get_videos(db_session, owner_id=TEST_OWNER_ID, **kwargs)
 
 
 @pytest_asyncio.fixture
 async def sample_channel(db_session):
     """Creates a test channel for testing video foreign key relationships."""
     channel = Channel(
+        owner_id=TEST_OWNER_ID,
         id="UC_test_channel",
         title="Test Channel",
         handle="@testchannel",
@@ -353,12 +360,14 @@ class TestCreateVideosBulk:
             title="Channel 1",
             handle="@channel1",
             uploads_playlist_id="UU_channel_1",
+            owner_id=TEST_OWNER_ID,
         )
         channel2 = Channel(
             id="UC_channel_2",
             title="Channel 2",
             handle="@channel2",
             uploads_playlist_id="UU_channel_2",
+            owner_id=TEST_OWNER_ID,
         )
         await create_channel(db_session, channel1)
         await create_channel(db_session, channel2)

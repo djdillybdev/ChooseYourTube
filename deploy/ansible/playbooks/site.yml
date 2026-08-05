@@ -1,0 +1,10 @@
+---
+- name: Deploy ChooseYourTube
+  hosts: chooseyourtube
+  become: true
+  gather_facts: true
+  serial: 1
+  roles:
+    - role: docker_host
+    - role: firewall
+    - role: chooseyourtube

@@ -5,8 +5,11 @@ import pytest
 from app.db.models.category import Category
 from app.db.models.channel import Channel
 
+TEST_USER_ID = "10000000-0000-0000-0000-000000000099"
+OTHER_USER_ID = "10000000-0000-0000-0000-000000000098"
 
-def make_channel(channel_id: str, owner_id: str = "test-user") -> Channel:
+
+def make_channel(channel_id: str, owner_id: str = TEST_USER_ID) -> Channel:
     now = datetime.now(timezone.utc)
     return Channel(
         owner_id=owner_id,
@@ -113,7 +116,7 @@ async def test_membership_validation_is_atomic(test_client, db_session):
     channel = make_channel("channel-1")
     category = Category(
         id="category-1",
-        owner_id="test-user",
+        owner_id=TEST_USER_ID,
         name="Games",
         normalized_name="games",
     )
@@ -140,7 +143,7 @@ async def test_category_access_is_owner_scoped(test_client, db_session):
     db_session.add(
         Category(
             id="other-category",
-            owner_id="other-user",
+            owner_id=OTHER_USER_ID,
             name="Private",
             normalized_name="private",
         )

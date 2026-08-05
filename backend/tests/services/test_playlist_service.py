@@ -11,20 +11,20 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 
 from app.services.playlist_service import (
-    get_all_playlists,
-    get_playlist_by_id,
-    get_playlist_detail,
-    create_new_playlist,
-    update_playlist,
-    delete_playlist_by_id,
-    set_playlist_videos,
-    add_video_to_playlist,
-    add_videos_to_playlist,
-    move_video_in_playlist,
-    set_playlist_position,
-    remove_video_from_playlist,
-    clear_playlist,
-    shuffle_playlist,
+    get_all_playlists as _get_all_playlists,
+    get_playlist_by_id as _get_playlist_by_id,
+    get_playlist_detail as _get_playlist_detail,
+    create_new_playlist as _create_new_playlist,
+    update_playlist as _update_playlist,
+    delete_playlist_by_id as _delete_playlist_by_id,
+    set_playlist_videos as _set_playlist_videos,
+    add_video_to_playlist as _add_video_to_playlist,
+    add_videos_to_playlist as _add_videos_to_playlist,
+    move_video_in_playlist as _move_video_in_playlist,
+    set_playlist_position as _set_playlist_position,
+    remove_video_from_playlist as _remove_video_from_playlist,
+    clear_playlist as _clear_playlist,
+    shuffle_playlist as _shuffle_playlist,
 )
 from app.schemas.playlist import (
     PlaylistCreate,
@@ -35,10 +35,52 @@ from app.schemas.playlist import (
     PlaylistMoveVideo,
     PlaylistSetPosition,
 )
-from app.db.models.playlist import Playlist
-from app.db.models.channel import Channel
+from app.db.models.playlist import Playlist as PlaylistModel
+from app.db.models.channel import Channel as ChannelModel
 from app.db.models.video import Video
-from app.db.crud.crud_playlist import set_playlist_videos as crud_set_videos
+from app.db.crud.crud_playlist import set_playlist_videos as _crud_set_videos
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+
+
+def Playlist(**kwargs):
+    kwargs.setdefault("owner_id", TEST_OWNER_ID)
+    return PlaylistModel(**kwargs)
+
+
+def Channel(**kwargs):
+    kwargs.setdefault("owner_id", TEST_OWNER_ID)
+    return ChannelModel(**kwargs)
+
+
+def _owned_service(function):
+    async def call(*args, **kwargs):
+        kwargs.setdefault("owner_id", TEST_OWNER_ID)
+        return await function(*args, **kwargs)
+
+    return call
+
+
+get_all_playlists = _owned_service(_get_all_playlists)
+get_playlist_by_id = _owned_service(_get_playlist_by_id)
+get_playlist_detail = _owned_service(_get_playlist_detail)
+create_new_playlist = _owned_service(_create_new_playlist)
+update_playlist = _owned_service(_update_playlist)
+delete_playlist_by_id = _owned_service(_delete_playlist_by_id)
+set_playlist_videos = _owned_service(_set_playlist_videos)
+add_video_to_playlist = _owned_service(_add_video_to_playlist)
+add_videos_to_playlist = _owned_service(_add_videos_to_playlist)
+move_video_in_playlist = _owned_service(_move_video_in_playlist)
+set_playlist_position = _owned_service(_set_playlist_position)
+remove_video_from_playlist = _owned_service(_remove_video_from_playlist)
+clear_playlist = _owned_service(_clear_playlist)
+shuffle_playlist = _owned_service(_shuffle_playlist)
+
+
+async def crud_set_videos(db_session, playlist_id, video_ids):
+    return await _crud_set_videos(
+        db_session, playlist_id, video_ids, owner_id=TEST_OWNER_ID
+    )
 
 
 @pytest_asyncio.fixture
@@ -719,7 +761,12 @@ class TestShufflePlaylist:
         # Add one video
         from app.db.crud.crud_playlist import add_video_to_playlist as crud_add
 
-        await crud_add(db_session, sample_playlist.id, sample_videos[0].id)
+        await crud_add(
+            db_session,
+            sample_playlist.id,
+            sample_videos[0].id,
+            owner_id=TEST_OWNER_ID,
+        )
 
         # Test single video
         detail = await shuffle_playlist(sample_playlist.id, db_session)

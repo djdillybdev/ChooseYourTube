@@ -15,6 +15,8 @@ from app.services.channel_playlist_service import (
     sync_channel_playlists,
 )
 
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+
 
 @pytest_asyncio.fixture
 async def sample_channel(db_session):
@@ -23,6 +25,7 @@ async def sample_channel(db_session):
         handle="syncchannel",
         title="Sync Channel",
         uploads_playlist_id="UU_sync_channel",
+        owner_id=TEST_OWNER_ID,
     )
     db_session.add(channel)
     await db_session.commit()
@@ -37,6 +40,7 @@ async def sample_other_channel(db_session):
         handle="otherchannel",
         title="Other Channel",
         uploads_playlist_id="UU_other_channel",
+        owner_id=TEST_OWNER_ID,
     )
     db_session.add(channel)
     await db_session.commit()
@@ -99,6 +103,7 @@ class TestSyncChannelPlaylists:
             source_channel_id=sample_channel.id,
             source_youtube_playlist_id="PL_STALE",
             source_is_active=True,
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(stale)
         await db_session.commit()
@@ -167,12 +172,13 @@ class TestSyncChannelPlaylists:
             channel_id=sample_channel.id,
             db_session=db_session,
             youtube_client=youtube_client,
+            owner_id=TEST_OWNER_ID,
         )
 
         playlists = await get_channel_playlists(
             channel_id=sample_channel.id,
             db_session=db_session,
-            owner_id="test-user",
+            owner_id=TEST_OWNER_ID,
             include_inactive=True,
         )
 
@@ -186,7 +192,7 @@ class TestSyncChannelPlaylists:
         assert active[0].is_system is True
 
         video_ids = await get_playlist_video_ids(
-            db_session, active[0].id, owner_id="test-user"
+            db_session, active[0].id, owner_id=TEST_OWNER_ID
         )
         assert video_ids == ["sync_v2", "sync_v1"]
 
@@ -202,6 +208,7 @@ class TestSyncChannelPlaylists:
             source_channel_id=sample_channel.id,
             source_youtube_playlist_id="PL_ACTIVE",
             source_is_active=True,
+            owner_id=TEST_OWNER_ID,
         )
         inactive = Playlist(
             id="inactive_channel_playlist",
@@ -211,6 +218,7 @@ class TestSyncChannelPlaylists:
             source_channel_id=sample_channel.id,
             source_youtube_playlist_id="PL_INACTIVE",
             source_is_active=False,
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(active)
         db_session.add(inactive)
@@ -219,12 +227,12 @@ class TestSyncChannelPlaylists:
         visible = await get_channel_playlists(
             channel_id=sample_channel.id,
             db_session=db_session,
-            owner_id="test-user",
+            owner_id=TEST_OWNER_ID,
         )
         all_items = await get_channel_playlists(
             channel_id=sample_channel.id,
             db_session=db_session,
-            owner_id="test-user",
+            owner_id=TEST_OWNER_ID,
             include_inactive=True,
         )
 
@@ -273,17 +281,18 @@ class TestSyncChannelPlaylists:
             channel_id=sample_channel.id,
             db_session=db_session,
             youtube_client=youtube_client,
+            owner_id=TEST_OWNER_ID,
         )
 
         playlists = await get_channel_playlists(
             channel_id=sample_channel.id,
             db_session=db_session,
-            owner_id="test-user",
+            owner_id=TEST_OWNER_ID,
             include_inactive=True,
         )
         assert playlists.total == 1
 
         video_ids = await get_playlist_video_ids(
-            db_session, playlists.items[0].id, owner_id="test-user"
+            db_session, playlists.items[0].id, owner_id=TEST_OWNER_ID
         )
         assert video_ids == ["sync_v1", "sync_v2"]

@@ -6,7 +6,8 @@ const { backendFetchMock, setAuthCookieMock, setRefreshAuthCookieMock, mapAuthEr
 		setAuthCookieMock: vi.fn(),
 		setRefreshAuthCookieMock: vi.fn(),
 		mapAuthErrorMock: vi.fn(
-			(payload: { detail?: string }) => payload.detail ?? 'AUTH_REQUEST_FAILED'
+			(payload: { code?: string; detail?: string }) =>
+				payload.code ?? payload.detail ?? 'AUTH_REQUEST_FAILED'
 		)
 	}));
 
@@ -118,6 +119,28 @@ describe('authentication form actions', () => {
 			data: {
 				email: 'person@example.com',
 				message: 'An account with this email already exists.'
+			}
+		});
+	});
+
+	it('explains when an email is not permitted to register', async () => {
+		backendFetchMock.mockResolvedValue(
+			Response.json({ code: 'REGISTRATION_EMAIL_NOT_ALLOWED' }, { status: 403 })
+		);
+
+		const result = await registerActions.default!({
+			request: formRequest('/register', {
+				email: 'blocked@example.com',
+				password: 'password',
+				confirmPassword: 'password'
+			})
+		} as never);
+
+		expect(result).toMatchObject({
+			status: 403,
+			data: {
+				email: 'blocked@example.com',
+				message: 'This email address is not permitted to register.'
 			}
 		});
 	});

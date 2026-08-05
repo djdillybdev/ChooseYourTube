@@ -8,6 +8,8 @@ listing videos, filtering by channel, and pagination.
 import pytest
 from datetime import datetime, timezone
 
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+
 
 @pytest.mark.asyncio
 class TestVideosRouter:
@@ -31,6 +33,7 @@ class TestVideosRouter:
             handle="testchannel",
             title="Test Channel",
             uploads_playlist_id="UU_test",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         await db_session.commit()
@@ -74,6 +77,7 @@ class TestVideosRouter:
             handle="videoids",
             title="Video IDs",
             uploads_playlist_id="UU_video_ids",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         db_session.add_all(
@@ -116,6 +120,7 @@ class TestVideosRouter:
             handle="paginationtest",
             title="Pagination Test",
             uploads_playlist_id="UU_pagination",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         await db_session.commit()
@@ -157,6 +162,7 @@ class TestVideosRouter:
             handle="duration",
             title="Duration Channel",
             uploads_playlist_id="UU_duration",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         db_session.add_all(
@@ -222,6 +228,7 @@ class TestVideosRouter:
             handle="videobyid",
             title="Video By ID",
             uploads_playlist_id="UU_video_by_id",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         await db_session.commit()
@@ -264,12 +271,14 @@ class TestVideosRouter:
             handle="channel1",
             title="Channel 1",
             uploads_playlist_id="UU_channel_1",
+            owner_id=TEST_OWNER_ID,
         )
         channel2 = Channel(
             id="UC_channel_2",
             handle="channel2",
             title="Channel 2",
             uploads_playlist_id="UU_channel_2",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel1)
         db_session.add(channel2)
@@ -319,6 +328,7 @@ class TestVideosRouter:
             handle="paginationbychannel",
             title="Pagination By Channel",
             uploads_playlist_id="UU_pagination_by_channel",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         await db_session.commit()
@@ -370,6 +380,7 @@ class TestVideosRouter:
             handle="searchtest",
             title="Search Test Channel",
             uploads_playlist_id="UU_search_test",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         await db_session.commit()
@@ -423,6 +434,7 @@ class TestVideosRouter:
             handle="paginationacc",
             title="Pagination Accuracy",
             uploads_playlist_id="UU_pagination_acc",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         await db_session.commit()
@@ -466,6 +478,7 @@ class TestVideosRouter:
             handle="relevancetest",
             title="Relevance Test Channel",
             uploads_playlist_id="UU_relevance_test",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         await db_session.commit()

@@ -11,12 +11,30 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 from app.db.crud.crud_tag import (
     create_tag,
-    get_or_create_tag,
+    get_or_create_tag as _get_or_create_tag,
     delete_tag,
-    delete_all_tags,
-    get_tags,
+    delete_all_tags as _delete_all_tags,
+    get_tags as _get_tags,
 )
-from app.db.models.tag import Tag
+from app.db.models.tag import Tag as TagModel
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000001"
+
+
+def Tag(**kwargs):
+    return TagModel(owner_id=TEST_OWNER_ID, **kwargs)
+
+
+async def get_tags(db_session, **kwargs):
+    return await _get_tags(db_session, owner_id=TEST_OWNER_ID, **kwargs)
+
+
+async def get_or_create_tag(db_session, name):
+    return await _get_or_create_tag(db_session, name, owner_id=TEST_OWNER_ID)
+
+
+async def delete_all_tags(db_session):
+    return await _delete_all_tags(db_session, owner_id=TEST_OWNER_ID)
 
 
 @pytest.mark.asyncio

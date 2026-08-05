@@ -26,6 +26,8 @@ from app.db.models.subscription_import import (
 from app.db.models.sync_run import SyncRun
 from app.db.models.tag import Tag
 from app.db.models.video import Video
+from app.db.models.user_state import UserChannel, UserVideoState
+from app.db.tenancy import user_uuid
 from app.schemas.sync_run import SyncRunStatus
 from app.services.sync_service import SyncProgress
 from app.services.video_service import refresh_latest_channel_videos_from_rss
@@ -89,15 +91,14 @@ async def _upsert_content(
     replace_existing: bool,
 ) -> None:
     snapshot_at = datetime.fromisoformat(catalog["snapshot_at"])
+    uid = user_uuid(owner_id)
     for definition in catalog["channels"]:
         channel = await db.scalar(
-            select(Channel).where(
-                Channel.owner_id == owner_id, Channel.id == definition["id"]
-            )
+            select(Channel).where(Channel.id == definition["id"])
         )
         channel_created = channel is None
         if channel is None:
-            channel = Channel(owner_id=owner_id, id=definition["id"])
+            channel = Channel(id=definition["id"])
             db.add(channel)
         if channel_created or replace_existing:
             channel.title = definition["title"]
@@ -108,14 +109,18 @@ async def _upsert_content(
                 "thumbnail_url", definition["videos"][0]["thumbnail_url"]
             )
             channel.last_updated = snapshot_at
+        await db.flush()
+        link = await db.get(UserChannel, (uid, definition["id"]))
+        if link is None:
+            db.add(UserChannel(user_id=uid, channel_id=definition["id"]))
         for video_definition in definition["videos"]:
             video_id = video_definition["id"]
             video = await db.scalar(
-                select(Video).where(Video.owner_id == owner_id, Video.id == video_id)
+                select(Video).where(Video.id == video_id)
             )
             video_created = video is None
             if video is None:
-                video = Video(owner_id=owner_id, id=video_id, channel_id=channel.id)
+                video = Video(id=video_id, channel_id=channel.id)
                 db.add(video)
             if video_created or replace_existing:
                 video.channel_id = channel.id
@@ -133,21 +138,22 @@ async def _upsert_content(
 
 async def _replace_catalog_content(db: AsyncSession, owner_id: str) -> None:
     """Remove every channel/video so an explicit seed is an exact replacement."""
+    uid = user_uuid(owner_id)
     await db.execute(
-        delete(playlist_videos).where(playlist_videos.c.owner_id == owner_id)
+        delete(playlist_videos).where(playlist_videos.c.user_id == uid)
     )
-    await db.execute(delete(channel_tags).where(channel_tags.c.owner_id == owner_id))
-    await db.execute(delete(video_tags).where(video_tags.c.owner_id == owner_id))
-    await db.execute(
-        update(Channel).where(Channel.owner_id == owner_id).values(folder_id=None)
-    )
+    await db.execute(delete(channel_tags).where(channel_tags.c.user_id == uid))
+    await db.execute(delete(video_tags).where(video_tags.c.user_id == uid))
     await db.execute(
         delete(SyncRun).where(
-            SyncRun.owner_id == owner_id, SyncRun.channel_id.is_not(None)
+            SyncRun.user_id == uid, SyncRun.channel_id.is_not(None)
         )
     )
-    await db.execute(delete(Video).where(Video.owner_id == owner_id))
-    await db.execute(delete(Channel).where(Channel.owner_id == owner_id))
+    channel_ids = list((await db.scalars(select(UserChannel.channel_id).where(UserChannel.user_id == uid))).all())
+    await db.execute(delete(UserChannel).where(UserChannel.user_id == uid))
+    for channel_id in channel_ids:
+        if await db.scalar(select(UserChannel.channel_id).where(UserChannel.channel_id == channel_id).limit(1)) is None:
+            await db.execute(delete(Channel).where(Channel.id == channel_id))
     await db.flush()
 
 
@@ -156,76 +162,69 @@ async def _remove_uncatalogued_channels(
 ) -> None:
     """Keep RSS-discovered videos, but only for channels in the demo catalog."""
     channel_ids = [definition["id"] for definition in catalog["channels"]]
+    uid = user_uuid(owner_id)
     await db.execute(
         delete(SyncRun).where(
-            SyncRun.owner_id == owner_id,
+            SyncRun.user_id == uid,
             SyncRun.channel_id.not_in(channel_ids),
         )
     )
-    await db.execute(
-        delete(Video).where(
-            Video.owner_id == owner_id,
-            Video.channel_id.not_in(channel_ids),
-        )
-    )
-    await db.execute(
-        delete(Channel).where(
-            Channel.owner_id == owner_id,
-            Channel.id.not_in(channel_ids),
-        )
-    )
+    removed_ids = list((await db.scalars(select(UserChannel.channel_id).where(
+        UserChannel.user_id == uid, UserChannel.channel_id.not_in(channel_ids)
+    ))).all())
+    await db.execute(delete(UserChannel).where(
+        UserChannel.user_id == uid, UserChannel.channel_id.not_in(channel_ids)
+    ))
+    for channel_id in removed_ids:
+        if await db.scalar(select(UserChannel.channel_id).where(UserChannel.channel_id == channel_id).limit(1)) is None:
+            await db.execute(delete(Channel).where(Channel.id == channel_id))
     await db.flush()
 
 
 async def _reset_mutable_state(
     db: AsyncSession, catalog: dict[str, Any], owner_id: str
 ) -> None:
+    uid = user_uuid(owner_id)
     await db.execute(
-        delete(playlist_videos).where(playlist_videos.c.owner_id == owner_id)
+        delete(playlist_videos).where(playlist_videos.c.user_id == uid)
     )
-    await db.execute(delete(channel_tags).where(channel_tags.c.owner_id == owner_id))
-    await db.execute(delete(video_tags).where(video_tags.c.owner_id == owner_id))
-    await db.execute(delete(Playlist).where(Playlist.owner_id == owner_id))
+    await db.execute(delete(channel_tags).where(channel_tags.c.user_id == uid))
+    await db.execute(delete(video_tags).where(video_tags.c.user_id == uid))
+    await db.execute(delete(Playlist).where(Playlist.user_id == uid))
     await db.execute(
-        update(Channel)
-        .where(Channel.owner_id == owner_id)
-        .values(folder_id=None, is_favorited=False)
+        update(UserChannel).where(UserChannel.user_id == uid).values(folder_id=None, is_favorited=False)
     )
     await db.execute(
-        update(Folder).where(Folder.owner_id == owner_id).values(parent_id=None)
+        update(Folder).where(Folder.user_id == uid).values(parent_id=None)
     )
-    await db.execute(delete(Folder).where(Folder.owner_id == owner_id))
-    await db.execute(delete(Tag).where(Tag.owner_id == owner_id))
-    await db.execute(
-        update(Video)
-        .where(Video.owner_id == owner_id)
-        .values(is_watched=False, is_favorited=False)
-    )
+    await db.execute(delete(Folder).where(Folder.user_id == uid))
+    await db.execute(delete(Tag).where(Tag.user_id == uid))
+    await db.execute(delete(UserVideoState).where(UserVideoState.user_id == uid))
 
     for definition in catalog["folders"]:
         db.add(
             Folder(
                 id=definition["id"],
-                owner_id=owner_id,
+                user_id=uid,
                 name=definition["name"],
                 position=definition["position"],
                 parent_id=definition.get("parent_id"),
             )
         )
     for definition in catalog["tags"]:
-        db.add(Tag(id=definition["id"], owner_id=owner_id, name=definition["name"]))
+        db.add(Tag(id=definition["id"], user_id=uid, name=definition["name"]))
     await db.flush()
 
     for definition in catalog["channels"]:
         await db.execute(
-            update(Channel)
-            .where(Channel.owner_id == owner_id, Channel.id == definition["id"])
+            update(UserChannel)
+            .where(UserChannel.user_id == uid, UserChannel.channel_id == definition["id"])
             .values(folder_id=definition["folder_id"])
         )
         for tag_id in definition["tag_ids"]:
             await db.execute(
                 insert(channel_tags).values(
-                    owner_id=owner_id, channel_id=definition["id"], tag_id=tag_id
+                    user_id=uid, channel_id=definition["id"], tag_id=tag_id
                 )
             )
 
@@ -233,19 +232,17 @@ async def _reset_mutable_state(
         for tag_id in tag_ids:
             await db.execute(
                 insert(video_tags).values(
-                    owner_id=owner_id, video_id=video_id, tag_id=tag_id
+                    user_id=uid, video_id=video_id, tag_id=tag_id
                 )
             )
-    await db.execute(
-        update(Video)
-        .where(Video.owner_id == owner_id, Video.id.in_(catalog["watched_ids"]))
-        .values(is_watched=True)
-    )
-    await db.execute(
-        update(Video)
-        .where(Video.owner_id == owner_id, Video.id.in_(catalog["favorite_ids"]))
-        .values(is_favorited=True)
-    )
+    state_ids = set(catalog["watched_ids"]) | set(catalog["favorite_ids"])
+    for video_id in state_ids:
+        db.add(UserVideoState(
+            user_id=uid,
+            video_id=video_id,
+            is_watched=video_id in catalog["watched_ids"],
+            is_favorited=video_id in catalog["favorite_ids"],
+        ))
 
     playlists = [
         {
@@ -263,7 +260,7 @@ async def _reset_mutable_state(
         db.add(
             Playlist(
                 id=definition["id"],
-                owner_id=owner_id,
+                user_id=uid,
                 name=definition["name"],
                 description=definition["description"],
                 current_position=definition["current_position"],
@@ -276,7 +273,7 @@ async def _reset_mutable_state(
         for position, video_id in enumerate(definition["video_ids"]):
             await db.execute(
                 insert(playlist_videos).values(
-                    owner_id=owner_id,
+                    user_id=uid,
                     playlist_id=definition["id"],
                     video_id=video_id,
                     position=position,
@@ -288,12 +285,13 @@ async def _ensure_portfolio_history(
     db: AsyncSession, catalog: dict[str, Any], owner_id: str
 ) -> None:
     now = datetime.fromisoformat(catalog["snapshot_at"])
+    uid = user_uuid(owner_id)
     failed = await db.get(SyncRun, HISTORICAL_RUN_IDS[0])
     if failed is None:
         db.add(
             SyncRun(
                 id=HISTORICAL_RUN_IDS[0],
-                owner_id=owner_id,
+                user_id=uid,
                 kind="channel_refresh",
                 status="failed",
                 channel_id="UCsBjURrPoezykLs9EqgamOA",
@@ -310,7 +308,7 @@ async def _ensure_portfolio_history(
         db.add(
             SyncRun(
                 id=HISTORICAL_RUN_IDS[1],
-                owner_id=owner_id,
+                user_id=uid,
                 kind="channel_refresh",
                 status="succeeded",
                 channel_id="UCsBjURrPoezykLs9EqgamOA",
@@ -326,7 +324,7 @@ async def _ensure_portfolio_history(
     if imported is None:
         imported = SubscriptionImport(
             id=IMPORT_ID,
-            owner_id=owner_id,
+            user_id=uid,
             source="youtube_takeout_csv",
             status="succeeded",
             candidate_count=7,
@@ -352,7 +350,6 @@ async def _ensure_portfolio_history(
     await db.flush()
     await db.execute(
         delete(SubscriptionImportCandidate).where(
-            SubscriptionImportCandidate.owner_id == owner_id,
             SubscriptionImportCandidate.import_id == IMPORT_ID,
         )
     )
@@ -360,7 +357,6 @@ async def _ensure_portfolio_history(
         db.add(
             SubscriptionImportCandidate(
                 import_id=IMPORT_ID,
-                owner_id=owner_id,
                 channel_id=definition["id"],
                 channel_title=definition["title"],
                 channel_url=f"https://www.youtube.com/@{definition['handle']}",
@@ -391,7 +387,7 @@ async def reset_demo_state(db: AsyncSession, *, owner_id: str) -> None:
     cutoff = datetime.now(timezone.utc) - timedelta(days=30)
     await db.execute(
         delete(SyncRun).where(
-            SyncRun.owner_id == owner_id,
+            SyncRun.user_id == user_uuid(owner_id),
             SyncRun.finished_at < cutoff,
             SyncRun.id.not_in(HISTORICAL_RUN_IDS),
         )

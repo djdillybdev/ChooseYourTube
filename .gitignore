@@ -6,3 +6,10 @@ __pycache__/
 *.py[cod]
 .vercel
 .env*
+
+# Local Ansible inventory, encrypted secrets, and fetched database backups.
+deploy/ansible/inventory/production/hosts.yml
+deploy/ansible/inventory/production/group_vars/chooseyourtube/main.yml
+deploy/ansible/inventory/production/group_vars/chooseyourtube/vault.yml
+deploy/ansible/backups/
+deploy/ansible/.venv/

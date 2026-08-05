@@ -7,8 +7,15 @@ Tests dynamic filtering, pagination, ordering, and folder relationships using TD
 import pytest
 import pytest_asyncio
 from datetime import datetime, timezone, timedelta
-from app.db.crud.crud_channel import get_channels
+from app.db.crud.crud_channel import get_channels as get_user_channels
 from app.db.models.channel import Channel
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000001"
+
+
+async def get_channels(db_session, **kwargs):
+    """Exercise every query as one authenticated user."""
+    return await get_user_channels(db_session, owner_id=TEST_OWNER_ID, **kwargs)
 
 
 @pytest_asyncio.fixture
@@ -26,6 +33,7 @@ async def sample_channels(db_session):
 
     channels = [
         Channel(
+            owner_id=TEST_OWNER_ID,
             id="ch001",
             title="Tech Tutorials",
             handle="@techtutorials",
@@ -35,6 +43,7 @@ async def sample_channels(db_session):
             created_at=now - timedelta(days=1),
         ),
         Channel(
+            owner_id=TEST_OWNER_ID,
             id="ch002",
             title="Programming Academy",
             handle="@progacademy",
@@ -44,6 +53,7 @@ async def sample_channels(db_session):
             created_at=now - timedelta(days=2),
         ),
         Channel(
+            owner_id=TEST_OWNER_ID,
             id="ch003",
             title="Quick Tips Daily",
             handle="@quicktips",
@@ -53,6 +63,7 @@ async def sample_channels(db_session):
             created_at=now - timedelta(days=3),
         ),
         Channel(
+            owner_id=TEST_OWNER_ID,
             id="ch004",
             title="Database Deep Dive",
             handle="@dbdeepdive",
@@ -62,6 +73,7 @@ async def sample_channels(db_session):
             created_at=now - timedelta(days=4),
         ),
         Channel(
+            owner_id=TEST_OWNER_ID,
             id="ch005",
             title="React Masters",
             handle="@reactmasters",
@@ -71,6 +83,7 @@ async def sample_channels(db_session):
             created_at=now - timedelta(days=5),
         ),
         Channel(
+            owner_id=TEST_OWNER_ID,
             id="ch006",
             title="Python Weekly",
             handle="@pythonweekly",
@@ -80,6 +93,7 @@ async def sample_channels(db_session):
             created_at=now - timedelta(days=6),
         ),
         Channel(
+            owner_id=TEST_OWNER_ID,
             id="ch007",
             title="Algorithms Explained",
             handle="@algoexplained",
@@ -89,6 +103,7 @@ async def sample_channels(db_session):
             created_at=now - timedelta(days=7),
         ),
         Channel(
+            owner_id=TEST_OWNER_ID,
             id="ch008",
             title="Web Dev Basics",
             handle="@webdevbasics",
@@ -98,6 +113,7 @@ async def sample_channels(db_session):
             created_at=now - timedelta(days=8),
         ),
         Channel(
+            owner_id=TEST_OWNER_ID,
             id="ch009",
             title="AI Innovations",
             handle="@aiinnovations",
@@ -107,6 +123,7 @@ async def sample_channels(db_session):
             created_at=now - timedelta(days=9),
         ),
         Channel(
+            owner_id=TEST_OWNER_ID,
             id="ch010",
             title="Cloud Computing 101",
             handle="@cloudcomputing101",

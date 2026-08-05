@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..db.crud import crud_folder
 from ..db.models.folder import Folder
+from ..db.tenancy import user_uuid
 from ..schemas.folder import FolderCreate, FolderUpdate, FolderOut
 
 
@@ -48,13 +49,13 @@ def _assert_not_cycle(
         cur = folders_by_id[cur].parent_id
 
 
-async def get_tree(db: AsyncSession, owner_id: str = "test-user") -> list[FolderOut]:
+async def get_tree(db: AsyncSession, owner_id: str) -> list[FolderOut]:
     folders = await crud_folder.get_folders(db, owner_id=owner_id, limit=None)
     return _build_tree(folders)
 
 
 async def get_folder_by_id(
-    folder_id: str, db: AsyncSession, owner_id: str = "test-user"
+    folder_id: str, db: AsyncSession, owner_id: str
 ) -> Folder:
     folder = await crud_folder.get_folders(
         db, owner_id=owner_id, id=folder_id, first=True
@@ -65,7 +66,7 @@ async def get_folder_by_id(
 
 
 async def create_folder(
-    payload: FolderCreate, db: AsyncSession, owner_id: str = "test-user"
+    payload: FolderCreate, db: AsyncSession, owner_id: str
 ) -> Folder:
     if payload.parent_id:
         parent = await crud_folder.get_folders(
@@ -91,7 +92,7 @@ async def create_folder(
         db,
         Folder(
             id=folder_id,
-            owner_id=owner_id,
+            user_id=user_uuid(owner_id),
             name=payload.name,
             parent_id=payload.parent_id,
             icon_key=payload.icon_key,
@@ -104,7 +105,7 @@ async def update_folder(
     folder_id: str,
     payload: FolderUpdate,
     db: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> Folder:
     folder = await crud_folder.get_folders(
         db, owner_id=owner_id, id=folder_id, first=True
@@ -164,7 +165,7 @@ async def update_folder(
 
 
 async def delete_folder_by_id(
-    folder_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+    folder_id: str, db_session: AsyncSession, owner_id: str
 ) -> None:
     """
     Deletes a folder by its ID.
@@ -188,8 +189,8 @@ async def delete_folder_by_id(
         raise HTTPException(status_code=404, detail="Folder not found")
 
     # Move channels to root
-    for channel in folder.channels:
-        channel.folder_id = None
+    for link in folder.channel_links:
+        link.folder_id = None
 
     # Move child folders up one level
     children = await crud_folder.get_folders(

@@ -4,7 +4,7 @@ from typing import Literal
 from urllib.parse import urlparse
 
 from arq.connections import RedisSettings
-from pydantic import EmailStr, field_validator, model_validator
+from pydantic import EmailStr, TypeAdapter, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     AUTH_SECRET: str = PLACEHOLDER_AUTH_SECRET
 
     REGISTRATION_ENABLED: bool | None = None
+    REGISTRATION_EMAIL_ALLOWLIST: str | None = None
+    REGISTRATION_ALLOWLIST_REQUIRED: bool = False
     BACKGROUND_JOBS_ENABLED: bool | None = None
     YOUTUBE_OAUTH_ENABLED: bool | None = None
     DEMO_LOGIN_ENABLED: bool | None = None
@@ -60,6 +62,32 @@ class Settings(BaseSettings):
         """Allow the shared full-mode env template to leave demo email blank."""
         return None if value == "" else value
 
+    @field_validator("REGISTRATION_EMAIL_ALLOWLIST", mode="before")
+    @classmethod
+    def validate_registration_email_allowlist(cls, value: object) -> object:
+        """Normalize an optional, comma-separated exact-email allowlist."""
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            raise ValueError("REGISTRATION_EMAIL_ALLOWLIST must be a comma-separated string")
+
+        entries = [entry.strip() for entry in value.split(",") if entry.strip()]
+        if not entries:
+            return None
+
+        adapter = TypeAdapter(EmailStr)
+        normalized: list[str] = []
+        for entry in entries:
+            try:
+                email = str(adapter.validate_python(entry)).casefold()
+            except ValueError as exc:
+                raise ValueError(
+                    f"Invalid email in REGISTRATION_EMAIL_ALLOWLIST: {entry}"
+                ) from exc
+            if email not in normalized:
+                normalized.append(email)
+        return ",".join(normalized)
+
     @model_validator(mode="after")
     def validate_runtime(self) -> "Settings":
         demo = self.APP_MODE == "demo"
@@ -81,6 +109,15 @@ class Settings(BaseSettings):
 
         if self.YOUTUBE_DAILY_QUOTA_BUDGET < 1:
             raise ValueError("YOUTUBE_DAILY_QUOTA_BUDGET must be positive")
+        if (
+            self.REGISTRATION_ENABLED
+            and self.REGISTRATION_ALLOWLIST_REQUIRED
+            and not self.registration_email_allowlist
+        ):
+            raise ValueError(
+                "REGISTRATION_EMAIL_ALLOWLIST must contain at least one email "
+                "when allowlist-only registration is required"
+            )
         if self.BACKGROUND_JOBS_ENABLED and not self.REDIS_URL:
             raise ValueError("REDIS_URL is required when background jobs are enabled")
         if not demo and not self.YOUTUBE_API_KEY:
@@ -144,6 +181,12 @@ class Settings(BaseSettings):
         return [
             origin.strip().rstrip("/") for origin in value.split(",") if origin.strip()
         ]
+
+    @property
+    def registration_email_allowlist(self) -> frozenset[str]:
+        if not self.REGISTRATION_EMAIL_ALLOWLIST:
+            return frozenset()
+        return frozenset(self.REGISTRATION_EMAIL_ALLOWLIST.split(","))
 
     @property
     def public_features(self) -> dict[str, bool]:

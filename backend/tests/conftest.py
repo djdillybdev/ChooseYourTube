@@ -9,6 +9,7 @@ Includes:
 """
 
 import os
+import uuid
 import pytest
 import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock
@@ -139,7 +140,9 @@ def test_client(db_session, mock_youtube_api, mock_arq_redis):
     app.dependency_overrides[get_db_session] = override_get_db_session
     app.dependency_overrides[get_youtube_api] = lambda: mock_youtube_api
     app.dependency_overrides[get_arq_redis] = lambda: mock_arq_redis
-    app.dependency_overrides[current_active_user] = lambda: MagicMock(id="test-user")
+    app.dependency_overrides[current_active_user] = lambda: MagicMock(
+        id=uuid.UUID("10000000-0000-0000-0000-000000000099")
+    )
 
     client = TestClient(app)
     yield client

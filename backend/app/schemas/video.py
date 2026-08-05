@@ -11,7 +11,6 @@ class VideoCreate(BaseModel):
     This is not intended for direct use by an end-user API endpoint.
     """
 
-    owner_id: str = "test-user"
     id: str
     channel_id: str
     title: str

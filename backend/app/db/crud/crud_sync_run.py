@@ -7,6 +7,7 @@ from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.sync_run import SyncRun, YouTubeAPIUsage
+from ..tenancy import user_uuid
 
 
 async def get_sync_run(
@@ -14,7 +15,7 @@ async def get_sync_run(
 ) -> SyncRun | None:
     stmt = select(SyncRun).where(SyncRun.id == sync_run_id)
     if owner_id is not None:
-        stmt = stmt.where(SyncRun.owner_id == owner_id)
+        stmt = stmt.where(SyncRun.user_id == user_uuid(owner_id))
     return await db.scalar(stmt)
 
 
@@ -27,10 +28,11 @@ async def get_active_sync_run(
     subscription_import_id: uuid.UUID | None = None,
 ) -> SyncRun | None:
     stmt = select(SyncRun).where(
-        SyncRun.owner_id == owner_id,
         SyncRun.kind == kind,
         SyncRun.status.in_(("queued", "running")),
     )
+    if kind != "channel_refresh":
+        stmt = stmt.where(SyncRun.user_id == user_uuid(owner_id))
     if channel_id is not None:
         stmt = stmt.where(SyncRun.channel_id == channel_id)
     elif subscription_import_id is not None:
@@ -43,7 +45,7 @@ async def get_active_sync_run(
 def _filtered_runs_query(
     *, owner_id: str, status: str | None, kind: str | None, channel_id: str | None
 ) -> Select[tuple[SyncRun]]:
-    stmt = select(SyncRun).where(SyncRun.owner_id == owner_id)
+    stmt = select(SyncRun).where(SyncRun.user_id == user_uuid(owner_id))
     if status is not None:
         stmt = stmt.where(SyncRun.status == status)
     if kind is not None:
@@ -92,7 +94,6 @@ async def latest_channel_runs(
             .label("position"),
         )
         .where(
-            SyncRun.owner_id == owner_id,
             SyncRun.channel_id.in_(channel_ids),
         )
         .subquery()
@@ -107,7 +108,6 @@ async def latest_channel_runs(
     successes = await db.execute(
         select(SyncRun.channel_id, func.max(SyncRun.finished_at))
         .where(
-            SyncRun.owner_id == owner_id,
             SyncRun.channel_id.in_(channel_ids),
             SyncRun.status.in_(("succeeded", "partial")),
         )

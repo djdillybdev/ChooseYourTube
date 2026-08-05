@@ -11,13 +11,27 @@ from fastapi import HTTPException
 from unittest.mock import patch, AsyncMock
 
 from app.services.channel_service import (
-    create_channel,
-    refresh_channel_by_id,
+    create_channel as _create_channel,
+    refresh_channel_by_id as _refresh_channel_by_id,
     _get_best_thumbnail_url,
 )
 from app.schemas.channel import ChannelCreate
 from app.db.models.channel import Channel
 from app.core.errors import ApplicationError
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+
+
+async def create_channel(payload, db_session, youtube_api, owner_id=TEST_OWNER_ID):
+    return await _create_channel(payload, db_session, youtube_api, TEST_OWNER_ID)
+
+
+async def refresh_channel_by_id(
+    channel_id, db_session, youtube_api, owner_id=TEST_OWNER_ID
+):
+    return await _refresh_channel_by_id(
+        channel_id, db_session, youtube_api, TEST_OWNER_ID
+    )
 
 
 @pytest_asyncio.fixture
@@ -28,6 +42,7 @@ async def sample_channel(db_session):
         handle="existingchannel",
         title="Existing Channel",
         uploads_playlist_id="UU_existing_uploads",
+        owner_id=TEST_OWNER_ID,
     )
     db_session.add(channel)
     await db_session.commit()
@@ -221,7 +236,9 @@ class TestCreateChannel:
         # First create a folder
         from app.db.models.folder import Folder
 
-        folder = Folder(id="f1", name="Test Folder", parent_id=None)
+        folder = Folder(
+            id="f1", name="Test Folder", parent_id=None, user_id=TEST_OWNER_ID
+        )
         db_session.add(folder)
         await db_session.commit()
 
@@ -293,7 +310,10 @@ class TestRefreshChannelById:
 
             # Verify refresh was called
             mock_refresh.assert_called_once_with(
-                sample_channel.id, db_session, mock_youtube_api, owner_id="test-user"
+                sample_channel.id,
+                db_session,
+                mock_youtube_api,
+                owner_id=TEST_OWNER_ID,
             )
 
             # Verify channel was returned

@@ -10,6 +10,7 @@ from app.clients.youtube import YouTubeAPI
 from app.core.config import settings
 from app.db.crud import crud_channel, crud_playlist, crud_video
 from app.db.models.playlist import Playlist
+from app.db.tenancy import user_uuid
 from app.db.session import sessionmanager
 from app.schemas.base import PaginatedResponse
 from app.schemas.playlist import ChannelPlaylistOut
@@ -121,7 +122,7 @@ async def sync_channel_playlists(
     channel_id: str,
     db_session: AsyncSession,
     youtube_client: YouTubeAPI,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> SyncProgress:
     channel = await crud_channel.get_channels(
         db_session, owner_id=owner_id, id=channel_id, first=True
@@ -204,7 +205,7 @@ async def sync_channel_playlists(
         if not playlist:
             playlist = Playlist(
                 id=str(uuid.uuid4()),
-                owner_id=owner_id,
+                user_id=user_uuid(owner_id),
                 name=snippet.get("title") or "Untitled Playlist",
                 description=snippet.get("description"),
                 thumbnail_url=_get_best_thumbnail_url(snippet.get("thumbnails", {})),
@@ -262,7 +263,7 @@ async def sync_channel_playlists(
 async def get_channel_playlists(
     channel_id: str,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
     include_inactive: bool = False,
     limit: int = 50,
     offset: int = 0,
@@ -327,7 +328,7 @@ async def get_channel_playlists(
 
 
 async def sync_channel_playlists_task(
-    ctx, channel_id: str, owner_id: str = "test-user"
+    ctx, channel_id: str, owner_id: str
 ):
     youtube_client = YouTubeAPI(
         api_key=settings.YOUTUBE_API_KEY, account_usage=True

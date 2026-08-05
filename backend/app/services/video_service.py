@@ -16,6 +16,8 @@ from ..schemas.video import VideoCreate, VideoUpdate, VideoOut
 from ..db.crud import crud_channel, crud_video
 from ..db.session import sessionmanager
 from ..db.models.video import Video
+from ..db.models.user_state import UserVideoState
+from ..db.tenancy import user_uuid
 from ..clients.youtube import YouTubeAPI
 from ..core.errors import ApplicationError
 from .sync_service import SyncProgress
@@ -126,7 +128,7 @@ async def fetch_initial_channel_videos(
     channel_id: str,
     db_session: AsyncSession,
     youtube_client: YouTubeAPI,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> SyncProgress:
     channel = await crud_channel.get_channels(
         db_session, owner_id=owner_id, id=channel_id, first=True
@@ -333,7 +335,7 @@ def _parse_rss_video_entries(content: bytes) -> tuple[list[RSSVideoEntry], int]:
 async def refresh_latest_channel_videos_from_rss(
     channel_id: str,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> SyncProgress:
     """Refresh a channel using RSS metadata without calling the Data API."""
 
@@ -358,7 +360,6 @@ async def refresh_latest_channel_videos_from_rss(
         if video is None:
             db_session.add(
                 Video(
-                    owner_id=owner_id,
                     id=entry.id,
                     channel_id=channel_id,
                     title=entry.title,
@@ -396,7 +397,7 @@ async def refresh_latest_channel_videos(
     channel_id: str,
     db_session: AsyncSession,
     youtube_client: YouTubeAPI,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> SyncProgress:
     """
     Fetch and add the latest videos for a channel
@@ -448,7 +449,7 @@ async def create_and_update_videos(
     channel_id: str,
     db_session: AsyncSession,
     youtube_client: YouTubeAPI,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> SyncProgress:
     video_ids = [video_id for video_id in dict.fromkeys(video_ids) if video_id]
     if not video_ids:
@@ -478,7 +479,6 @@ async def create_and_update_videos(
 
         new_video = VideoCreate(
             id=video_id,
-            owner_id=owner_id,
             channel_id=channel_id,
             title=snippet.get("title"),
             description=snippet.get("description"),
@@ -506,7 +506,7 @@ async def create_and_update_videos(
 
 # Compatibility entrypoints for older queued jobs during a rolling deployment.
 async def fetch_and_store_all_channel_videos_task(
-    ctx: dict, channel_id: str, owner_id: str = "test-user"
+    ctx: dict, channel_id: str, owner_id: str
 ) -> None:
     youtube_client = YouTubeAPI(api_key=settings.YOUTUBE_API_KEY, account_usage=True)
     async with sessionmanager.session() as db_session:
@@ -524,7 +524,7 @@ async def fetch_and_store_all_channel_videos_task(
 
 
 async def refresh_latest_channel_videos_task(
-    ctx: dict, channel_id: str, owner_id: str = "test-user"
+    ctx: dict, channel_id: str, owner_id: str
 ) -> None:
     youtube_client = YouTubeAPI(api_key=settings.YOUTUBE_API_KEY, account_usage=True)
     async with sessionmanager.session() as db_session:
@@ -534,7 +534,7 @@ async def refresh_latest_channel_videos_task(
 
 
 async def get_video_by_id(
-    video_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+    video_id: str, db_session: AsyncSession, owner_id: str
 ) -> Video:
     video = await crud_video.get_videos(
         db_session, owner_id=owner_id, id=video_id, first=True
@@ -546,7 +546,7 @@ async def get_video_by_id(
 
 async def get_all_videos(
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
     limit: int = 50,
     offset: int = 0,
     is_favorited: bool | None = None,
@@ -624,7 +624,7 @@ async def get_all_videos(
 async def get_videos_for_channel(
     channel_id: str,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
     limit: int = 50,
     offset: int = 0,
 ) -> list[Video]:
@@ -637,7 +637,7 @@ async def update_video(
     video_id: str,
     payload: VideoUpdate,
     db_session: AsyncSession,
-    owner_id: str = "test-user",
+    owner_id: str,
 ) -> Video:
     """
     Updates a video by its ID. Allows updating favorited status, watched status, short status, and tags.
@@ -648,11 +648,22 @@ async def update_video(
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
 
-    # Update simple fields
-    if payload.is_favorited is not None:
-        video.is_favorited = payload.is_favorited
-    if payload.is_watched is not None:
-        video.is_watched = payload.is_watched
+    uid = user_uuid(owner_id)
+    state = video.user_state
+    if payload.is_favorited is not None or payload.is_watched is not None:
+        if state is None:
+            state = UserVideoState(user_id=uid, video_id=video.id)
+            db_session.add(state)
+        if payload.is_favorited is not None:
+            state.is_favorited = payload.is_favorited
+            video.is_favorited = payload.is_favorited
+        if payload.is_watched is not None:
+            state.is_watched = payload.is_watched
+            video.is_watched = payload.is_watched
+        await db_session.flush()
+        if not state.is_favorited and not state.is_watched:
+            await db_session.delete(state)
+            video.user_state = None
     if payload.is_short is not None:
         video.is_short = payload.is_short
 
@@ -666,7 +677,7 @@ async def update_video(
 
 
 async def delete_video_by_id(
-    video_id: str, db_session: AsyncSession, owner_id: str = "test-user"
+    video_id: str, db_session: AsyncSession, owner_id: str
 ) -> None:
     """Delete an owned video after verifying it exists."""
     from app.core.demo_policy import DemoOperation, require_demo_safe

@@ -5,6 +5,7 @@ import pytest
 from app.db.schema_guard import (
     REQUIRED_PLAYLIST_COLUMNS,
     REQUIRED_IMPORT_COLUMNS,
+    REQUIRED_USER_STATE_COLUMNS,
     SchemaMismatchError,
     assert_required_playlist_schema,
 )
@@ -17,7 +18,8 @@ async def test_assert_required_playlist_schema_passes_when_columns_exist(
     async def fake_get_table_columns(_db_session, table_name):
         if table_name == "playlists":
             return set(REQUIRED_PLAYLIST_COLUMNS)
-        return set(REQUIRED_IMPORT_COLUMNS[table_name])
+        expected = {**REQUIRED_IMPORT_COLUMNS, **REQUIRED_USER_STATE_COLUMNS}
+        return set(expected[table_name])
 
     monkeypatch.setattr("app.db.schema_guard._get_table_columns", fake_get_table_columns)
 

@@ -9,8 +9,14 @@ import uuid
 import pytest
 import pytest_asyncio
 from datetime import datetime, timezone, timedelta
-from app.db.crud.crud_tag import get_tags
+from app.db.crud.crud_tag import get_tags as _get_tags
 from app.db.models.tag import Tag
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000001"
+
+
+async def get_tags(db_session, **kwargs):
+    return await _get_tags(db_session, owner_id=TEST_OWNER_ID, **kwargs)
 
 
 @pytest_asyncio.fixture
@@ -42,6 +48,7 @@ async def sample_tags(db_session):
     ]
 
     for tag in tags:
+        tag.owner_id = TEST_OWNER_ID
         db_session.add(tag)
     await db_session.commit()
 

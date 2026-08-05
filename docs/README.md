@@ -6,6 +6,12 @@ Start with the repository [README](../README.md) for a product overview and Dock
 
 - [Deployment and self-hosting](deployment.md): production configuration, Docker, backups, upgrades,
   rollback, troubleshooting, and hosted-demo operations.
+- [Oracle Cloud VM deployment](oracle-vm.md): Ubuntu host setup, HTTPS, systemd, resource limits,
+  and scheduled backups.
+- [Oracle Cloud end-to-end runbook](oracle-ansible-runbook.md): release publication, OCI and DNS
+  setup, Mac-based Ansible deployment, first registration and login, and recovery verification.
+- [Ansible operations](../deploy/ansible/README.md): repeatable Oracle VM deployment, upgrades,
+  allowlist management, off-host backup fetching, and guarded restores.
 - [Frontend development](../frontend/README.md): SvelteKit setup, build targets, API types, and tests.
 - [Backend development](../backend/README.md): FastAPI setup, workers, migrations, and tests.
 

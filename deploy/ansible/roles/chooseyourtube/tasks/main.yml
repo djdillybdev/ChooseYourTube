@@ -1,0 +1,231 @@
+---
+- name: Validate deployment variables
+  ansible.builtin.include_tasks: validate.yml
+
+- name: Require minimum host memory
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.memtotal_mb | int >= 1900
+    fail_msg: "At least 2 GB RAM is required; set chooseyourtube_allow_low_resource=true to override."
+  when: not chooseyourtube_allow_low_resource | bool
+
+- name: Create the application directory
+  ansible.builtin.file:
+    path: "{{ chooseyourtube_project_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Inspect available application disk space
+  ansible.builtin.command:
+    argv:
+      - df
+      - -Pk
+      - /
+  register: chooseyourtube_disk_space
+  changed_when: false
+  check_mode: false
+
+- name: Require minimum application disk space
+  ansible.builtin.assert:
+    that:
+      - chooseyourtube_disk_space.stdout_lines[-1].split()[3] | int >= 10485760
+    fail_msg: "At least 10 GB free disk is required; set chooseyourtube_allow_low_resource=true to override."
+  when: not chooseyourtube_allow_low_resource | bool
+
+- name: Inspect the deployed version marker
+  ansible.builtin.slurp:
+    path: "{{ chooseyourtube_project_dir }}/.deployed-version"
+  register: chooseyourtube_deployed_version_file
+  failed_when: false
+  changed_when: false
+
+- name: Record the currently deployed version
+  ansible.builtin.set_fact:
+    chooseyourtube_current_version: >-
+      {{
+        (chooseyourtube_deployed_version_file.content | b64decode | trim)
+        if chooseyourtube_deployed_version_file.content is defined
+        else ''
+      }}
+
+- name: Inspect the current backup command
+  ansible.builtin.stat:
+    path: "{{ chooseyourtube_project_dir }}/deploy/oracle/bin/backup.sh"
+  register: chooseyourtube_backup_command
+
+- name: Back up the current database before an upgrade
+  ansible.builtin.command:
+    argv:
+      - "{{ chooseyourtube_project_dir }}/deploy/oracle/bin/backup.sh"
+  environment:
+    ENV_FILE: "{{ chooseyourtube_project_dir }}/.env"
+  when:
+    - chooseyourtube_current_version | length > 0
+    - chooseyourtube_current_version != chooseyourtube_version
+    - chooseyourtube_backup_command.stat.exists
+    - not ansible_check_mode
+  register: chooseyourtube_upgrade_backup
+  changed_when: true
+
+- name: Check out the exact application release
+  ansible.builtin.git:
+    repo: "{{ chooseyourtube_repository_url }}"
+    dest: "{{ chooseyourtube_project_dir }}"
+    version: "v{{ chooseyourtube_version }}"
+    depth: 1
+    single_branch: true
+    update: true
+    force: false
+
+- name: Inspect the checked-out deployment files
+  ansible.builtin.stat:
+    path: "{{ chooseyourtube_project_dir }}/deploy/oracle/compose.yaml"
+  register: chooseyourtube_deployment_files
+
+- name: Authenticate to GHCR when private credentials are configured
+  community.docker.docker_login:
+    registry_url: ghcr.io
+    username: "{{ chooseyourtube_registry_username }}"
+    password: "{{ chooseyourtube_registry_token }}"
+    reauthorize: false
+  when:
+    - chooseyourtube_registry_username | length > 0
+    - chooseyourtube_registry_token | length > 0
+    - not ansible_check_mode
+  no_log: true
+
+- name: Remove stored GHCR credentials when private access is disabled
+  community.docker.docker_login:
+    registry_url: ghcr.io
+    state: absent
+  when:
+    - chooseyourtube_registry_username | length == 0
+    - chooseyourtube_registry_token | length == 0
+    - not ansible_check_mode
+  no_log: true
+
+- name: Render the production environment
+  ansible.builtin.template:
+    src: oracle.env.j2
+    dest: "{{ chooseyourtube_project_dir }}/.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  diff: false
+  when: not ansible_check_mode or chooseyourtube_deployment_files.stat.exists
+
+- name: Install ChooseYourTube systemd units
+  ansible.builtin.copy:
+    src: "{{ chooseyourtube_project_dir }}/deploy/oracle/systemd/{{ item }}"
+    dest: "/etc/systemd/system/{{ item }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - chooseyourtube.service
+    - chooseyourtube-backup.service
+    - chooseyourtube-backup.timer
+  notify: Reload systemd
+  when: not ansible_check_mode or chooseyourtube_deployment_files.stat.exists
+
+- name: Apply systemd unit changes before deployment
+  ansible.builtin.meta: flush_handlers
+
+- name: Pull exact release images
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ chooseyourtube_project_dir }}"
+    files:
+      - compose.yaml
+      - compose.release.yaml
+      - deploy/oracle/compose.yaml
+    policy: always
+  when: not ansible_check_mode or chooseyourtube_deployment_files.stat.exists
+
+- name: Validate the rendered Compose configuration
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --env-file
+      - "{{ chooseyourtube_project_dir }}/.env"
+      - -f
+      - "{{ chooseyourtube_project_dir }}/compose.yaml"
+      - -f
+      - "{{ chooseyourtube_project_dir }}/compose.release.yaml"
+      - -f
+      - "{{ chooseyourtube_project_dir }}/deploy/oracle/compose.yaml"
+      - config
+      - --quiet
+  changed_when: false
+
+- name: Validate the Caddy configuration
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --env-file
+      - "{{ chooseyourtube_project_dir }}/.env"
+      - -f
+      - "{{ chooseyourtube_project_dir }}/compose.yaml"
+      - -f
+      - "{{ chooseyourtube_project_dir }}/compose.release.yaml"
+      - -f
+      - "{{ chooseyourtube_project_dir }}/deploy/oracle/compose.yaml"
+      - run
+      - --rm
+      - --no-deps
+      - caddy
+      - caddy
+      - validate
+      - --config
+      - /etc/caddy/Caddyfile
+      - --adapter
+      - caddyfile
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Reconcile the production Compose stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ chooseyourtube_project_dir }}"
+    files:
+      - compose.yaml
+      - compose.release.yaml
+      - deploy/oracle/compose.yaml
+    state: present
+    pull: never
+    remove_orphans: true
+    wait: true
+    wait_timeout: 300
+  when: not ansible_check_mode
+
+- name: Enable application startup and scheduled backups
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - chooseyourtube.service
+    - chooseyourtube-backup.timer
+  when: not ansible_check_mode
+
+- name: Verify internal and public health
+  ansible.builtin.command:
+    argv:
+      - "{{ chooseyourtube_project_dir }}/deploy/oracle/bin/health.sh"
+  environment:
+    ENV_FILE: "{{ chooseyourtube_project_dir }}/.env"
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Record the successfully deployed version
+  ansible.builtin.copy:
+    content: "{{ chooseyourtube_version }}\n"
+    dest: "{{ chooseyourtube_project_dir }}/.deployed-version"
+    owner: root
+    group: root
+    mode: "0644"
+  when: not ansible_check_mode
