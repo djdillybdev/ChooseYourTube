@@ -23,4 +23,5 @@ if [ -z "$postgres_password" ] || [ "$postgres_password" = "replace-me" ]; then
 fi
 
 log "Production environment prepared at $ENV_FILE."
-log "Edit its domain, email, release version, YouTube API key, and optional allowlist before deploying."
+log "Edit its domain, email, release version, and YouTube API key before deploying."
+log "Add invited users with deploy/oracle/bin/allowlist.sh add EMAIL."

@@ -79,6 +79,7 @@ access to the host account that runs Docker.
 | `API_CORS_ORIGINS`                          | No         | `API_ORIGIN`            | Comma-separated frontend origins trusted by FastAPI.               |
 | `REGISTRATION_ENABLED`                      | No         | mode-derived            | Allows new account registration.                                   |
 | `REGISTRATION_EMAIL_ALLOWLIST`              | No         | empty                   | Comma-separated exact emails; empty allows any email to register.  |
+| `REGISTRATION_ALLOWLIST_REQUIRED`           | No         | `false`                 | Refuses to start with enabled, open registration.                  |
 | `BACKGROUND_JOBS_ENABLED`                   | No         | mode-derived            | Enables Redis jobs and scheduled refreshes.                        |
 | `YOUTUBE_DAILY_QUOTA_BUDGET`                | No         | `8000`                  | Stops optional API work at this daily unit count.                  |
 | `YOUTUBE_OAUTH_ENABLED`                     | No         | credential-derived      | Enables one-time Google subscription discovery.                    |

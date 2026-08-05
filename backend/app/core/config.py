@@ -27,6 +27,7 @@ class Settings(BaseSettings):
 
     REGISTRATION_ENABLED: bool | None = None
     REGISTRATION_EMAIL_ALLOWLIST: str | None = None
+    REGISTRATION_ALLOWLIST_REQUIRED: bool = False
     BACKGROUND_JOBS_ENABLED: bool | None = None
     YOUTUBE_OAUTH_ENABLED: bool | None = None
     DEMO_LOGIN_ENABLED: bool | None = None
@@ -108,6 +109,15 @@ class Settings(BaseSettings):
 
         if self.YOUTUBE_DAILY_QUOTA_BUDGET < 1:
             raise ValueError("YOUTUBE_DAILY_QUOTA_BUDGET must be positive")
+        if (
+            self.REGISTRATION_ENABLED
+            and self.REGISTRATION_ALLOWLIST_REQUIRED
+            and not self.registration_email_allowlist
+        ):
+            raise ValueError(
+                "REGISTRATION_EMAIL_ALLOWLIST must contain at least one email "
+                "when allowlist-only registration is required"
+            )
         if self.BACKGROUND_JOBS_ENABLED and not self.REDIS_URL:
             raise ValueError("REDIS_URL is required when background jobs are enabled")
         if not demo and not self.YOUTUBE_API_KEY:

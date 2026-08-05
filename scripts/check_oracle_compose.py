@@ -17,6 +17,8 @@ def main() -> None:
         "ACME_EMAIL": "admin@example.com",
         "CHOOSEYOURTUBE_VERSION": "1.0.0",
         "CADDY_VERSION": "2.11.4",
+        "REGISTRATION_EMAIL_ALLOWLIST": "invited@example.com",
+        "REGISTRATION_ALLOWLIST_REQUIRED": "true",
     }
     command = [
         "docker",
@@ -56,6 +58,9 @@ def main() -> None:
     assert services["frontend"]["image"].endswith(":1.0.0")
     assert services["caddy"]["image"] == "caddy:2.11.4-alpine"
     assert services["caddy"]["volumes"], "Caddy certificate storage must be persistent"
+    backend_environment = services["backend"]["environment"]
+    assert backend_environment["REGISTRATION_EMAIL_ALLOWLIST"] == "invited@example.com"
+    assert backend_environment["REGISTRATION_ALLOWLIST_REQUIRED"] == "true"
     print("Oracle Compose security contract passed")
 
 

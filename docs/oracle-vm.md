@@ -60,15 +60,28 @@ YOUTUBE_API_KEY=your-key
 `configure.sh` generates `AUTH_SECRET` and a URL-safe PostgreSQL password without displaying them.
 The environment file must remain owned by root with mode `0600`.
 
-Registration is enabled by default. `REGISTRATION_EMAIL_ALLOWLIST` accepts comma-separated complete
-addresses and compares them case-insensitively:
+Registration is enabled by default and the Oracle profile requires a non-empty allowlist.
+`REGISTRATION_EMAIL_ALLOWLIST` accepts comma-separated complete addresses and compares them
+case-insensitively:
 
 ```env
 REGISTRATION_EMAIL_ALLOWLIST=person@example.com,second@example.com
 ```
 
-An empty value deliberately allows any valid email address to register. Wildcards and domain-only
-entries are not supported. After changing the allowlist, apply it with:
+The root-only helper updates the list without displaying or changing other secrets:
+
+```bash
+sudo ./deploy/oracle/bin/allowlist.sh list
+sudo ./deploy/oracle/bin/allowlist.sh add another@example.com
+sudo ./deploy/oracle/bin/allowlist.sh remove person@example.com
+```
+
+Wildcards and domain-only entries are not supported. The deployment preflight and application startup
+both reject enabled registration with an empty list. To stop onboarding after the invited users have
+registered, set `REGISTRATION_ENABLED=false`; existing users can still sign in. Removing an address
+from the list prevents a new registration but does not deactivate an existing account.
+
+After changing either registration setting, apply it with:
 
 ```bash
 sudo systemctl restart chooseyourtube

@@ -30,6 +30,16 @@ printf '%s' "${ACME_EMAIL:-}" | grep -Eq '^[^[:space:]@]+@[^[:space:]@]+\.[^[:sp
   || die "Set YOUTUBE_API_KEY."
 [ "${#AUTH_SECRET}" -ge 32 ] && [ "$AUTH_SECRET" != "replace-me" ] \
   || die "AUTH_SECRET must contain at least 32 characters."
+case "${REGISTRATION_ENABLED:-}" in
+  true|false) ;;
+  *) die "REGISTRATION_ENABLED must be true or false." ;;
+esac
+[ "${REGISTRATION_ALLOWLIST_REQUIRED:-}" = "true" ] \
+  || die "Oracle deployments require REGISTRATION_ALLOWLIST_REQUIRED=true."
+if [ "$REGISTRATION_ENABLED" = "true" ]; then
+  [ -n "${REGISTRATION_EMAIL_ALLOWLIST:-}" ] \
+    || die "Set REGISTRATION_EMAIL_ALLOWLIST or disable registration."
+fi
 printf '%s' "${POSTGRES_USER:-}" | grep -Eq '^[A-Za-z_][A-Za-z0-9_-]*$' \
   || die "POSTGRES_USER contains unsupported characters."
 printf '%s' "${POSTGRES_DB:-}" | grep -Eq '^[A-Za-z_][A-Za-z0-9_-]*$' \

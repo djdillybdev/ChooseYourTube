@@ -56,6 +56,22 @@ def test_empty_registration_email_allowlist_is_open() -> None:
 
 
 @pytest.mark.unit
+def test_required_registration_allowlist_rejects_open_registration() -> None:
+    with pytest.raises(ValidationError, match="must contain at least one email"):
+        full_settings(REGISTRATION_ALLOWLIST_REQUIRED=True)
+
+
+@pytest.mark.unit
+def test_required_registration_allowlist_allows_closed_registration() -> None:
+    configured = full_settings(
+        REGISTRATION_ENABLED=False,
+        REGISTRATION_ALLOWLIST_REQUIRED=True,
+    )
+
+    assert configured.REGISTRATION_ENABLED is False
+
+
+@pytest.mark.unit
 def test_invalid_registration_email_allowlist_is_rejected() -> None:
     with pytest.raises(ValidationError, match="REGISTRATION_EMAIL_ALLOWLIST"):
         full_settings(REGISTRATION_EMAIL_ALLOWLIST="not-an-email")
