@@ -4,6 +4,10 @@ This control layer configures one existing Ubuntu 24.04 Oracle Cloud VM and mana
 ChooseYourTube lifecycle over SSH. It does not create OCI networking, compute instances, reserved IPs,
 or DNS records.
 
+For a first deployment beginning with an empty OCI account and ending with registration and login on
+a Mac, follow the [complete Oracle Cloud runbook](../../docs/oracle-ansible-runbook.md). This document
+is the shorter day-two reference for an already prepared host.
+
 ## Controller setup
 
 Use macOS or Linux with Python 3.12 or newer:

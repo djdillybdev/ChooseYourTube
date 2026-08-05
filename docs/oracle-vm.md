@@ -4,6 +4,9 @@ This guide installs the full ChooseYourTube stack on an Ubuntu 24.04 Oracle Clou
 (OCI) VM. It uses published `amd64` or `arm64` images, Caddy-managed HTTPS, private Docker networking,
 systemd startup, resource limits, and scheduled PostgreSQL backups.
 
+For the complete first-time path—from release publication and OCI console setup through Ansible,
+registration, and login from a Mac—use the [end-to-end deployment runbook](oracle-ansible-runbook.md).
+
 ## Requirements
 
 - Ubuntu 24.04 on `x86_64` or Ampere `aarch64`;
