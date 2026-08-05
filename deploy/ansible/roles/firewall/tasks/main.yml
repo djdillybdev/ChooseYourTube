@@ -1,0 +1,88 @@
+---
+- name: Configure the optional ChooseYourTube firewall
+  when: chooseyourtube_manage_ufw | bool
+  block:
+    - name: Require at least one SSH administrator network
+      ansible.builtin.assert:
+        that:
+          - chooseyourtube_admin_cidrs | length > 0
+        fail_msg: "Set chooseyourtube_admin_cidrs before enabling UFW management."
+
+    - name: Install UFW
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+
+    - name: Create the ChooseYourTube state directory
+      ansible.builtin.file:
+        path: /var/lib/chooseyourtube
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Inspect the prior managed SSH networks
+      ansible.builtin.slurp:
+        path: /var/lib/chooseyourtube/ufw-admin-cidrs
+      register: chooseyourtube_prior_ufw_cidrs
+      failed_when: false
+      changed_when: false
+
+    - name: Record prior managed SSH networks
+      ansible.builtin.set_fact:
+        chooseyourtube_previous_admin_cidrs: >-
+          {{
+            (chooseyourtube_prior_ufw_cidrs.content | default('') | b64decode).splitlines()
+            if chooseyourtube_prior_ufw_cidrs.content is defined
+            else []
+          }}
+
+    - name: Remove stale managed SSH rules
+      community.general.ufw:
+        rule: limit
+        proto: tcp
+        from_ip: "{{ item }}"
+        to_port: "{{ chooseyourtube_ssh_port | string }}"
+        delete: true
+      loop: "{{ chooseyourtube_previous_admin_cidrs | difference(chooseyourtube_admin_cidrs) }}"
+
+    - name: Allow rate-limited SSH from administrator networks
+      community.general.ufw:
+        rule: limit
+        proto: tcp
+        from_ip: "{{ item }}"
+        to_port: "{{ chooseyourtube_ssh_port | string }}"
+        comment: ChooseYourTube administrator SSH
+      loop: "{{ chooseyourtube_admin_cidrs }}"
+
+    - name: Allow public HTTP and HTTPS
+      community.general.ufw:
+        rule: allow
+        proto: tcp
+        to_port: "{{ item }}"
+        comment: ChooseYourTube public web
+      loop:
+        - "80"
+        - "443"
+
+    - name: Deny incoming traffic by default
+      community.general.ufw:
+        direction: incoming
+        default: deny
+
+    - name: Allow outgoing traffic by default
+      community.general.ufw:
+        direction: outgoing
+        default: allow
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+
+    - name: Persist managed administrator networks
+      ansible.builtin.copy:
+        content: "{{ chooseyourtube_admin_cidrs | join('\n') }}\n"
+        dest: /var/lib/chooseyourtube/ufw-admin-cidrs
+        owner: root
+        group: root
+        mode: "0644"

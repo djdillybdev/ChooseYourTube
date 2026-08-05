@@ -34,6 +34,16 @@ removes the application port publications and exposes only Caddy.
 
 ## Install and configure
 
+### Ansible-managed installation
+
+For repeatable deployment and day-two management from a macOS or Linux controller, use the
+[Ansible control layer](../deploy/ansible/README.md). It configures an existing Ubuntu VM, manages the
+registration allowlist and exact release, performs pre-upgrade backups, verifies health, fetches
+off-host backups, and provides a guarded restore workflow. OCI networking, the reserved IP, and DNS
+remain prerequisites.
+
+### Manual installation
+
 Clone an exact release into the fixed systemd path. Replace `v1.0.0` with the intended release:
 
 ```bash

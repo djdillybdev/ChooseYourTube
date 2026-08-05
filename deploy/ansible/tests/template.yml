@@ -1,0 +1,10 @@
+---
+- name: Test the ChooseYourTube environment template
+  hosts: chooseyourtube
+  become: false
+  gather_facts: false
+  tasks:
+    - name: Run the environment template test
+      ansible.builtin.include_role:
+        name: chooseyourtube
+        tasks_from: template_test.yml

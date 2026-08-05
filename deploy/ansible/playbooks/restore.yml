@@ -1,0 +1,80 @@
+---
+- name: Restore a ChooseYourTube backup
+  hosts: chooseyourtube
+  become: true
+  gather_facts: false
+  serial: 1
+  vars:
+    chooseyourtube_effective_project_dir: "{{ chooseyourtube_project_dir | default('/opt/chooseyourtube') }}"
+    chooseyourtube_restore_staging_path: >-
+      {{ chooseyourtube_backup_dir | default('/var/backups/chooseyourtube') }}/ansible-restore-{{ inventory_hostname }}.dump
+  pre_tasks:
+    - name: Require explicit destructive restore confirmation
+      ansible.builtin.assert:
+        that:
+          - restore_confirm | default('') == 'RESTORE'
+          - restore_source | default('') | length > 0
+        fail_msg: >-
+          Pass restore_confirm=RESTORE and an absolute controller-side restore_source path.
+
+    - name: Inspect the controller-side restore source
+      ansible.builtin.stat:
+        path: "{{ restore_source }}"
+        checksum_algorithm: sha256
+      delegate_to: localhost
+      become: false
+      register: chooseyourtube_restore_source
+
+    - name: Require a non-empty controller-side dump
+      ansible.builtin.assert:
+        that:
+          - restore_source is match('^/')
+          - chooseyourtube_restore_source.stat.isreg | default(false)
+          - chooseyourtube_restore_source.stat.size | int > 0
+        fail_msg: "restore_source must be an absolute path to a non-empty backup file."
+
+  tasks:
+    - name: Restore the selected database backup
+      block:
+        - name: Create the protected restore staging directory
+          ansible.builtin.file:
+            path: "{{ chooseyourtube_restore_staging_path | dirname }}"
+            state: directory
+            owner: root
+            group: root
+            mode: "0700"
+
+        - name: Stage the backup on the managed host
+          ansible.builtin.copy:
+            src: "{{ restore_source }}"
+            dest: "{{ chooseyourtube_restore_staging_path }}"
+            owner: root
+            group: root
+            mode: "0600"
+
+        - name: Inspect the staged backup
+          ansible.builtin.stat:
+            path: "{{ chooseyourtube_restore_staging_path }}"
+            checksum_algorithm: sha256
+          register: chooseyourtube_staged_restore
+
+        - name: Require an intact staged backup
+          ansible.builtin.assert:
+            that:
+              - chooseyourtube_staged_restore.stat.checksum == chooseyourtube_restore_source.stat.checksum
+            fail_msg: "The staged restore dump does not match its controller source."
+
+        - name: Run the guarded restore workflow
+          ansible.builtin.command:
+            argv:
+              - "{{ chooseyourtube_effective_project_dir }}/deploy/oracle/bin/restore.sh"
+          environment:
+            ENV_FILE: "{{ chooseyourtube_effective_project_dir }}/.env"
+            CONFIRM: RESTORE
+            BACKUP_FILE: "{{ chooseyourtube_restore_staging_path }}"
+          changed_when: true
+      always:
+        - name: Remove the staged restore dump
+          ansible.builtin.file:
+            path: "{{ chooseyourtube_restore_staging_path }}"
+            state: absent

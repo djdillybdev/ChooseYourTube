@@ -1,0 +1,13 @@
+---
+- name: Verify ChooseYourTube health
+  hosts: chooseyourtube
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Run the deployment health contract
+      ansible.builtin.command:
+        argv:
+          - "{{ chooseyourtube_project_dir | default('/opt/chooseyourtube') }}/deploy/oracle/bin/health.sh"
+      environment:
+        ENV_FILE: "{{ chooseyourtube_project_dir | default('/opt/chooseyourtube') }}/.env"
+      changed_when: false
