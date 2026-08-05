@@ -8,13 +8,31 @@ import pytest
 import pytest_asyncio
 from fastapi import HTTPException
 from datetime import datetime, timezone
-from app.services.video_service import update_video
-from app.db.crud.crud_video import get_videos, create_videos_bulk
+from sqlalchemy import select
+
+from app.services.video_service import update_video as _update_video
+from app.db.crud.crud_video import get_videos as _get_videos, create_videos_bulk
 from app.db.crud.crud_channel import create_channel
-from app.db.crud.crud_tag import create_tag, get_tags
+from app.db.crud.crud_tag import create_tag
+from app.db.models.association_tables import video_tags
 from app.db.models.channel import Channel
-from app.db.models.tag import Tag
+from app.db.models.tag import Tag as TagModel
 from app.schemas.video import VideoCreate, VideoUpdate
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+
+
+def Tag(**kwargs):
+    kwargs.setdefault("user_id", TEST_OWNER_ID)
+    return TagModel(**kwargs)
+
+
+async def get_videos(db_session, **kwargs):
+    return await _get_videos(db_session, owner_id=TEST_OWNER_ID, **kwargs)
+
+
+async def update_video(video_id, payload, db_session):
+    return await _update_video(video_id, payload, db_session, TEST_OWNER_ID)
 
 
 @pytest_asyncio.fixture
@@ -25,6 +43,7 @@ async def sample_channel(db_session):
         title="Python Tutorials",
         handle="@pythontutorials",
         uploads_playlist_id="UU001",
+        owner_id=TEST_OWNER_ID,
     )
     return await create_channel(db_session, channel)
 
@@ -238,11 +257,15 @@ class TestVideoTagRelationships:
             payload = VideoUpdate(tag_ids=[sample_tags[0].id])
             await update_video(created.id, payload, db_session)
 
-        # Access videos through tag relationship
-        refreshed_tag = await get_tags(db_session, id=sample_tags[0].id, first=True)
-        assert len(refreshed_tag.videos) == 3
-
-        video_ids = {v.id for v in refreshed_tag.videos}
+        # Associations are tenant-scoped rather than exposed as a Tag relationship.
+        rows = await db_session.execute(
+            select(video_tags.c.video_id).where(
+                video_tags.c.user_id == TEST_OWNER_ID,
+                video_tags.c.tag_id == sample_tags[0].id,
+            )
+        )
+        video_ids = set(rows.scalars())
+        assert len(video_ids) == 3
         expected_ids = {v.id for v in videos}
         assert video_ids == expected_ids
 
@@ -320,9 +343,14 @@ class TestVideoTagEdgeCases:
             payload = VideoUpdate(tag_ids=[sample_tags[0].id])
             await update_video(created.id, payload, db_session)
 
-        # Verify tag has all videos
-        refreshed_tag = await get_tags(db_session, id=sample_tags[0].id, first=True)
-        assert len(refreshed_tag.videos) == 5
+        # Verify the tenant-scoped association has all videos.
+        rows = await db_session.execute(
+            select(video_tags.c.video_id).where(
+                video_tags.c.user_id == TEST_OWNER_ID,
+                video_tags.c.tag_id == sample_tags[0].id,
+            )
+        )
+        assert len(set(rows.scalars())) == 5
 
     async def test_add_remove_add_tags_multiple_times(
         self, db_session, sample_video, sample_tags

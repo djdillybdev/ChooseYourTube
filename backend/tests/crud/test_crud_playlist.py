@@ -12,28 +12,97 @@ import pytest
 import pytest_asyncio
 from datetime import datetime, timezone
 from app.db.crud.crud_playlist import (
-    get_playlists,
-    count_playlists,
+    get_playlists as _get_playlists,
+    count_playlists as _count_playlists,
     create_playlist,
     delete_playlist,
-    get_playlist_video_ids,
-    get_max_position,
-    set_playlist_videos,
-    add_video_to_playlist,
-    remove_video_from_playlist,
-    move_video_in_playlist,
-    bulk_add_videos_to_playlist,
-    clear_playlist_videos,
+    get_playlist_video_ids as _get_playlist_video_ids,
+    get_max_position as _get_max_position,
+    set_playlist_videos as _set_playlist_videos,
+    add_video_to_playlist as _add_video_to_playlist,
+    remove_video_from_playlist as _remove_video_from_playlist,
+    move_video_in_playlist as _move_video_in_playlist,
+    bulk_add_videos_to_playlist as _bulk_add_videos_to_playlist,
+    clear_playlist_videos as _clear_playlist_videos,
 )
-from app.db.models.playlist import Playlist
+from app.db.models.playlist import Playlist as PlaylistModel
 from app.db.models.channel import Channel
 from app.db.models.video import Video
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000001"
+
+
+def Playlist(**kwargs):
+    return PlaylistModel(owner_id=TEST_OWNER_ID, **kwargs)
+
+
+async def get_playlists(db_session, **kwargs):
+    return await _get_playlists(db_session, owner_id=TEST_OWNER_ID, **kwargs)
+
+
+async def count_playlists(db_session, **kwargs):
+    return await _count_playlists(db_session, owner_id=TEST_OWNER_ID, **kwargs)
+
+
+async def get_playlist_video_ids(db_session, playlist_id):
+    return await _get_playlist_video_ids(db_session, playlist_id, owner_id=TEST_OWNER_ID)
+
+
+async def get_max_position(db_session, playlist_id):
+    return await _get_max_position(db_session, playlist_id, owner_id=TEST_OWNER_ID)
+
+
+async def set_playlist_videos(db_session, playlist_id, video_ids):
+    return await _set_playlist_videos(
+        db_session, playlist_id, video_ids, owner_id=TEST_OWNER_ID
+    )
+
+
+async def add_video_to_playlist(db_session, playlist_id, video_id, position=None):
+    return await _add_video_to_playlist(
+        db_session,
+        playlist_id,
+        video_id,
+        owner_id=TEST_OWNER_ID,
+        position=position,
+    )
+
+
+async def remove_video_from_playlist(db_session, playlist_id, video_id):
+    return await _remove_video_from_playlist(
+        db_session, playlist_id, video_id, owner_id=TEST_OWNER_ID
+    )
+
+
+async def move_video_in_playlist(db_session, playlist_id, video_id, new_position):
+    return await _move_video_in_playlist(
+        db_session, playlist_id, video_id, new_position, owner_id=TEST_OWNER_ID
+    )
+
+
+async def bulk_add_videos_to_playlist(
+    db_session, playlist_id, video_ids, start_position=None
+):
+    return await _bulk_add_videos_to_playlist(
+        db_session,
+        playlist_id,
+        video_ids,
+        owner_id=TEST_OWNER_ID,
+        start_position=start_position,
+    )
+
+
+async def clear_playlist_videos(db_session, playlist_id):
+    return await _clear_playlist_videos(
+        db_session, playlist_id, owner_id=TEST_OWNER_ID
+    )
 
 
 @pytest_asyncio.fixture
 async def sample_channel(db_session):
     """Create a sample channel for video FK requirements."""
     channel = Channel(
+        owner_id=TEST_OWNER_ID,
         id="CH_playlist_test",
         handle="playlisttest",
         title="Playlist Test Channel",
@@ -250,7 +319,7 @@ class TestGetPlaylists:
         """Should return single playlist object when first=True."""
         playlist = await get_playlists(db_session, first=True)
 
-        assert isinstance(playlist, Playlist)
+        assert isinstance(playlist, PlaylistModel)
         assert playlist.id == sample_playlist.id
 
     async def test_first_returns_none_when_empty(self, db_session):

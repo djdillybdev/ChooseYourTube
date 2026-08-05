@@ -250,7 +250,6 @@ async def store_oauth_candidates(
         safe_title, _ = _safe_display(subscription.get("title"), maximum=255)
         candidate = SubscriptionImportCandidate(
             import_id=import_record.id,
-            owner_id=import_record.owner_id,
             channel_id=channel_id,
             channel_title=safe_title,
             channel_url=(

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { api } from '$lib/api';
 	import { playerState, playNext } from '$lib/stores/playerState.svelte';
 
@@ -13,7 +14,7 @@
 	let player: YT.Player | null = null;
 	let isReady = $state(false);
 	let isAdvancingQueue = false;
-	const watchedUpdatesInFlight = new Set<string>();
+	const watchedUpdatesInFlight = new SvelteSet<string>();
 
 	async function markCurrentVideoWatched() {
 		const video = playerState.current.currentVideo;

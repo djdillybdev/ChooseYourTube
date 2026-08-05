@@ -52,7 +52,9 @@ class Folder(Base):
     parent: Mapped["Folder"] = relationship(back_populates="children", remote_side=[id])
 
     # Relationship to Children (One-to-Many to itself)
-    children: Mapped[list["Folder"]] = relationship(back_populates="parent")
+    children: Mapped[list["Folder"]] = relationship(
+        back_populates="parent", passive_deletes="all"
+    )
 
     # Relationship to Channels (One-to-Many)
     # A Folder can contain many Channels.

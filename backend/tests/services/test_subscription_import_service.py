@@ -5,20 +5,90 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.core.errors import ApplicationError
-from app.db.crud import crud_subscription_import
-from app.db.models.channel import Channel
-from app.db.models.folder import Folder
-from app.db.models.tag import Tag
+from app.db.crud import crud_subscription_import as _crud_subscription_import
+from app.db.models.channel import Channel as ChannelModel
+from app.db.models.folder import Folder as FolderModel
+from app.db.models.tag import Tag as TagModel
 from app.schemas.subscription_import import (
     CandidateSelectionUpdate,
     SubscriptionImportCommit,
 )
-from app.services import subscription_import_service as service
+from app.services import subscription_import_service as _service
 
 
 CHANNEL_A = "UC" + "a" * 22
 CHANNEL_B = "UC" + "b" * 22
 CHANNEL_C = "UC" + "c" * 22
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+OTHER_OWNER_ID = "20000000-0000-0000-0000-000000000099"
+
+
+class _OwnerProxy:
+    def __init__(self, target, owned_methods):
+        self._target = target
+        self._owned_methods = owned_methods
+
+    def __getattr__(self, name):
+        value = getattr(self._target, name)
+        if name not in self._owned_methods:
+            return value
+
+        async def call(*args, **kwargs):
+            if "owner_id" in kwargs:
+                kwargs["owner_id"] = (
+                    OTHER_OWNER_ID
+                    if kwargs["owner_id"] == "another-owner"
+                    else TEST_OWNER_ID
+                )
+            if name == "get_owned_import" and len(args) >= 3:
+                args = (
+                    *args[:2],
+                    OTHER_OWNER_ID if args[2] == "another-owner" else TEST_OWNER_ID,
+                    *args[3:],
+                )
+            return await value(*args, **kwargs)
+
+        return call
+
+
+service = _OwnerProxy(
+    _service,
+    {
+        "collect_csv",
+        "consume_oauth_state",
+        "create_oauth_import",
+        "defer_execution",
+        "enqueue_run",
+        "execute_import",
+        "fail_execution",
+        "get_detail",
+        "get_owned_import",
+        "prepare_commit",
+        "store_oauth_candidates",
+        "update_selection",
+    },
+)
+crud_subscription_import = _OwnerProxy(
+    _crud_subscription_import, {"list_candidates"}
+)
+
+
+def Channel(**kwargs):
+    if "owner_id" in kwargs:
+        kwargs["owner_id"] = TEST_OWNER_ID
+    return ChannelModel(**kwargs)
+
+
+def Folder(**kwargs):
+    if "owner_id" in kwargs:
+        kwargs["owner_id"] = TEST_OWNER_ID
+    return FolderModel(**kwargs)
+
+
+def Tag(**kwargs):
+    if "owner_id" in kwargs:
+        kwargs["owner_id"] = TEST_OWNER_ID
+    return TagModel(**kwargs)
 
 
 @pytest.mark.parametrize(

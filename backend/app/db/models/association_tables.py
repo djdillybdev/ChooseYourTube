@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, ForeignKeyConstraint, Integer, Table, Uuid, String, UniqueConstraint
+from fastapi_users_db_sqlalchemy.generics import GUID
 
 from ..base import Base
 
@@ -19,7 +20,7 @@ def _created_at() -> Column:
 channel_tags = Table(
     "channel_tags",
     Base.metadata,
-    Column("user_id", Uuid, primary_key=True, nullable=False),
+    Column("user_id", GUID, primary_key=True, nullable=False),
     Column("channel_id", String(32), primary_key=True, nullable=False),
     Column("tag_id", String(36), primary_key=True, nullable=False),
     _created_at(),
@@ -40,7 +41,7 @@ channel_tags = Table(
 channel_categories = Table(
     "channel_categories",
     Base.metadata,
-    Column("user_id", Uuid, primary_key=True, nullable=False),
+    Column("user_id", GUID, primary_key=True, nullable=False),
     Column("channel_id", String(32), primary_key=True, nullable=False),
     Column("category_id", String(36), primary_key=True, nullable=False),
     _created_at(),
@@ -61,7 +62,7 @@ channel_categories = Table(
 video_tags = Table(
     "video_tags",
     Base.metadata,
-    Column("user_id", Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", GUID, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
     Column("video_id", String(16), ForeignKey("videos.id", ondelete="CASCADE"), primary_key=True),
     Column("tag_id", String(36), primary_key=True, nullable=False),
     _created_at(),
@@ -76,7 +77,7 @@ video_tags = Table(
 playlist_videos = Table(
     "playlist_videos",
     Base.metadata,
-    Column("user_id", Uuid, primary_key=True, nullable=False),
+    Column("user_id", GUID, primary_key=True, nullable=False),
     Column("playlist_id", String(36), primary_key=True, nullable=False),
     Column("video_id", String(16), ForeignKey("videos.id", ondelete="CASCADE"), primary_key=True),
     Column("position", Integer, nullable=False, default=0),
@@ -93,7 +94,7 @@ playlist_videos = Table(
 subscription_import_tags = Table(
     "subscription_import_tags",
     Base.metadata,
-    Column("user_id", Uuid, primary_key=True, nullable=False),
+    Column("user_id", GUID, primary_key=True, nullable=False),
     Column("import_id", Uuid, primary_key=True, nullable=False),
     Column("tag_id", String(36), primary_key=True, nullable=False),
     _created_at(),

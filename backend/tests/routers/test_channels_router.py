@@ -8,6 +8,8 @@ listing, creating, updating, refreshing, and deleting channels.
 import pytest
 from unittest.mock import AsyncMock, patch
 
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+
 
 @pytest.mark.asyncio
 class TestChannelsRouter:
@@ -30,12 +32,14 @@ class TestChannelsRouter:
             handle="testchannel1",
             title="Test Channel 1",
             uploads_playlist_id="UU_test_1",
+            owner_id=TEST_OWNER_ID,
         )
         channel2 = Channel(
             id="UC_test_2",
             handle="testchannel2",
             title="Test Channel 2",
             uploads_playlist_id="UU_test_2",
+            owner_id=TEST_OWNER_ID,
         )
 
         db_session.add(channel1)
@@ -60,6 +64,7 @@ class TestChannelsRouter:
             handle="testchannel",
             title="Test Channel",
             uploads_playlist_id="UU_test",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         await db_session.commit()
@@ -199,7 +204,9 @@ class TestChannelsRouter:
         # Create a folder first
         from app.db.models.folder import Folder
 
-        folder = Folder(id="f1", name="Test Folder", parent_id=None)
+        folder = Folder(
+            id="f1", name="Test Folder", parent_id=None, user_id=TEST_OWNER_ID
+        )
         db_session.add(folder)
         await db_session.commit()
 
@@ -232,7 +239,9 @@ class TestChannelsRouter:
         from app.db.models.channel import Channel
         from app.db.models.folder import Folder
 
-        folder = Folder(id="fav-folder", name="Favorites", parent_id=None)
+        folder = Folder(
+            id="fav-folder", name="Favorites", parent_id=None, user_id=TEST_OWNER_ID
+        )
         channel = Channel(
             id="UC_update_test",
             handle="updatetest",
@@ -240,6 +249,7 @@ class TestChannelsRouter:
             uploads_playlist_id="UU_update_test",
             is_favorited=False,
             folder_id=folder.id,
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(folder)
         db_session.add(channel)
@@ -260,13 +270,16 @@ class TestChannelsRouter:
         from app.db.models.folder import Folder
 
         # Create folder and channel
-        folder = Folder(id="f1", name="Test Folder", parent_id=None)
+        folder = Folder(
+            id="f1", name="Test Folder", parent_id=None, user_id=TEST_OWNER_ID
+        )
         channel = Channel(
             id="UC_move_test",
             handle="movetest",
             title="Move Test",
             uploads_playlist_id="UU_move_test",
             folder_id=None,
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(folder)
         db_session.add(channel)
@@ -285,13 +298,16 @@ class TestChannelsRouter:
         from app.db.models.channel import Channel
         from app.db.models.folder import Folder
 
-        folder = Folder(id="folder-x", name="Folder X", parent_id=None)
+        folder = Folder(
+            id="folder-x", name="Folder X", parent_id=None, user_id=TEST_OWNER_ID
+        )
         channel_in_folder = Channel(
             id="UC_foldered",
             handle="foldered",
             title="Foldered",
             uploads_playlist_id="UU_foldered",
             folder_id=folder.id,
+            owner_id=TEST_OWNER_ID,
         )
         channel_unfoldered = Channel(
             id="UC_unfoldered",
@@ -299,6 +315,7 @@ class TestChannelsRouter:
             title="Unfoldered",
             uploads_playlist_id="UU_unfoldered",
             folder_id=None,
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(folder)
         db_session.add(channel_in_folder)
@@ -325,6 +342,7 @@ class TestChannelsRouter:
             handle="refreshtest",
             title="Refresh Test",
             uploads_playlist_id="UU_refresh_test",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         await db_session.commit()
@@ -358,6 +376,7 @@ class TestChannelsRouter:
             handle="channelpl",
             title="Channel Playlist Test",
             uploads_playlist_id="UU_channel_pl",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         db_session.add(
@@ -369,6 +388,7 @@ class TestChannelsRouter:
                 source_channel_id=channel.id,
                 source_youtube_playlist_id="PL_yt_active",
                 source_is_active=True,
+                owner_id=TEST_OWNER_ID,
             )
         )
         db_session.add(
@@ -380,6 +400,7 @@ class TestChannelsRouter:
                 source_channel_id=channel.id,
                 source_youtube_playlist_id="PL_yt_inactive",
                 source_is_active=False,
+                owner_id=TEST_OWNER_ID,
             )
         )
         await db_session.commit()
@@ -402,6 +423,7 @@ class TestChannelsRouter:
             handle="refreshplaylists",
             title="Refresh Playlists",
             uploads_playlist_id="UU_channel_refresh_pl",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         await db_session.commit()
@@ -423,6 +445,7 @@ class TestChannelsRouter:
             handle="deletetest",
             title="Delete Test",
             uploads_playlist_id="UU_delete_test",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel)
         await db_session.commit()
@@ -450,12 +473,14 @@ class TestChannelsRouter:
             handle="delete1",
             title="Delete 1",
             uploads_playlist_id="UU_delete_1",
+            owner_id=TEST_OWNER_ID,
         )
         channel2 = Channel(
             id="UC_delete_2",
             handle="delete2",
             title="Delete 2",
             uploads_playlist_id="UU_delete_2",
+            owner_id=TEST_OWNER_ID,
         )
         db_session.add(channel1)
         db_session.add(channel2)

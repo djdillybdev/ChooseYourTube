@@ -2,6 +2,8 @@ import pytest
 
 from app.services.playlist_service import ensure_watch_later
 
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+
 
 @pytest.mark.asyncio
 async def test_watch_later_static_route_initializes_playlist(test_client, db_session):
@@ -14,7 +16,7 @@ async def test_watch_later_static_route_initializes_playlist(test_client, db_ses
 
 @pytest.mark.asyncio
 async def test_watch_later_general_mutations_are_protected(test_client, db_session):
-    playlist = await ensure_watch_later(db_session)
+    playlist = await ensure_watch_later(db_session, owner_id=TEST_OWNER_ID)
 
     rename = test_client.patch(
         f"/playlists/{playlist.id}", json={"name": "Not allowed"}

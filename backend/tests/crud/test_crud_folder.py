@@ -7,8 +7,15 @@ Tests dynamic filtering, pagination, ordering, and hierarchical queries using TD
 import pytest
 import pytest_asyncio
 from datetime import datetime, timezone, timedelta
-from app.db.crud.crud_folder import get_folders
+from app.db.crud.crud_folder import get_folders as _get_folders
 from app.db.models.folder import Folder
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000001"
+
+
+async def get_folders(db_session, **kwargs):
+    """Exercise folder queries as the suite's authenticated tenant."""
+    return await _get_folders(db_session, owner_id=TEST_OWNER_ID, **kwargs)
 
 
 @pytest_asyncio.fixture
@@ -58,6 +65,7 @@ async def sample_folders(db_session):
     ]
 
     for folder in folders:
+        folder.owner_id = TEST_OWNER_ID
         db_session.add(folder)
     await db_session.commit()
 

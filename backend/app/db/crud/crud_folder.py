@@ -248,5 +248,13 @@ async def delete_folder(db_session: AsyncSession, folder_to_delete: Folder) -> N
         db_session: Database session
         folder_to_delete: The folder instance to delete
     """
+    await db_session.execute(
+        update(Folder)
+        .where(
+            Folder.user_id == folder_to_delete.user_id,
+            Folder.parent_id == folder_to_delete.id,
+        )
+        .values(parent_id=folder_to_delete.parent_id)
+    )
     await db_session.delete(folder_to_delete)
     await db_session.commit()

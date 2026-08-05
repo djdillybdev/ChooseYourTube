@@ -11,12 +11,32 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.services.video_service import (
-    fetch_and_store_all_channel_videos_task,
-    refresh_latest_channel_videos_task,
-    refresh_latest_channel_videos,
-    create_and_update_videos,
+    fetch_and_store_all_channel_videos_task as _fetch_and_store_all_channel_videos_task,
+    refresh_latest_channel_videos_task as _refresh_latest_channel_videos_task,
+    refresh_latest_channel_videos as _refresh_latest_channel_videos,
+    create_and_update_videos as _create_and_update_videos,
 )
 from app.db.models.channel import Channel
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+
+
+def _owned_service(function):
+    async def call(*args, **kwargs):
+        kwargs.setdefault("owner_id", TEST_OWNER_ID)
+        return await function(*args, **kwargs)
+
+    return call
+
+
+fetch_and_store_all_channel_videos_task = _owned_service(
+    _fetch_and_store_all_channel_videos_task
+)
+refresh_latest_channel_videos_task = _owned_service(
+    _refresh_latest_channel_videos_task
+)
+refresh_latest_channel_videos = _owned_service(_refresh_latest_channel_videos)
+create_and_update_videos = _owned_service(_create_and_update_videos)
 
 
 @pytest_asyncio.fixture
@@ -27,6 +47,7 @@ async def sample_channel(db_session):
         handle="testchannel",
         title="Test Channel",
         uploads_playlist_id="UU_test_uploads",
+        owner_id=TEST_OWNER_ID,
     )
     db_session.add(channel)
     await db_session.commit()
@@ -104,11 +125,13 @@ class TestFetchAndStoreAllChannelVideosTask:
         # Verify videos were created
         from app.db.crud.crud_video import get_videos
 
-        videos = await get_videos(db_session, channel_id=sample_channel.id)
+        videos = await get_videos(
+            db_session, owner_id=TEST_OWNER_ID, channel_id=sample_channel.id
+        )
         assert len(videos) == 2
         mock_ctx["redis"].enqueue_job.assert_called_once_with(
             "sync_channel_playlists_task",
-            owner_id="test-user",
+            owner_id=TEST_OWNER_ID,
             channel_id=sample_channel.id,
         )
 
@@ -271,7 +294,7 @@ class TestFetchAndStoreAllChannelVideosTask:
         mock_youtube_api.videos_list_async.assert_not_called()
         mock_ctx["redis"].enqueue_job.assert_called_once_with(
             "sync_channel_playlists_task",
-            owner_id="test-user",
+            owner_id=TEST_OWNER_ID,
             channel_id=sample_channel.id,
         )
 
@@ -617,7 +640,9 @@ class TestCreateAndUpdateVideos:
         # Verify video was created with parsed duration (630 seconds)
         from app.db.crud.crud_video import get_videos
 
-        videos = await get_videos(db_session, id="video_1", first=True)
+        videos = await get_videos(
+            db_session, owner_id=TEST_OWNER_ID, id="video_1", first=True
+        )
         assert videos.duration_seconds == 630
 
     async def test_create_and_update_classifies_shorts(
@@ -660,8 +685,12 @@ class TestCreateAndUpdateVideos:
         # Verify classification
         from app.db.crud.crud_video import get_videos
 
-        short_video = await get_videos(db_session, id="short_video", first=True)
-        regular_video = await get_videos(db_session, id="regular_video", first=True)
+        short_video = await get_videos(
+            db_session, owner_id=TEST_OWNER_ID, id="short_video", first=True
+        )
+        regular_video = await get_videos(
+            db_session, owner_id=TEST_OWNER_ID, id="regular_video", first=True
+        )
 
         assert short_video.is_short is True  # Short duration + #shorts tag
         assert regular_video.is_short is False  # Long duration
@@ -695,5 +724,7 @@ class TestCreateAndUpdateVideos:
         # Verify no videos were created (invalid item was skipped)
         from app.db.crud.crud_video import get_videos
 
-        videos = await get_videos(db_session, channel_id=sample_channel.id)
+        videos = await get_videos(
+            db_session, owner_id=TEST_OWNER_ID, channel_id=sample_channel.id
+        )
         assert len(videos) == 0

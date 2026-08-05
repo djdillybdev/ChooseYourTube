@@ -3,6 +3,7 @@ from app.services import subscription_import_service
 
 
 CHANNEL_ID = "UC" + "r" * 22
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
 
 
 def test_csv_upload_returns_preview_and_owner_scoped_detail(test_client):
@@ -47,7 +48,7 @@ async def test_oauth_denial_consumes_state_and_redirects_to_failed_import(
     test_client, db_session
 ):
     record, state = await subscription_import_service.create_oauth_import(
-        db_session, owner_id="test-user"
+        db_session, owner_id=TEST_OWNER_ID
     )
     response = test_client.get(
         f"/imports/youtube/oauth/callback?state={state}&error=access_denied",

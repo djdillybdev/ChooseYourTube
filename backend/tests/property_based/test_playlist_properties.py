@@ -5,21 +5,66 @@ Tests that playlist position management maintains critical invariants
 using concrete test cases.
 """
 
-import pytest
-import pytest_asyncio
 from datetime import datetime, timezone
 
+import pytest
+import pytest_asyncio
+
 from app.db.crud.crud_playlist import (
-    set_playlist_videos,
-    add_video_to_playlist,
-    remove_video_from_playlist,
-    move_video_in_playlist,
-    get_playlist_video_ids,
-    bulk_add_videos_to_playlist,
+    add_video_to_playlist as _add_video_to_playlist,
+    bulk_add_videos_to_playlist as _bulk_add_videos_to_playlist,
+    get_playlist_video_ids as _get_playlist_video_ids,
+    move_video_in_playlist as _move_video_in_playlist,
+    remove_video_from_playlist as _remove_video_from_playlist,
+    set_playlist_videos as _set_playlist_videos,
 )
-from app.db.models.playlist import Playlist
 from app.db.models.channel import Channel
+from app.db.models.playlist import Playlist
 from app.db.models.video import Video
+
+TEST_OWNER_ID = "00000000-0000-0000-0000-000000000001"
+
+
+async def set_playlist_videos(db_session, playlist_id, video_ids):
+    return await _set_playlist_videos(
+        db_session, playlist_id, video_ids, owner_id=TEST_OWNER_ID
+    )
+
+
+async def add_video_to_playlist(db_session, playlist_id, video_id, position=None):
+    return await _add_video_to_playlist(
+        db_session,
+        playlist_id,
+        video_id,
+        owner_id=TEST_OWNER_ID,
+        position=position,
+    )
+
+
+async def remove_video_from_playlist(db_session, playlist_id, video_id):
+    return await _remove_video_from_playlist(
+        db_session, playlist_id, video_id, TEST_OWNER_ID
+    )
+
+
+async def move_video_in_playlist(db_session, playlist_id, video_id, position):
+    return await _move_video_in_playlist(
+        db_session,
+        playlist_id,
+        video_id,
+        position,
+        owner_id=TEST_OWNER_ID,
+    )
+
+
+async def get_playlist_video_ids(db_session, playlist_id):
+    return await _get_playlist_video_ids(db_session, playlist_id, TEST_OWNER_ID)
+
+
+async def bulk_add_videos_to_playlist(db_session, playlist_id, video_ids):
+    return await _bulk_add_videos_to_playlist(
+        db_session, playlist_id, video_ids, owner_id=TEST_OWNER_ID
+    )
 
 
 @pytest_asyncio.fixture
@@ -30,6 +75,7 @@ async def inv_channel(db_session):
         handle="invtest",
         title="Invariant Test Channel",
         uploads_playlist_id="UU_inv",
+        owner_id=TEST_OWNER_ID,
     )
     db_session.add(channel)
     await db_session.commit()
@@ -44,6 +90,7 @@ async def inv_playlist(db_session):
         id="PL_inv",
         name="Invariant Test Playlist",
         is_system=False,
+        owner_id=TEST_OWNER_ID,
     )
     db_session.add(playlist)
     await db_session.commit()

@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal, overload
 from sqlalchemy import select, func, delete, insert, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
 from ..models.playlist import Playlist
 from ..models.video import Video
 from ..models.association_tables import playlist_videos
@@ -22,6 +23,47 @@ def _dedupe_video_ids_keep_first(video_ids: list[str]) -> list[str]:
         seen.add(vid)
         unique_ids.append(vid)
     return unique_ids
+
+
+async def _shift_positions(
+    db: AsyncSession,
+    playlist_id: str,
+    owner_id: str,
+    condition: ColumnElement[bool],
+    delta: int,
+) -> None:
+    """Shift selected rows without transiently violating unique positions."""
+    uid = user_uuid(owner_id)
+    video_ids = list(
+        (
+            await db.scalars(
+                select(playlist_videos.c.video_id).where(
+                    playlist_videos.c.user_id == uid,
+                    playlist_videos.c.playlist_id == playlist_id,
+                    condition,
+                )
+            )
+        ).all()
+    )
+    if not video_ids:
+        return
+
+    offset = 1_000_000_000
+    selected = (
+        playlist_videos.c.user_id == uid,
+        playlist_videos.c.playlist_id == playlist_id,
+        playlist_videos.c.video_id.in_(video_ids),
+    )
+    await db.execute(
+        update(playlist_videos)
+        .where(*selected)
+        .values(position=playlist_videos.c.position + offset)
+    )
+    await db.execute(
+        update(playlist_videos)
+        .where(*selected)
+        .values(position=playlist_videos.c.position - offset + delta)
+    )
 
 
 @overload
@@ -325,14 +367,12 @@ async def add_video_to_playlist(
         position = (await get_max_position(db, playlist_id, owner_id=owner_id)) + 1
     else:
         # Shift existing items at >= position down
-        await db.execute(
-            update(playlist_videos)
-            .where(
-                playlist_videos.c.playlist_id == playlist_id,
-                playlist_videos.c.user_id == user_uuid(owner_id),
-                playlist_videos.c.position >= position,
-            )
-            .values(position=playlist_videos.c.position + 1)
+        await _shift_positions(
+            db,
+            playlist_id,
+            owner_id,
+            playlist_videos.c.position >= position,
+            1,
         )
 
     await db.execute(
@@ -374,14 +414,12 @@ async def remove_video_from_playlist(
     )
 
     # Compact: shift items after removed position up by 1
-    await db.execute(
-        update(playlist_videos)
-        .where(
-            playlist_videos.c.playlist_id == playlist_id,
-            playlist_videos.c.user_id == user_uuid(owner_id),
-            playlist_videos.c.position > removed_position,
-        )
-        .values(position=playlist_videos.c.position - 1)
+    await _shift_positions(
+        db,
+        playlist_id,
+        owner_id,
+        playlist_videos.c.position > removed_position,
+        -1,
     )
 
     await db.commit()
@@ -413,27 +451,23 @@ async def _move_video(
 
     if old_position < new_position:
         # Moving down: shift items between old+1..new up by 1
-        await db.execute(
-            update(playlist_videos)
-            .where(
-                playlist_videos.c.playlist_id == playlist_id,
-                playlist_videos.c.user_id == user_uuid(owner_id),
-                playlist_videos.c.position > old_position,
-                playlist_videos.c.position <= new_position,
-            )
-            .values(position=playlist_videos.c.position - 1)
+        await _shift_positions(
+            db,
+            playlist_id,
+            owner_id,
+            (playlist_videos.c.position > old_position)
+            & (playlist_videos.c.position <= new_position),
+            -1,
         )
     else:
         # Moving up: shift items between new..old-1 down by 1
-        await db.execute(
-            update(playlist_videos)
-            .where(
-                playlist_videos.c.playlist_id == playlist_id,
-                playlist_videos.c.user_id == user_uuid(owner_id),
-                playlist_videos.c.position >= new_position,
-                playlist_videos.c.position < old_position,
-            )
-            .values(position=playlist_videos.c.position + 1)
+        await _shift_positions(
+            db,
+            playlist_id,
+            owner_id,
+            (playlist_videos.c.position >= new_position)
+            & (playlist_videos.c.position < old_position),
+            1,
         )
 
     # Place video at new position
@@ -518,14 +552,12 @@ async def bulk_add_videos_to_playlist(
         ) + 1
     else:
         # Shift existing items at >= start_position
-        await db.execute(
-            update(playlist_videos)
-            .where(
-                playlist_videos.c.playlist_id == playlist_id,
-                playlist_videos.c.user_id == user_uuid(owner_id),
-                playlist_videos.c.position >= start_position,
-            )
-            .values(position=playlist_videos.c.position + len(video_ids))
+        await _shift_positions(
+            db,
+            playlist_id,
+            owner_id,
+            playlist_videos.c.position >= start_position,
+            len(video_ids),
         )
 
     # Deduplicate video_ids preserving order (keep last occurrence)

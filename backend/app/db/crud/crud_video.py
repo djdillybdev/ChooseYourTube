@@ -10,6 +10,7 @@ from ..models.user_state import UserChannel, UserVideoState
 from ..models.video import Video
 from ..tenancy import user_uuid
 from ...schemas.video import VideoCreate
+from .crud_base import _validate_order_by_field, _validate_pagination
 
 RELEVANCE_ORDER_BY = "relevance"
 
@@ -87,15 +88,26 @@ def _apply_filters(
         query = query.where(Video.duration_seconds <= max_duration_seconds)
     if q and q.strip():
         pattern = f"%{q.strip().lower()}%"
-        tagged = select(video_tags.c.video_id).join(
-            Tag,
-            (Tag.user_id == video_tags.c.user_id) & (Tag.id == video_tags.c.tag_id),
-        ).where(video_tags.c.user_id == uid, func.lower(Tag.name).like(pattern))
+        tagged = (
+            select(1)
+            .select_from(video_tags)
+            .join(
+                Tag,
+                (Tag.user_id == video_tags.c.user_id)
+                & (Tag.id == video_tags.c.tag_id),
+            )
+            .where(
+                video_tags.c.user_id == uid,
+                video_tags.c.video_id == Video.id,
+                func.lower(Tag.name).like(pattern),
+            )
+            .exists()
+        )
         query = query.where(
             or_(
                 func.lower(Video.title).like(pattern),
                 func.lower(func.coalesce(Video.description, "")).like(pattern),
-                Video.id.in_(tagged),
+                tagged,
             )
         )
     return query
@@ -159,6 +171,18 @@ async def get_videos(
     first: bool = False,
     **kwargs: Any,
 ) -> list[Video] | Video | None:
+    if kwargs:
+        raise ValueError(f"Invalid filter field: {next(iter(kwargs))}")
+    _validate_pagination(limit, offset)
+    if order_direction not in ("asc", "desc"):
+        raise ValueError("order_direction must be 'asc' or 'desc'")
+    if isinstance(id, list) and not id:
+        raise ValueError("Filter list for 'id' cannot be empty")
+    if isinstance(channel_id, list) and not channel_id:
+        raise ValueError("Filter list for 'channel_id' cannot be empty")
+    if order_by != RELEVANCE_ORDER_BY:
+        _validate_order_by_field(Video, order_by)
+
     query, uid = _base_query(owner_id)
     query = _apply_filters(
         query, uid=uid, id=id, channel_id=channel_id, is_favorited=is_favorited,

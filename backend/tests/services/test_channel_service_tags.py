@@ -7,12 +7,47 @@ Tests the update_channel service method's tag synchronization functionality.
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException
-from app.services.channel_service import update_channel
-from app.db.crud.crud_channel import create_channel, delete_channel, get_channels
-from app.db.crud.crud_tag import create_tag, get_tags
-from app.db.models.channel import Channel
-from app.db.models.tag import Tag
+from sqlalchemy import select
+
+from app.db.models.association_tables import channel_tags
+from app.services.channel_service import update_channel as _update_channel
+from app.db.crud.crud_channel import (
+    create_channel,
+    delete_channel as _delete_channel,
+    get_channels as _get_channels,
+)
+from app.db.crud.crud_tag import create_tag, get_tags as _get_tags
+from app.db.models.channel import Channel as ChannelModel
+from app.db.models.tag import Tag as TagModel
 from app.schemas.channel import ChannelUpdate
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+
+
+def Channel(**kwargs):
+    kwargs.setdefault("owner_id", TEST_OWNER_ID)
+    return ChannelModel(**kwargs)
+
+
+def Tag(**kwargs):
+    kwargs.setdefault("user_id", TEST_OWNER_ID)
+    return TagModel(**kwargs)
+
+
+async def update_channel(channel_id, payload, db_session):
+    return await _update_channel(channel_id, payload, db_session, TEST_OWNER_ID)
+
+
+async def get_channels(db_session, **kwargs):
+    return await _get_channels(db_session, owner_id=TEST_OWNER_ID, **kwargs)
+
+
+async def get_tags(db_session, **kwargs):
+    return await _get_tags(db_session, owner_id=TEST_OWNER_ID, **kwargs)
+
+
+async def delete_channel(db_session, channel):
+    return await _delete_channel(db_session, channel, TEST_OWNER_ID)
 
 
 @pytest_asyncio.fixture
@@ -214,11 +249,15 @@ class TestChannelTagRelationships:
             payload = ChannelUpdate(tag_ids=[sample_tags[0].id])
             await update_channel(created.id, payload, db_session)
 
-        # Access channels through tag relationship
-        refreshed_tag = await get_tags(db_session, id=sample_tags[0].id, first=True)
-        assert len(refreshed_tag.channels) == 3
-
-        channel_ids = {c.id for c in refreshed_tag.channels}
+        # Associations are tenant-scoped rather than exposed as a Tag relationship.
+        rows = await db_session.execute(
+            select(channel_tags.c.channel_id).where(
+                channel_tags.c.user_id == TEST_OWNER_ID,
+                channel_tags.c.tag_id == sample_tags[0].id,
+            )
+        )
+        channel_ids = set(rows.scalars())
+        assert len(channel_ids) == 3
         expected_ids = {c.id for c in channels}
         assert channel_ids == expected_ids
 
@@ -292,9 +331,14 @@ class TestChannelTagEdgeCases:
             payload = ChannelUpdate(tag_ids=[sample_tags[0].id])
             await update_channel(created.id, payload, db_session)
 
-        # Verify tag has all channels
-        refreshed_tag = await get_tags(db_session, id=sample_tags[0].id, first=True)
-        assert len(refreshed_tag.channels) == 5
+        # Verify the tenant-scoped association has all channels.
+        rows = await db_session.execute(
+            select(channel_tags.c.channel_id).where(
+                channel_tags.c.user_id == TEST_OWNER_ID,
+                channel_tags.c.tag_id == sample_tags[0].id,
+            )
+        )
+        assert len(set(rows.scalars())) == 5
 
     async def test_add_remove_add_tags_multiple_times(
         self, db_session, sample_channel, sample_tags

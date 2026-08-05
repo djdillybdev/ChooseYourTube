@@ -26,6 +26,14 @@ from app.worker import (
     startup,
 )
 
+WORKER_OWNER_ID = "30000000-0000-0000-0000-000000000099"
+
+
+def _rows_result(rows):
+    result = MagicMock()
+    result.all.return_value = rows
+    return result
+
 
 class TestWorkerSettings:
     def test_only_common_durable_runner_is_registered(self):
@@ -88,10 +96,9 @@ async def test_scheduler_handles_empty_page_and_does_not_delete_foreign_lock(
     redis = AsyncMock()
     redis.set.return_value = True
     redis.get.return_value = b"another-scheduler"
-    with patch(
-        "app.worker.crud_channel.get_channels", new=AsyncMock(return_value=[])
-    ):
-        await enqueue_channel_refreshes({"redis": redis})
+    db = mock_sessionmanager.session.return_value.__aenter__.return_value
+    db.execute.return_value = _rows_result([])
+    await enqueue_channel_refreshes({"redis": redis})
     redis.delete.assert_not_awaited()
 
 
@@ -100,21 +107,17 @@ async def test_scheduler_pages_and_enqueues_every_channel(mock_sessionmanager):
     redis = AsyncMock()
     redis.set.return_value = True
     redis.get.side_effect = lambda _key: redis.set.call_args.args[1]
-    channels = [MagicMock(id=f"channel-{i}", owner_id=f"owner-{i}") for i in range(200)]
-    final = MagicMock(id="channel-final", owner_id="owner-final")
+    channels = [(f"channel-{i}", f"owner-{i}") for i in range(200)]
+    final = ("channel-final", "owner-final")
+    db = mock_sessionmanager.session.return_value.__aenter__.return_value
+    db.execute.side_effect = [_rows_result(channels), _rows_result([final])]
 
-    with (
-        patch(
-            "app.worker.crud_channel.get_channels",
-            new=AsyncMock(side_effect=[channels, [final]]),
-        ) as get_channels,
-        patch(
-            "app.worker.sync_service.enqueue_run", new=AsyncMock()
-        ) as enqueue_run,
-    ):
+    with patch(
+        "app.worker.sync_service.enqueue_run", new=AsyncMock()
+    ) as enqueue_run:
         await enqueue_channel_refreshes({"redis": redis})
 
-    assert get_channels.await_count == 2
+    assert db.execute.await_count == 2
     assert enqueue_run.await_count == 201
     assert enqueue_run.call_args.kwargs["kind"] == SyncRunKind.CHANNEL_REFRESH
     redis.delete.assert_awaited_once()
@@ -125,24 +128,17 @@ async def test_scheduler_isolates_channel_enqueue_failure(mock_sessionmanager):
     redis = AsyncMock()
     redis.set.return_value = True
     redis.get.side_effect = lambda _key: redis.set.call_args.args[1]
-    channels = [
-        MagicMock(id="broken", owner_id="owner-1"),
-        MagicMock(id="healthy", owner_id="owner-2"),
-    ]
-    with (
-        patch(
-            "app.worker.crud_channel.get_channels",
-            new=AsyncMock(return_value=channels),
-        ),
-        patch(
-            "app.worker.sync_service.enqueue_run",
-            new=AsyncMock(side_effect=[RuntimeError("queue"), MagicMock()]),
-        ) as enqueue_run,
-    ):
-        mock_sessionmanager.session.return_value.__aenter__.return_value.is_active = False
+    channels = [("broken", "owner-1"), ("healthy", "owner-2")]
+    db = mock_sessionmanager.session.return_value.__aenter__.return_value
+    db.execute.return_value = _rows_result(channels)
+    with patch(
+        "app.worker.sync_service.enqueue_run",
+        new=AsyncMock(side_effect=[RuntimeError("queue"), MagicMock()]),
+    ) as enqueue_run:
+        db.is_active = False
         await enqueue_channel_refreshes({"redis": redis})
     assert enqueue_run.await_count == 2
-    mock_sessionmanager.session.return_value.__aenter__.return_value.rollback.assert_awaited()
+    db.rollback.assert_awaited()
 
 
 def _session_factory(db_session):
@@ -156,13 +152,13 @@ def _session_factory(db_session):
 async def _queued_channel_run(db_session, *, attempt_count: int = 0) -> SyncRun:
     channel = Channel(
         id=f"UC_worker_{attempt_count}",
-        owner_id="worker-owner",
+        owner_id=WORKER_OWNER_ID,
         handle=f"worker-{attempt_count}",
         title="Worker test",
         uploads_playlist_id=f"UU_worker_{attempt_count}",
     )
     run = SyncRun(
-        owner_id=channel.owner_id,
+        owner_id=WORKER_OWNER_ID,
         channel_id=channel.id,
         kind=SyncRunKind.CHANNEL_REFRESH.value,
         status=SyncRunStatus.QUEUED.value,
@@ -221,12 +217,12 @@ async def test_execute_sync_run_records_partial_channel_progress(db_session):
 @pytest.mark.asyncio
 async def test_execute_sync_run_marks_all_failed_import(db_session):
     import_record = SubscriptionImport(
-        owner_id="worker-owner", source="youtube_takeout_csv", status="queued"
+        owner_id=WORKER_OWNER_ID, source="youtube_takeout_csv", status="queued"
     )
     db_session.add(import_record)
     await db_session.flush()
     run = SyncRun(
-        owner_id="worker-owner",
+        owner_id=WORKER_OWNER_ID,
         subscription_import_id=import_record.id,
         kind=SyncRunKind.SUBSCRIPTION_IMPORT.value,
         status=SyncRunStatus.QUEUED.value,
@@ -302,12 +298,12 @@ async def test_execute_sync_run_stops_nonretryable_and_exhausted_failures(db_ses
 @pytest.mark.asyncio
 async def test_execute_sync_run_marks_unexpected_import_failure(db_session):
     import_record = SubscriptionImport(
-        owner_id="worker-owner", source="youtube_takeout_csv", status="queued"
+        owner_id=WORKER_OWNER_ID, source="youtube_takeout_csv", status="queued"
     )
     db_session.add(import_record)
     await db_session.flush()
     run = SyncRun(
-        owner_id="worker-owner",
+        owner_id=WORKER_OWNER_ID,
         subscription_import_id=import_record.id,
         kind=SyncRunKind.SUBSCRIPTION_IMPORT.value,
         status=SyncRunStatus.QUEUED.value,

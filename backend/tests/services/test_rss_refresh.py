@@ -12,8 +12,16 @@ from app.services.video_service import (
     _fetch_rss_bytes,
     _parse_rss_video_entries,
     _rss_video_ids,
-    refresh_latest_channel_videos_from_rss,
+    refresh_latest_channel_videos_from_rss as _refresh_latest_channel_videos_from_rss,
 )
+
+TEST_OWNER_ID = "10000000-0000-0000-0000-000000000099"
+
+
+async def refresh_latest_channel_videos_from_rss(channel_id, db_session):
+    return await _refresh_latest_channel_videos_from_rss(
+        channel_id, db_session, TEST_OWNER_ID
+    )
 
 
 @pytest.fixture
@@ -25,6 +33,7 @@ async def channel(db_session):
         uploads_playlist_id="UU_rss",
         rss_etag='"old"',
         rss_last_modified="Mon, 13 Jul 2026 10:00:00 GMT",
+        owner_id=TEST_OWNER_ID,
     )
     db_session.add(row)
     await db_session.commit()
@@ -232,7 +241,7 @@ async def test_rss_only_refresh_upserts_metadata_and_preserves_user_state(
     db_session, channel
 ):
     existing = Video(
-        owner_id="test-user",
+        owner_id=TEST_OWNER_ID,
         id="video-1",
         channel_id=channel.id,
         title="Old title",
@@ -278,7 +287,7 @@ async def test_rss_only_refresh_upserts_metadata_and_preserves_user_state(
         second = await refresh_latest_channel_videos_from_rss(channel.id, db_session)
 
     await db_session.refresh(existing)
-    created = await db_session.get(Video, ("test-user", "video-2"))
+    created = await db_session.get(Video, "video-2")
     assert first.discovered == 2
     assert first.created == 1
     assert first.updated == 1
