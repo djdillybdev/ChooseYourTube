@@ -9,11 +9,8 @@ require_root
 load_env
 
 backup_dir=${BACKUP_DIR:-/var/backups/chooseyourtube}
-retention_days=${BACKUP_RETENTION_DAYS:-14}
 [ "${backup_dir#/}" != "$backup_dir" ] && [ "$backup_dir" != "/" ] \
   || die "BACKUP_DIR must be a specific absolute directory."
-printf '%s' "$retention_days" | grep -Eq '^[1-9][0-9]*$' \
-  || die "BACKUP_RETENTION_DAYS must be a positive integer."
 
 umask 077
 mkdir -p "$backup_dir"
@@ -28,5 +25,4 @@ test -s "$temporary_file" || die "PostgreSQL produced an empty backup."
 mv "$temporary_file" "$backup_file"
 trap - EXIT HUP INT TERM
 
-find "$backup_dir" -type f -name 'chooseyourtube-*.dump' -mtime "+$retention_days" -delete
 log "Database backup written to $backup_file."

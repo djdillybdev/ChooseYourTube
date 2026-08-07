@@ -10,8 +10,10 @@ load_env
 
 [ "${CONFIRM:-}" = "RESTORE" ] \
   || die "Restore is destructive. Re-run with CONFIRM=RESTORE BACKUP_FILE=/absolute/path.dump."
-[ -n "${BACKUP_FILE:-}" ] && [ -f "$BACKUP_FILE" ] \
+[ -n "${BACKUP_FILE:-}" ] && [ "${BACKUP_FILE#/}" != "$BACKUP_FILE" ] && [ -f "$BACKUP_FILE" ] \
   || die "BACKUP_FILE must name an existing PostgreSQL custom-format dump."
+compose exec -T postgres pg_restore --list < "$BACKUP_FILE" >/dev/null \
+  || die "BACKUP_FILE is not a readable PostgreSQL custom-format dump."
 
 compose stop caddy frontend backend worker
 compose exec -T postgres sh -c \

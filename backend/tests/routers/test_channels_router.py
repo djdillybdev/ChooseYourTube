@@ -117,7 +117,9 @@ class TestChannelsRouter:
         assert data["channel"]["id"] == "UC_new_channel"
         assert data["channel"]["handle"] == "newchannel"  # @ stripped
         assert data["initial_sync"]["status"] == "queued"
-        assert data["initial_sync"]["owner_id"] == "10000000-0000-0000-0000-000000000099"
+        assert (
+            data["initial_sync"]["owner_id"] == "10000000-0000-0000-0000-000000000099"
+        )
 
         # Verify only initial video fetch is enqueued from the route.
         # Playlist sync is chained by the worker task after ingestion completes.
@@ -365,6 +367,36 @@ class TestChannelsRouter:
         assert data["channel_id"] == "UC_refresh_test"
         assert data["kind"] == "channel_refresh"
         assert data["status"] == "queued"
+
+    async def test_refresh_all_channels_enqueues_owned_channels(
+        self, test_client, db_session
+    ):
+        from app.db.models.channel import Channel
+
+        db_session.add_all(
+            [
+                Channel(
+                    id=f"UC_refresh_all_{index}",
+                    handle=f"refresh-all-{index}",
+                    title=f"Refresh all {index}",
+                    uploads_playlist_id=f"UU_refresh_all_{index}",
+                    owner_id=TEST_OWNER_ID,
+                )
+                for index in range(2)
+            ]
+        )
+        await db_session.commit()
+
+        response = test_client.post("/channels/refresh-all")
+
+        assert response.status_code == 202
+        data = response.json()
+        assert data["total_channels"] == data["queued_channels"] == 2
+        assert data["failed_channels"] == 0
+        assert [item["channel_id"] for item in data["items"]] == [
+            "UC_refresh_all_0",
+            "UC_refresh_all_1",
+        ]
 
     async def test_list_channel_playlists(self, test_client, db_session):
         """Test GET /channels/{id}/playlists returns channel-sourced playlists."""

@@ -9,7 +9,7 @@ from ..schemas.channel import (
 from ..schemas.playlist import ChannelPlaylistOut
 from ..schemas.base import PaginatedResponse
 from ..services import channel_service, channel_playlist_service, sync_service
-from ..schemas.sync_run import SyncRunKind, SyncRunOut
+from ..schemas.sync_run import BulkChannelRefreshOut, SyncRunKind, SyncRunOut
 from ..core.config import settings
 from ..core.errors import ApplicationError
 
@@ -146,6 +146,29 @@ async def refresh_channel(
         channel_id=channel_id,
     )
     return sync_service.to_sync_run_out(run)
+
+
+@router.post(
+    "/refresh-all",
+    response_model=BulkChannelRefreshOut,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def refresh_all_channels(
+    db_session: DBSessionDep,
+    redis: ArqDep,
+    user: CurrentUserDep,
+) -> BulkChannelRefreshOut:
+    if not settings.BACKGROUND_JOBS_ENABLED:
+        raise ApplicationError(
+            "FEATURE_DISABLED_IN_DEMO",
+            "External refresh is disabled in the demo; data is maintained daily.",
+            403,
+        )
+    return await sync_service.enqueue_all_channel_refreshes(
+        db_session,
+        redis,
+        owner_id=str(user.id),
+    )
 
 
 @router.get(

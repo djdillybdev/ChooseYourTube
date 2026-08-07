@@ -66,6 +66,23 @@ Google OAuth is optional. Google Takeout CSV import works without OAuth credenti
 [deployment guide](docs/deployment.md) covers production configuration, HTTPS, backups, restores,
 upgrades, release images, and troubleshooting.
 
+### Host on an Oracle Cloud VM
+
+For an Ubuntu 24.04 Oracle instance, point your domain at the VM, allow inbound TCP 80 and 443 in
+OCI, then run:
+
+```bash
+git clone https://github.com/djdillybdev/ChooseYourTube.git
+cd ChooseYourTube
+cp deploy/oracle/oracle.env.example .env
+# Edit the four required values in .env.
+sudo ./chooseyourtube setup
+```
+
+The command installs Docker when needed, generates private secrets, builds the cloned checkout, runs
+migrations, starts the stack, and provisions HTTPS. See the [Oracle Cloud guide](docs/oracle-vm.md)
+for the one-time OCI networking steps and day-two commands.
+
 ## Hosted demo
 
 The [shared demo](https://chooseyourtube-demo-tawny.vercel.app) requires no credentials. It supports
@@ -153,8 +170,6 @@ Report vulnerabilities through the private process in [SECURITY.md](SECURITY.md)
 
 - [Deployment and self-hosting](docs/deployment.md)
 - [Oracle Cloud VM deployment](docs/oracle-vm.md)
-- [Oracle Cloud end-to-end deployment runbook](docs/oracle-ansible-runbook.md)
-- [Ansible deployment and operations](deploy/ansible/README.md)
 - [Architecture](docs/architecture.md)
 - [Engineering decisions](docs/engineering-decisions.md)
 - [Contributing](CONTRIBUTING.md)

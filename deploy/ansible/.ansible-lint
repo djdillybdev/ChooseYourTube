@@ -1,5 +1,0 @@
----
-profile: production
-skip_list:
-  # These variables intentionally form one shared public contract across roles.
-  - var-naming[no-role-prefix]

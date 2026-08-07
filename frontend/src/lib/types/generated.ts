@@ -253,6 +253,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	'/channels/refresh-all': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Refresh All Channels */
+		post: operations['refresh_all_channels_channels_refresh_all_post'];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	'/channels/{channel_id}': {
 		parameters: {
 			query?: never;
@@ -1080,6 +1097,28 @@ export interface components {
 			 * Format: binary
 			 */
 			file: string;
+		};
+		/** BulkChannelRefreshItemOut */
+		BulkChannelRefreshItemOut: {
+			/** Channel Id */
+			channel_id: string;
+			status: components['schemas']['SyncRunStatus'];
+			/**
+			 * Sync Run Id
+			 * Format: uuid
+			 */
+			sync_run_id: string;
+		};
+		/** BulkChannelRefreshOut */
+		BulkChannelRefreshOut: {
+			/** Failed Channels */
+			failed_channels: number;
+			/** Items */
+			items: components['schemas']['BulkChannelRefreshItemOut'][];
+			/** Queued Channels */
+			queued_channels: number;
+			/** Total Channels */
+			total_channels: number;
 		};
 		/** CandidateSelectionUpdate */
 		CandidateSelectionUpdate: {
@@ -3519,6 +3558,89 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+			/** @description Safe API error */
+			400: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			401: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			403: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			422: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+			/** @description Safe API error */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['APIErrorBody'];
+				};
+			};
+		};
+	};
+	refresh_all_channels_channels_refresh_all_post: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Successful Response */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					'application/json': components['schemas']['BulkChannelRefreshOut'];
+				};
 			};
 			/** @description Safe API error */
 			400: {

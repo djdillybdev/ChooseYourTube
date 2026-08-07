@@ -8,9 +8,8 @@ SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 . "$SCRIPT_DIR/common.sh"
 load_env
 
-compose pull
 compose run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-compose up -d --wait --remove-orphans
+compose up -d --build --wait --remove-orphans
 "$SCRIPT_DIR/health.sh"
 
-log "ChooseYourTube ${CHOOSEYOURTUBE_VERSION} is deployed at https://${APP_DOMAIN}."
+log "ChooseYourTube is deployed at https://${APP_DOMAIN}."

@@ -85,6 +85,27 @@ test('manual refresh becomes visible and failed activity can be retried', async 
 	await expect(page.getByRole('table').getByText('Sync queued', { exact: true })).toBeVisible();
 });
 
+test('inbox refresh all tracks channel synchronization to completion', async ({
+	page,
+	context
+}) => {
+	await context.addCookies([
+		{
+			name: 'cyt_access_token',
+			value: 'e2e-access',
+			url: 'http://localhost:4173',
+			httpOnly: true,
+			sameSite: 'Lax'
+		}
+	]);
+
+	await page.goto('/inbox');
+	await page.getByRole('button', { name: 'Refresh all' }).click();
+	await expect(page.getByRole('button', { name: /Refreshing 0\/1/ })).toBeVisible();
+	await expect(page.getByText('1 channel synchronized.')).toBeVisible({ timeout: 15_000 });
+	await expect(page.getByRole('button', { name: 'Refresh all' })).toBeEnabled();
+});
+
 test('logout protects browser Back history', async ({ page, context }) => {
 	await page.goto('/login');
 	await authenticate(context);

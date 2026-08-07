@@ -7,13 +7,13 @@ SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 
 require_root
 
-if [ ! -f "$ENV_FILE" ]; then
-  cp "$REPO_DIR/deploy/oracle/oracle.env.example" "$ENV_FILE"
-fi
+[ -f "$ENV_FILE" ] || die "Missing $ENV_FILE. Copy deploy/oracle/oracle.env.example to .env and edit it first."
 chmod 600 "$ENV_FILE"
 
 auth_secret=$(awk -F= '$1 == "AUTH_SECRET" { sub(/^AUTH_SECRET=/, ""); print; exit }' "$ENV_FILE")
-if [ -z "$auth_secret" ] || [ "$auth_secret" = "replace-me" ]; then
+if [ -z "$auth_secret" ] \
+  || [ "$auth_secret" = "replace-me" ] \
+  || [ "$auth_secret" = "change-me-in-production-with-at-least-32-characters" ]; then
   replace_env_value AUTH_SECRET "$(openssl rand -hex 32)"
 fi
 
@@ -22,6 +22,4 @@ if [ -z "$postgres_password" ] || [ "$postgres_password" = "replace-me" ]; then
   replace_env_value POSTGRES_PASSWORD "$(openssl rand -hex 24)"
 fi
 
-log "Production environment prepared at $ENV_FILE."
-log "Edit its domain, email, release version, and YouTube API key before deploying."
-log "Add invited users with deploy/oracle/bin/allowlist.sh add EMAIL."
+log "Production secrets are prepared in $ENV_FILE."

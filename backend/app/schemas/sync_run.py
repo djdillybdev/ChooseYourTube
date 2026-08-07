@@ -64,6 +64,19 @@ class SyncRunOut(BaseSchema):
         return value
 
 
+class BulkChannelRefreshItemOut(BaseSchema):
+    channel_id: str
+    sync_run_id: uuid.UUID
+    status: SyncRunStatus
+
+
+class BulkChannelRefreshOut(BaseSchema):
+    total_channels: int
+    queued_channels: int
+    failed_channels: int
+    items: list[BulkChannelRefreshItemOut]
+
+
 class LatestSyncSummary(BaseSchema):
     id: uuid.UUID
     kind: SyncRunKind

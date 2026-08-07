@@ -1,20 +1,26 @@
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from arq.connections import ArqRedis
+from arq.constants import job_key_prefix
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ApplicationError
 from app.db.crud import crud_sync_run
 from app.db.models.sync_run import SyncRun
+from app.db.models.user_state import UserChannel
 from app.db.tenancy import user_uuid
 from app.schemas.base import PaginatedResponse
 from app.schemas.sync_run import (
+    BulkChannelRefreshItemOut,
+    BulkChannelRefreshOut,
     LatestSyncSummary,
     SyncRunKind,
     SyncRunOut,
@@ -29,7 +35,11 @@ RETRYABLE_ERROR_CODES = {
     "YOUTUBE_RATE_LIMITED",
     "YOUTUBE_UPSTREAM_ERROR",
     "QUEUE_UNAVAILABLE",
+    "WORKER_INTERRUPTED",
 }
+# Manual bulk refreshes should feel immediate, but a small spread avoids sending
+# every channel feed/API request at exactly the same time.
+BULK_REFRESH_SPREAD_SECONDS = 10
 
 
 @dataclass(slots=True)
@@ -140,22 +150,26 @@ async def enqueue_run(
         channel_id=channel_id,
         subscription_import_id=subscription_import_id,
     )
-    if not created:
+    if not created and run.status != SyncRunStatus.QUEUED.value:
         return run
 
     try:
-        if defer_seconds:
-            await redis.enqueue_job(
-                "execute_sync_run",
-                str(run.id),
-                _job_id=str(run.id),
-                _defer_by=defer_seconds,
-            )
-        else:
-            await redis.enqueue_job(
-                "execute_sync_run", str(run.id), _job_id=str(run.id)
-            )
+        await reenqueue_run(
+            redis,
+            run,
+            defer_seconds=defer_seconds,
+            promote_existing=not created and defer_seconds <= 0,
+        )
     except Exception as exc:
+        if not created:
+            if raise_on_enqueue_failure:
+                raise ApplicationError(
+                    "QUEUE_UNAVAILABLE",
+                    "Synchronization is temporarily unavailable.",
+                    status_code=503,
+                    retryable=True,
+                ) from exc
+            return run
         run.status = SyncRunStatus.FAILED.value
         run.error_code = "QUEUE_UNAVAILABLE"
         run.error_message = "The synchronization queue is temporarily unavailable."
@@ -180,6 +194,84 @@ async def enqueue_run(
             ) from exc
         return run
     return run
+
+
+async def reenqueue_run(
+    redis: ArqRedis,
+    run: SyncRun,
+    *,
+    defer_seconds: int = 0,
+    promote_existing: bool = False,
+) -> bool:
+    """Idempotently ensure a queued sync run has an ARQ job."""
+    if defer_seconds > 0:
+        job = await redis.enqueue_job(
+            "execute_sync_run",
+            str(run.id),
+            _job_id=str(run.id),
+            _defer_by=defer_seconds,
+        )
+    else:
+        job = await redis.enqueue_job(
+            "execute_sync_run", str(run.id), _job_id=str(run.id)
+        )
+    if (
+        job is None
+        and promote_existing
+        and await redis.exists(job_key_prefix + str(run.id))
+    ):
+        await redis.zadd(
+            redis.default_queue_name,
+            {str(run.id): int(time.time() * 1000) + defer_seconds * 1000},
+            lt=True,
+        )
+    return job is not None
+
+
+async def enqueue_all_channel_refreshes(
+    db_session: AsyncSession,
+    redis: ArqRedis,
+    *,
+    owner_id: str,
+) -> BulkChannelRefreshOut:
+    channel_ids = list(
+        await db_session.scalars(
+            select(UserChannel.channel_id)
+            .where(UserChannel.user_id == user_uuid(owner_id))
+            .order_by(UserChannel.channel_id)
+        )
+    )
+    total = len(channel_ids)
+    items: list[BulkChannelRefreshItemOut] = []
+    queued = failed = 0
+    for index, channel_id in enumerate(channel_ids):
+        defer_seconds = index * BULK_REFRESH_SPREAD_SECONDS // max(total, 1)
+        run = await enqueue_run(
+            db_session,
+            redis,
+            owner_id=owner_id,
+            kind=SyncRunKind.CHANNEL_REFRESH,
+            channel_id=channel_id,
+            defer_seconds=defer_seconds,
+            raise_on_enqueue_failure=False,
+        )
+        if run.status == SyncRunStatus.FAILED.value:
+            failed += 1
+        else:
+            queued += 1
+        items.append(
+            BulkChannelRefreshItemOut(
+                channel_id=channel_id,
+                sync_run_id=run.id,
+                status=SyncRunStatus(run.status),
+            )
+        )
+    return BulkChannelRefreshOut(
+        total_channels=total,
+        queued_channels=queued,
+        failed_channels=failed,
+        items=items,
+    )
 
 
 async def list_runs(
@@ -213,9 +305,7 @@ async def list_runs(
 async def get_owned_run(
     db_session: AsyncSession, sync_run_id: uuid.UUID, owner_id: str
 ) -> SyncRun:
-    run = await crud_sync_run.get_sync_run(
-        db_session, sync_run_id, owner_id=owner_id
-    )
+    run = await crud_sync_run.get_sync_run(db_session, sync_run_id, owner_id=owner_id)
     if run is None:
         raise ApplicationError("NOT_FOUND", "Synchronization run not found.", 404)
     return run

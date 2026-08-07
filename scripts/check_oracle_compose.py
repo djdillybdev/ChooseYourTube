@@ -15,10 +15,9 @@ def main() -> None:
     environment = os.environ | {
         "APP_DOMAIN": "tube.example.com",
         "ACME_EMAIL": "admin@example.com",
-        "CHOOSEYOURTUBE_VERSION": "1.0.0",
-        "CADDY_VERSION": "2.11.4",
         "REGISTRATION_EMAIL_ALLOWLIST": "invited@example.com",
-        "REGISTRATION_ALLOWLIST_REQUIRED": "true",
+        "AUTH_SECRET": "ci-auth-secret-with-at-least-thirty-two-characters",
+        "POSTGRES_PASSWORD": "ci-postgres-password-with-24-chars",
     }
     command = [
         "docker",
@@ -27,8 +26,6 @@ def main() -> None:
         ".env.example",
         "-f",
         "compose.yaml",
-        "-f",
-        "compose.release.yaml",
         "-f",
         "deploy/oracle/compose.yaml",
         "config",
@@ -54,13 +51,19 @@ def main() -> None:
         (port["target"], int(port["published"])) for port in services["caddy"]["ports"]
     }
     assert caddy_ports == {(80, 80), (443, 443)}
-    assert services["backend"]["image"].endswith(":1.0.0")
-    assert services["frontend"]["image"].endswith(":1.0.0")
+    assert services["backend"].get("build"), "backend must build from the checkout"
+    assert services["frontend"].get("build"), "frontend must build from the checkout"
     assert services["caddy"]["image"] == "caddy:2.11.4-alpine"
     assert services["caddy"]["volumes"], "Caddy certificate storage must be persistent"
     backend_environment = services["backend"]["environment"]
     assert backend_environment["REGISTRATION_EMAIL_ALLOWLIST"] == "invited@example.com"
     assert backend_environment["REGISTRATION_ALLOWLIST_REQUIRED"] == "true"
+    assert backend_environment["APP_ENV"] == "production"
+    assert backend_environment["API_ORIGIN"] == "https://tube.example.com"
+    assert backend_environment["API_CORS_ORIGINS"] == "https://tube.example.com"
+    assert services["frontend"]["environment"]["ORIGIN"] == "https://tube.example.com"
+    for service_name in ("postgres", "redis", "backend", "worker", "frontend", "caddy"):
+        assert services[service_name]["restart"] == "unless-stopped"
     print("Oracle Compose security contract passed")
 
 

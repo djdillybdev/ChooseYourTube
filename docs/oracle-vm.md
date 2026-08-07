@@ -1,193 +1,182 @@
-# Deploy on an Oracle Cloud VM
+# Host ChooseYourTube on an Oracle Cloud VM
 
-This guide installs the full ChooseYourTube stack on an Ubuntu 24.04 Oracle Cloud Infrastructure
-(OCI) VM. It uses published `amd64` or `arm64` images, Caddy-managed HTTPS, private Docker networking,
-systemd startup, resource limits, and scheduled PostgreSQL backups.
+This is the supported production path for an Ubuntu 24.04 Oracle Cloud Infrastructure (OCI) VM. It
+builds the cloned checkout, runs the complete application with Docker Compose, and serves it through
+Caddy-managed HTTPS.
 
-For the complete first-time path—from release publication and OCI console setup through Ansible,
-registration, and login from a Mac—use the [end-to-end deployment runbook](oracle-ansible-runbook.md).
+The setup command supports both Ampere `aarch64` and `x86_64`. Use at least 6 GB RAM and 10 GB free
+disk space so the VM can build the frontend and backend while the database and worker are running.
 
-## Requirements
+## 1. Prepare Oracle networking
 
-- Ubuntu 24.04 on `x86_64` or Ampere `aarch64`;
-- at least 2 GB RAM and 10 GB free persistent storage;
-- a reserved public IP and a domain whose `A` record points to it;
-- TCP ports 80 and 443 available on the VM;
-- an exact ChooseYourTube release version;
-- a YouTube Data API key.
+Use a stable or reserved public IPv4 address. In the Network Security Group attached to the VM, or
+in its subnet security list, add these stateful ingress rules:
 
-The default limits permit the containers to use up to approximately 3.3 GB combined. Limits are
-ceilings, not reservations. Review them in `.env` if the VM has constrained resources.
+| Source | Protocol | Destination port | Purpose |
+| --- | --- | --- | --- |
+| `0.0.0.0/0` | TCP | `80` | Certificate validation and HTTPS redirect |
+| `0.0.0.0/0` | TCP | `443` | Public HTTPS application |
+| your administrator CIDR | TCP | `22` | SSH administration |
 
-## Prepare OCI networking
+Do not open ports 5173, 8000, 5432, or 6379. The production Compose configuration publishes only
+Caddy; the frontend, API, PostgreSQL, and Redis stay on the private Docker network.
 
-Assign a [reserved public IP](https://docs.oracle.com/en-us/iaas/Content/Network/Tasks/managingpublicIPs.htm)
-to the VM and point the deployment domain to it. Add stateful ingress rules to the VM's Network
-Security Group for:
+Do not enable UFW on an OCI Ubuntu platform image. Oracle warns that UFW can remove essential
+platform firewall rules and prevent a successful reboot. Preserve the image's existing host rules
+and use the OCI network rules above. If the image has custom host firewall rules, arrange equivalent
+allowances for ports 80 and 443 without replacing Oracle's essential rules.
 
-| Source                       | Protocol | Destination | Purpose                            |
-| ---------------------------- | -------- | ----------- | ---------------------------------- |
-| `0.0.0.0/0`                  | TCP      | 80          | ACME validation and HTTPS redirect |
-| `0.0.0.0/0`                  | TCP      | 443         | Application HTTPS                  |
-| trusted administrator ranges | TCP      | 22          | SSH administration                 |
+## 2. Confirm DuckDNS
 
-Apply equivalent allowances to the host firewall without replacing existing rules. OCI networking
-and the host firewall are both enforced. Do not open 5173, 8000, 5432, or 6379; production Compose
-removes the application port publications and exposes only Caddy.
-
-## Install and configure
-
-### Ansible-managed installation
-
-For repeatable deployment and day-two management from a macOS or Linux controller, use the
-[Ansible control layer](../deploy/ansible/README.md). It configures an existing Ubuntu VM, manages the
-registration allowlist and exact release, performs pre-upgrade backups, verifies health, fetches
-off-host backups, and provides a guarded restore workflow. OCI networking, the reserved IP, and DNS
-remain prerequisites.
-
-### Manual installation
-
-Clone an exact release into the fixed systemd path. Replace `v1.0.0` with the intended release:
+Set the DuckDNS IPv4 address for `chooseyourtube.duckdns.org` to the VM's public IPv4 address. From
+your laptop or desktop, confirm it before deploying:
 
 ```bash
-sudo git clone --branch v1.0.0 --depth 1 \
-  https://github.com/djdillybdev/ChooseYourTube.git /opt/chooseyourtube
-cd /opt/chooseyourtube
-sudo ./deploy/oracle/bin/install-host.sh
-sudo ./deploy/oracle/bin/configure.sh
-sudoedit /opt/chooseyourtube/.env
+dig +short A chooseyourtube.duckdns.org
 ```
 
-Set these required values in `.env`:
+The result must be the VM address. Remove a stale `AAAA` record unless the VM is intentionally
+configured and secured for IPv6. Caddy needs correct DNS and public access to ports 80 and 443 to
+obtain and renew the HTTPS certificate.
+
+## 3. Clone and configure ChooseYourTube
+
+SSH into the VM as its normal Ubuntu account, then run:
+
+```bash
+git clone https://github.com/djdillybdev/ChooseYourTube.git
+cd ChooseYourTube
+cp deploy/oracle/oracle.env.example .env
+nano .env
+```
+
+Set the four required values:
 
 ```env
-CHOOSEYOURTUBE_VERSION=1.0.0
-CADDY_VERSION=2.11.4
-APP_DOMAIN=tube.example.com
-ACME_EMAIL=admin@example.com
-API_ORIGIN=https://tube.example.com
-API_CORS_ORIGINS=https://tube.example.com
-YOUTUBE_API_KEY=your-key
+APP_DOMAIN=chooseyourtube.duckdns.org
+ACME_EMAIL=you@example.com
+YOUTUBE_API_KEY=your-youtube-data-api-key
+REGISTRATION_EMAIL_ALLOWLIST=you@example.com
 ```
 
-`configure.sh` generates `AUTH_SECRET` and a URL-safe PostgreSQL password without displaying them.
-The environment file must remain owned by root with mode `0600`.
+The allowlist accepts comma-separated complete email addresses and is case-insensitive. Only those
+addresses can create accounts. Do not add spaces around commas.
 
-Registration is enabled by default and the Oracle profile requires a non-empty allowlist.
-`REGISTRATION_EMAIL_ALLOWLIST` accepts comma-separated complete addresses and compares them
-case-insensitively:
+Google Takeout CSV import works without OAuth. Leave the OAuth values disabled for the first setup.
 
-```env
-REGISTRATION_EMAIL_ALLOWLIST=person@example.com,second@example.com
+## 4. Set up and host the application
+
+Run the one setup command from the repository root:
+
+```bash
+sudo ./chooseyourtube setup
 ```
 
-The root-only helper updates the list without displaying or changing other secrets:
+The command:
+
+1. validates Ubuntu, architecture, memory, disk, configuration, DNS, and ports;
+2. installs Docker Engine and the Compose plugin from Docker's official Ubuntu repository when
+   needed;
+3. generates the authentication and PostgreSQL secrets and protects `.env` with mode `0600`;
+4. builds the current checkout and validates the Caddy configuration;
+5. applies database migrations and starts the application; and
+6. verifies internal services and the public HTTPS endpoint.
+
+The first build and certificate request can take several minutes. When setup reports success, open:
+
+<https://chooseyourtube.duckdns.org>
+
+Register using an address in `REGISTRATION_EMAIL_ALLOWLIST`. The same URL works from laptops,
+desktops, and phones on any network.
+
+Docker is enabled at boot, and the long-running containers use `unless-stopped` restart policies.
+No separate application systemd service is installed.
+
+## Operations
+
+Run management commands from the cloned repository:
+
+```bash
+sudo ./chooseyourtube status
+sudo ./chooseyourtube logs
+sudo ./chooseyourtube restart
+sudo ./chooseyourtube stop
+sudo ./chooseyourtube start
+```
+
+`stop` preserves PostgreSQL, Redis, and Caddy volumes. After a reboot, use `status` to verify the
+stack and its public endpoint.
+
+### Update the application
+
+Pull code as the normal repository owner, then rerun the same idempotent setup command:
+
+```bash
+git pull --ff-only
+sudo ./chooseyourtube setup
+```
+
+The command rebuilds changed images, reapplies migrations, and preserves secrets and named volumes.
+Create a backup before an update that includes database migrations.
+
+### Back up and restore
+
+Create a manual PostgreSQL backup:
+
+```bash
+sudo ./chooseyourtube backup
+```
+
+The command prints the absolute path of the new custom-format dump. Backups are not scheduled or
+automatically deleted. Copy important dumps off the VM.
+
+Restore replaces the current database. Test restores on a separate installation whenever possible:
+
+```bash
+sudo CONFIRM=RESTORE ./chooseyourtube restore \
+  /var/backups/chooseyourtube/chooseyourtube-20260807T120000Z.dump
+```
+
+Restore validates the dump, stops application writers, recreates PostgreSQL, reapplies migrations,
+restarts the stack, and runs health checks.
+
+### Change allowed registration addresses
+
+The helper updates the root-only `.env` without printing other secrets:
 
 ```bash
 sudo ./deploy/oracle/bin/allowlist.sh list
 sudo ./deploy/oracle/bin/allowlist.sh add another@example.com
-sudo ./deploy/oracle/bin/allowlist.sh remove person@example.com
+sudo ./deploy/oracle/bin/allowlist.sh remove another@example.com
+sudo ./chooseyourtube restart
 ```
 
-Wildcards and domain-only entries are not supported. The deployment preflight and application startup
-both reject enabled registration with an empty list. To stop onboarding after the invited users have
-registered, set `REGISTRATION_ENABLED=false`; existing users can still sign in. Removing an address
-from the list prevents a new registration but does not deactivate an existing account.
-
-After changing either registration setting, apply it with:
-
-```bash
-sudo systemctl restart chooseyourtube
-```
-
-## Deploy and enable boot startup
-
-Wait for DNS to resolve to the VM, then run:
-
-```bash
-cd /opt/chooseyourtube
-sudo ./deploy/oracle/bin/deploy.sh
-sudo ./deploy/oracle/bin/install-systemd.sh
-```
-
-The deployment validates configuration, architecture, memory, disk, DNS, ports, Compose, and Caddy;
-pulls the exact release; runs database migrations; waits for healthy containers; and checks the
-public HTTPS endpoint. It does not build images or change firewall rules.
-
-Useful operations:
-
-```bash
-sudo systemctl status chooseyourtube
-sudo systemctl reload chooseyourtube
-sudo make oracle-health
-sudo make oracle-logs
-sudo make oracle-backup
-sudo systemctl list-timers chooseyourtube-backup.timer
-```
-
-After a VM reboot, verify `systemctl status chooseyourtube`, `sudo make oracle-health`, and the public
-site. Caddy stores certificates in its named Docker volume and renews them automatically.
+Removing an address prevents future registration but does not deactivate an existing account.
 
 ## Optional Google OAuth import
 
-Google Takeout CSV import needs no OAuth configuration. To enable one-time Google subscription
-discovery, create a Google web OAuth client and set:
+To enable one-time Google subscription discovery, create a Google web OAuth client and add:
 
 ```env
 YOUTUBE_OAUTH_ENABLED=true
 GOOGLE_CLIENT_ID=your-client-id
 GOOGLE_CLIENT_SECRET=your-client-secret
-GOOGLE_REDIRECT_URI=https://tube.example.com/imports/youtube/oauth/callback
+GOOGLE_REDIRECT_URI=https://chooseyourtube.duckdns.org/imports/youtube/oauth/callback
 ```
 
-Register that exact HTTPS URI in Google Cloud, then reload the service. Caddy proxies only this exact
-callback path directly to FastAPI; all normal browser API traffic continues through SvelteKit.
-
-## Backups and restore
-
-The systemd timer creates a custom-format PostgreSQL dump daily at 03:15 UTC plus a random delay of
-up to 30 minutes. Dumps are mode `0600` under `/var/backups/chooseyourtube` and are retained for 14
-days by default. Cleanup runs only after a new non-empty dump succeeds.
-
-Change `BACKUP_DIR` or `BACKUP_RETENTION_DAYS` in `.env` if needed. These backups remain on the VM and
-do not protect against loss of the VM or its storage. Copy important dumps to another system.
-
-Test a restore on a separate installation. Restoring replaces the current database:
-
-```bash
-cd /opt/chooseyourtube
-sudo CONFIRM=RESTORE \
-  BACKUP_FILE=/var/backups/chooseyourtube/chooseyourtube-20260720T031500Z.dump \
-  ./deploy/oracle/bin/restore.sh
-```
-
-The restore stops writers and Caddy, recreates the configured database, restores the dump, applies
-current migrations, restarts the stack, and runs health checks.
-
-## Upgrade and rollback
-
-Read the target release notes and migration notes, then pass an exact version:
-
-```bash
-cd /opt/chooseyourtube
-sudo ./deploy/oracle/bin/upgrade.sh 1.1.0
-```
-
-The upgrade refuses floating versions, creates a backup, records the new version, pulls its images,
-runs migrations, and verifies health. It does not automatically roll back after a failed migration.
-An older image can be restarted only when it understands the migrated schema; otherwise restore the
-pre-upgrade dump with the matching source release.
-
-Deployment scripts themselves are versioned with the repository. For a later release, update the
-checkout to the matching tag before running its upgrade script.
+Register that exact HTTPS redirect URI in Google Cloud, then run `sudo ./chooseyourtube restart`.
+Caddy sends only that callback path directly to FastAPI; normal browser API traffic stays behind
+SvelteKit.
 
 ## Troubleshooting
 
-- Run `sudo ./deploy/oracle/bin/preflight.sh` for configuration and capacity errors.
-- Check `sudo docker compose --env-file .env -f compose.yaml -f compose.release.yaml -f deploy/oracle/compose.yaml ps`.
-- Read `sudo journalctl -u chooseyourtube` and `sudo make oracle-logs`.
-- If TLS issuance fails, confirm public DNS and both OCI and host firewall rules for ports 80/443.
-- If the worker is unhealthy, inspect Redis connectivity and `BACKGROUND_JOBS_ENABLED=true`.
-- Inspect pressure with `free -h`, `df -h`, and `sudo docker stats` before raising resource limits.
-- Use `ALLOW_LOW_RESOURCE=true` only to bypass the preflight minimum; it does not reduce the stack's
-  actual requirements.
+- If setup says the domain does not resolve, correct DuckDNS and wait for DNS propagation.
+- If public HTTPS fails, verify both OCI ingress rules and confirm no other process uses ports 80 or
+  443 with `sudo ss -ltnp`.
+- Run `sudo ./chooseyourtube status` for service readiness and `sudo ./chooseyourtube logs` for
+  migration, Caddy, worker, or authentication errors.
+- Check capacity with `free -h`, `df -h`, and `sudo docker stats`. `ALLOW_LOW_RESOURCE=true` bypasses
+  preflight only; it does not reduce actual build or runtime requirements.
+- If Docker is already installed without a compatible Compose plugin, setup stops without replacing
+  the existing engine. Resolve that installation explicitly, then rerun setup.
+- Never use `docker compose down --volumes` unless permanently deleting application data is intended.

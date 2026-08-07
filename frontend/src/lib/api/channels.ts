@@ -8,6 +8,7 @@ import type {
 	ChannelCreate,
 	ChannelUpdate,
 	ChannelFilters,
+	BulkChannelRefreshOut,
 	PaginatedResponse
 } from '$lib/types/api';
 
@@ -78,6 +79,13 @@ export class ChannelsAPI {
 		this.client.invalidateCache('videos/');
 
 		return channel;
+	}
+
+	/**
+	 * Refresh every channel followed by the current user.
+	 */
+	async refreshAll(): Promise<BulkChannelRefreshOut> {
+		return this.client.post<BulkChannelRefreshOut>('/channels/refresh-all');
 	}
 
 	/**

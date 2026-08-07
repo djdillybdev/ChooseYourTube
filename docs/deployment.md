@@ -133,8 +133,8 @@ Do not expose PostgreSQL or Redis. Keep `.env`, backups, API keys, and OAuth cre
 by administrators. Use a unique `AUTH_SECRET` for each installation and retain off-host database
 backups.
 
-For an HTTPS deployment on an Oracle Cloud Ubuntu VM, including Caddy, systemd, resource limits, and
-scheduled backups, follow [Deploy on an Oracle Cloud VM](oracle-vm.md).
+For a source-built HTTPS deployment on an Oracle Cloud Ubuntu VM, including Caddy and a single setup
+command, follow [Deploy on an Oracle Cloud VM](oracle-vm.md).
 
 After changing the public origin, recreate the affected containers:
 
@@ -229,6 +229,12 @@ migration, API, worker, and frontend services can start. The API exposes `/healt
 
 The worker writes a heartbeat to Redis. Confirm that Redis is healthy, `BACKGROUND_JOBS_ENABLED=true`,
 and the worker can read the same `REDIS_URL` as the API.
+
+The worker also reconciles PostgreSQL synchronization records with Redis when it starts and every
+five minutes. Queued runs whose ARQ payloads expired are recreated with the same job ID. A run left in
+progress for more than ten minutes is marked failed with `WORKER_INTERRUPTED`; the next scheduled or
+manual channel refresh creates its replacement. Check for `sync_reconciliation_completed` and
+`sync_reconciliation_enqueue_failed` in worker logs when diagnosing queue drift.
 
 ### Registration or refresh is disabled
 

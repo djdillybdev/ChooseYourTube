@@ -16,6 +16,10 @@ services:
     logging: *bounded-logging
 
   migrate:
+    environment:
+      APP_ENV: production
+      APP_MODE: full
+      API_ORIGIN: https://${APP_DOMAIN}
     cpus: ${MIGRATE_CPUS:-1.0}
     mem_limit: ${MIGRATE_MEMORY_LIMIT:-768m}
     logging: *bounded-logging
@@ -24,21 +28,35 @@ services:
     cpus: ${BACKEND_CPUS:-0.75}
     mem_limit: ${BACKEND_MEMORY_LIMIT:-768m}
     ports: !override []
+    environment:
+      APP_ENV: production
+      APP_MODE: full
+      REGISTRATION_ENABLED: "true"
+      REGISTRATION_ALLOWLIST_REQUIRED: "true"
+      API_ORIGIN: https://${APP_DOMAIN}
+      API_CORS_ORIGINS: https://${APP_DOMAIN}
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}
     logging: *bounded-logging
 
   worker:
     cpus: ${WORKER_CPUS:-1.0}
     mem_limit: ${WORKER_MEMORY_LIMIT:-768m}
     logging: *bounded-logging
+    environment:
+      APP_ENV: production
+      APP_MODE: full
+      API_ORIGIN: https://${APP_DOMAIN}
 
   frontend:
     cpus: ${FRONTEND_CPUS:-0.50}
     mem_limit: ${FRONTEND_MEMORY_LIMIT:-384m}
     ports: !override []
+    environment:
+      ORIGIN: https://${APP_DOMAIN}
     logging: *bounded-logging
 
   caddy:
-    image: caddy:${CADDY_VERSION:-2.11.4}-alpine
+    image: caddy:2.11.4-alpine
     pull_policy: missing
     restart: unless-stopped
     depends_on:

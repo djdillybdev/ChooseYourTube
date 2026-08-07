@@ -41,6 +41,13 @@ import when their subscription list changes.
 ## Make background jobs durable and idempotent
 
 Each background command creates a PostgreSQL sync record and uses its UUID as the queue job ID.
+The worker reconciles queued records with Redis at startup and every five minutes. Re-enqueueing the
+same UUID is idempotent, so a Redis restart or an expired ARQ payload cannot leave a channel
+permanently queued. Runs left in progress beyond the worker timeout and safety margin are recorded as
+`WORKER_INTERRUPTED`; channel refreshes are replaced by the next scheduled or manual refresh, while
+other retryable work can use the existing retry endpoint.
+An explicit manual request promotes an already-deferred job to run immediately without changing its
+durable sync-run ID.
 Active-run deduplication, unique source identifiers, and upserts make duplicate delivery safe. Retry
 policy distinguishes temporary failures from invalid configuration, authorization, and quota limits.
 

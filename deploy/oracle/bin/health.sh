@@ -21,7 +21,7 @@ compose ps --status running --quiet caddy | grep -q .
 attempt=0
 until curl --fail --silent --show-error --max-time 10 "https://${APP_DOMAIN}/api/meta" >/dev/null; do
   attempt=$((attempt + 1))
-  [ "$attempt" -lt 12 ] || die "Public HTTPS health check failed for https://${APP_DOMAIN}/api/meta."
+  [ "$attempt" -lt 36 ] || die "Public HTTPS health check failed for https://${APP_DOMAIN}/api/meta. Check DuckDNS and OCI ingress for ports 80 and 443."
   sleep 5
 done
 

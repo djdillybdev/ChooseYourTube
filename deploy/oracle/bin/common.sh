@@ -20,18 +20,32 @@ require_root() {
 
 load_env() {
   [ -f "$ENV_FILE" ] || die "Missing $ENV_FILE; run deploy/oracle/bin/configure.sh first."
-  set -a
-  # The deployment environment is root-owned and contains shell-compatible KEY=value pairs.
-  # shellcheck disable=SC1090
-  . "$ENV_FILE"
-  set +a
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      ''|'#'*) continue ;;
+    esac
+    key=${line%%=*}
+    value=${line#*=}
+    [ "$line" != "$key" ] || die "Invalid line in $ENV_FILE: expected KEY=value."
+    printf '%s' "$key" | grep -Eq '^[A-Z][A-Z0-9_]*$' \
+      || die "Invalid environment key in $ENV_FILE: $key"
+    case "$value" in
+      *[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./:@,%+=-]*)
+        die "$key contains unsupported characters; do not quote values or include spaces."
+        ;;
+    esac
+    export "$key=$value"
+  done < "$ENV_FILE"
+  COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-chooseyourtube}
+  POSTGRES_USER=${POSTGRES_USER:-chooseyourtube}
+  POSTGRES_DB=${POSTGRES_DB:-chooseyourtube}
+  export COMPOSE_PROJECT_NAME POSTGRES_USER POSTGRES_DB
 }
 
 compose() {
   docker compose \
     --env-file "$ENV_FILE" \
     -f "$REPO_DIR/compose.yaml" \
-    -f "$REPO_DIR/compose.release.yaml" \
     -f "$REPO_DIR/deploy/oracle/compose.yaml" \
     "$@"
 }

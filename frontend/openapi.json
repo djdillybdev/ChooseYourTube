@@ -158,6 +158,51 @@
 				"title": "Body_upload_takeout_csv_imports_subscriptions_csv_post",
 				"type": "object"
 			},
+			"BulkChannelRefreshItemOut": {
+				"properties": {
+					"channel_id": {
+						"title": "Channel Id",
+						"type": "string"
+					},
+					"status": {
+						"$ref": "#/components/schemas/SyncRunStatus"
+					},
+					"sync_run_id": {
+						"format": "uuid",
+						"title": "Sync Run Id",
+						"type": "string"
+					}
+				},
+				"required": ["channel_id", "sync_run_id", "status"],
+				"title": "BulkChannelRefreshItemOut",
+				"type": "object"
+			},
+			"BulkChannelRefreshOut": {
+				"properties": {
+					"failed_channels": {
+						"title": "Failed Channels",
+						"type": "integer"
+					},
+					"items": {
+						"items": {
+							"$ref": "#/components/schemas/BulkChannelRefreshItemOut"
+						},
+						"title": "Items",
+						"type": "array"
+					},
+					"queued_channels": {
+						"title": "Queued Channels",
+						"type": "integer"
+					},
+					"total_channels": {
+						"title": "Total Channels",
+						"type": "integer"
+					}
+				},
+				"required": ["total_channels", "queued_channels", "failed_channels", "items"],
+				"title": "BulkChannelRefreshOut",
+				"type": "object"
+			},
 			"CandidateSelectionUpdate": {
 				"properties": {
 					"candidate_ids": {
@@ -4397,6 +4442,100 @@
 					}
 				],
 				"summary": "Create Channel",
+				"tags": ["Channels"]
+			}
+		},
+		"/channels/refresh-all": {
+			"post": {
+				"operationId": "refresh_all_channels_channels_refresh_all_post",
+				"responses": {
+					"202": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/BulkChannelRefreshOut"
+								}
+							}
+						},
+						"description": "Successful Response"
+					},
+					"400": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"401": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"403": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"404": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"409": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"422": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					},
+					"500": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/APIErrorBody"
+								}
+							}
+						},
+						"description": "Safe API error"
+					}
+				},
+				"security": [
+					{
+						"OAuth2PasswordBearer": []
+					}
+				],
+				"summary": "Refresh All Channels",
 				"tags": ["Channels"]
 			}
 		},

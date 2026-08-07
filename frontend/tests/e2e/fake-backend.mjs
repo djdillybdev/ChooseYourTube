@@ -55,6 +55,8 @@ const baseRun = {
 	updated_at: '2026-07-14T10:00:00Z'
 };
 let refreshPolls = 0;
+let bulkRefreshPolls = 0;
+const bulkRunId = '00000000-0000-0000-0000-000000000006';
 let initialSyncPolls = 0;
 let failedStatus = 'failed';
 const importId = '10000000-0000-0000-0000-000000000001';
@@ -147,7 +149,24 @@ createServer(async (request, response) => {
 			is_verified: true
 		});
 	if (path === '/folders/tree') return send(response, 200, []);
-	if (path === '/app/bootstrap')
+	if (path === '/app/bootstrap') {
+		if (bulkRefreshPolls > 0) {
+			bulkRefreshPolls += 1;
+			channels = channels.map((item) => ({
+				...item,
+				latest_sync: {
+					id: bulkRunId,
+					kind: 'channel_refresh',
+					status: bulkRefreshPolls > 2 ? 'succeeded' : 'running',
+					error_code: null,
+					error_message: null,
+					retryable: false,
+					queued_at: '2026-07-14T10:00:00Z',
+					finished_at: bulkRefreshPolls > 2 ? '2026-07-14T10:01:00Z' : null,
+					last_successful_at: bulkRefreshPolls > 2 ? '2026-07-14T10:01:00Z' : null
+				}
+			}));
+		}
 		return send(response, 200, {
 			current_user: {
 				id: 'user-1',
@@ -189,6 +208,7 @@ createServer(async (request, response) => {
 				}
 			}
 		});
+	}
 	if (path === '/categories' && request.method === 'GET') return send(response, 200, categories);
 	if (path === '/categories' && request.method === 'POST') {
 		const body = await readBody(request);
@@ -434,6 +454,33 @@ createServer(async (request, response) => {
 			id: '00000000-0000-0000-0000-000000000001',
 			kind: 'channel_refresh',
 			status: 'queued'
+		});
+	}
+	if (path === '/channels/refresh-all' && request.method === 'POST') {
+		bulkRefreshPolls = 1;
+		channels = channels.map((item) => ({
+			...item,
+			latest_sync: {
+				id: bulkRunId,
+				kind: 'channel_refresh',
+				status: 'queued',
+				error_code: null,
+				error_message: null,
+				retryable: false,
+				queued_at: '2026-07-14T10:00:00Z',
+				finished_at: null,
+				last_successful_at: null
+			}
+		}));
+		return send(response, 202, {
+			total_channels: channels.length,
+			queued_channels: channels.length,
+			failed_channels: 0,
+			items: channels.map((item) => ({
+				channel_id: item.id,
+				sync_run_id: bulkRunId,
+				status: 'queued'
+			}))
 		});
 	}
 	if (path === '/sync-runs/00000000-0000-0000-0000-000000000001') {

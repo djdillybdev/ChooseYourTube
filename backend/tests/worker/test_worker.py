@@ -2,7 +2,7 @@
 
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import arq
@@ -16,12 +16,16 @@ from app.schemas.sync_run import SyncRunKind, SyncRunStatus
 from app.services.sync_service import SyncProgress
 from app.worker import (
     WorkerSettings,
+    JOB_TIMEOUT_SECONDS,
     RETRY_DELAYS_SECONDS,
+    STALE_RUNNING_AFTER_SECONDS,
     _execute_kind,
+    _reconciliation_defer_seconds,
     _stagger_seconds,
     enqueue_channel_refreshes,
     execute_sync_run,
     maintain_worker_heartbeat,
+    reconcile_sync_runs,
     shutdown,
     startup,
 )
@@ -40,23 +44,28 @@ class TestWorkerSettings:
         assert WorkerSettings.functions == [execute_sync_run]
 
     def test_scheduler_runs_hourly_in_utc(self):
-        assert len(WorkerSettings.cron_jobs) == 1
+        assert len(WorkerSettings.cron_jobs) == 2
         assert WorkerSettings.cron_jobs[0].minute == 0
+        assert WorkerSettings.cron_jobs[1].minute == set(range(0, 60, 5))
         assert WorkerSettings.timezone == timezone.utc
 
     def test_runtime_limits(self):
         assert WorkerSettings.max_jobs == 10
         assert WorkerSettings.max_tries == 4
         assert WorkerSettings.keep_result == 0
+        assert WorkerSettings.job_timeout == JOB_TIMEOUT_SECONDS == 300
+        assert STALE_RUNNING_AFTER_SECONDS == 600
         assert RETRY_DELAYS_SECONDS == (60, 300, 1800)
 
 
 @pytest.mark.asyncio
 async def test_startup_and_shutdown_manage_pool_and_heartbeat(mock_arq_pool):
     ctx = {}
-    await startup(ctx)
+    with patch("app.worker.reconcile_sync_runs", new=AsyncMock()) as reconcile:
+        await startup(ctx)
     assert ctx["redis"] == mock_arq_pool
     assert "heartbeat_task" in ctx
+    reconcile.assert_awaited_once_with(ctx)
     await shutdown(ctx)
 
 
@@ -68,7 +77,9 @@ async def test_shutdown_without_started_resources_is_safe():
 @pytest.mark.asyncio
 async def test_heartbeat_writes_identity_and_ttl():
     redis = AsyncMock()
-    with patch("app.worker.asyncio.sleep", new=AsyncMock(side_effect=asyncio.CancelledError)):
+    with patch(
+        "app.worker.asyncio.sleep", new=AsyncMock(side_effect=asyncio.CancelledError)
+    ):
         with pytest.raises(asyncio.CancelledError):
             await maintain_worker_heartbeat({"redis": redis})
     redis.set.assert_awaited_once()
@@ -79,6 +90,22 @@ def test_stagger_is_stable_and_bounded():
     first = _stagger_seconds("owner", "channel")
     assert first == _stagger_seconds("owner", "channel")
     assert 0 <= first < 50 * 60
+
+
+def test_reconciliation_defer_respects_retry_before_channel_stagger():
+    now = datetime.now(timezone.utc)
+    run = MagicMock(
+        next_retry_at=now + timedelta(seconds=31),
+        kind=SyncRunKind.CHANNEL_REFRESH.value,
+        channel_id="channel",
+        owner_id="owner",
+    )
+    assert _reconciliation_defer_seconds(run, now) == 31
+
+    run.next_retry_at = now - timedelta(seconds=1)
+    assert _reconciliation_defer_seconds(run, now) == _stagger_seconds(
+        "owner", "channel"
+    )
 
 
 @pytest.mark.asyncio
@@ -112,9 +139,7 @@ async def test_scheduler_pages_and_enqueues_every_channel(mock_sessionmanager):
     db = mock_sessionmanager.session.return_value.__aenter__.return_value
     db.execute.side_effect = [_rows_result(channels), _rows_result([final])]
 
-    with patch(
-        "app.worker.sync_service.enqueue_run", new=AsyncMock()
-    ) as enqueue_run:
+    with patch("app.worker.sync_service.enqueue_run", new=AsyncMock()) as enqueue_run:
         await enqueue_channel_refreshes({"redis": redis})
 
     assert db.execute.await_count == 2
@@ -147,6 +172,61 @@ def _session_factory(db_session):
         yield db_session
 
     return session
+
+
+@pytest.mark.asyncio
+async def test_reconciliation_repairs_queued_and_fails_stale_running_import(
+    db_session,
+):
+    queued = await _queued_channel_run(db_session)
+    import_record = SubscriptionImport(
+        owner_id=WORKER_OWNER_ID,
+        source="youtube_takeout_csv",
+        status="running",
+    )
+    db_session.add(import_record)
+    await db_session.flush()
+    stale = SyncRun(
+        owner_id=WORKER_OWNER_ID,
+        subscription_import_id=import_record.id,
+        kind=SyncRunKind.SUBSCRIPTION_IMPORT.value,
+        status=SyncRunStatus.RUNNING.value,
+        updated_at=datetime.now(timezone.utc)
+        - timedelta(seconds=STALE_RUNNING_AFTER_SECONDS + 1),
+    )
+    db_session.add(stale)
+    await db_session.commit()
+
+    redis = AsyncMock()
+    redis.set.return_value = True
+    redis.get.side_effect = lambda _key: redis.set.call_args.args[1]
+    redis.enqueue_job.return_value = MagicMock()
+    with patch("app.worker.sessionmanager.session", new=_session_factory(db_session)):
+        await reconcile_sync_runs({"redis": redis})
+
+    await db_session.refresh(queued)
+    await db_session.refresh(stale)
+    await db_session.refresh(import_record)
+    assert queued.status == SyncRunStatus.QUEUED.value
+    redis.enqueue_job.assert_awaited_once_with(
+        "execute_sync_run",
+        str(queued.id),
+        _job_id=str(queued.id),
+        _defer_by=_stagger_seconds(str(queued.owner_id), queued.channel_id),
+    )
+    assert stale.status == SyncRunStatus.FAILED.value
+    assert stale.error_code == "WORKER_INTERRUPTED"
+    assert import_record.status == "failed"
+    assert import_record.error_code == "WORKER_INTERRUPTED"
+    redis.delete.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_reconciliation_skips_when_lock_is_held():
+    redis = AsyncMock()
+    redis.set.return_value = False
+    await reconcile_sync_runs({"redis": redis})
+    redis.get.assert_not_awaited()
 
 
 async def _queued_channel_run(db_session, *, attempt_count: int = 0) -> SyncRun:
@@ -284,7 +364,9 @@ async def test_execute_sync_run_stops_nonretryable_and_exhausted_failures(db_ses
         ),
     ):
         with (
-            patch("app.worker.sessionmanager.session", new=_session_factory(db_session)),
+            patch(
+                "app.worker.sessionmanager.session", new=_session_factory(db_session)
+            ),
             patch("app.worker.YouTubeAPI"),
             patch("app.worker._execute_kind", new=AsyncMock(side_effect=error)),
         ):
@@ -313,7 +395,9 @@ async def test_execute_sync_run_marks_unexpected_import_failure(db_session):
     with (
         patch("app.worker.sessionmanager.session", new=_session_factory(db_session)),
         patch("app.worker.YouTubeAPI"),
-        patch("app.worker._execute_kind", new=AsyncMock(side_effect=RuntimeError("boom"))),
+        patch(
+            "app.worker._execute_kind", new=AsyncMock(side_effect=RuntimeError("boom"))
+        ),
     ):
         with pytest.raises(RuntimeError, match="boom"):
             await execute_sync_run({"redis": AsyncMock()}, str(run.id))
@@ -373,11 +457,15 @@ async def test_execute_kind_dispatches_all_supported_work(db_session):
         initial.assert_awaited_once()
 
         channel_run.kind = SyncRunKind.CHANNEL_REFRESH.value
-        assert (await _execute_kind(channel_run, db_session, youtube, redis)).updated == 1
+        assert (
+            await _execute_kind(channel_run, db_session, youtube, redis)
+        ).updated == 1
         refresh.assert_awaited_once()
 
         channel_run.kind = SyncRunKind.PLAYLIST_SYNC.value
-        assert (await _execute_kind(channel_run, db_session, youtube, redis)).skipped == 1
+        assert (
+            await _execute_kind(channel_run, db_session, youtube, redis)
+        ).skipped == 1
 
         channel_run.kind = SyncRunKind.SUBSCRIPTION_IMPORT.value
         channel_run.subscription_import_id = MagicMock()

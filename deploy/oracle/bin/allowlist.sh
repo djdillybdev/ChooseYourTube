@@ -60,7 +60,7 @@ case "$action" in
         updated=${current:+$current,}$email
         replace_env_value REGISTRATION_EMAIL_ALLOWLIST "$updated"
         log "Added $email to the registration allowlist."
-        log "Run 'systemctl reload chooseyourtube' to apply the change."
+        log "Run 'sudo ./chooseyourtube restart' to apply the change."
         ;;
     esac
     ;;
@@ -82,14 +82,10 @@ case "$action" in
       '
     )
     [ "$updated" != "$current" ] || die "$email is not allowlisted."
-    if [ -z "$updated" ] \
-      && [ "${REGISTRATION_ENABLED:-true}" = "true" ] \
-      && [ "${REGISTRATION_ALLOWLIST_REQUIRED:-false}" = "true" ]; then
-      die "Disable registration before removing the final allowlisted email."
-    fi
+    [ -n "$updated" ] || die "At least one registration email must remain allowlisted."
     replace_env_value REGISTRATION_EMAIL_ALLOWLIST "$updated"
     log "Removed $email from the registration allowlist."
-    log "Run 'systemctl reload chooseyourtube' to apply the change."
+    log "Run 'sudo ./chooseyourtube restart' to apply the change."
     ;;
   *) usage ;;
 esac

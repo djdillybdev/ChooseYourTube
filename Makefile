@@ -1,13 +1,13 @@
 COMPOSE := docker compose
 ENV_FILE := .env
 
-.PHONY: build up down logs ps migrate quickstart test health backup restore release-up release-pull dev-build dev-up dev-down dev-logs dev-ps oracle-config oracle-deploy oracle-health oracle-logs oracle-backup oracle-restore
+.PHONY: build up down logs ps migrate quickstart test health backup restore release-up release-pull dev-build dev-up dev-down dev-logs dev-ps oracle-config oracle-setup oracle-deploy oracle-health oracle-logs oracle-backup oracle-restore
 
 build:
 	$(COMPOSE) --env-file $(ENV_FILE) build
 
 up:
-	$(COMPOSE) --env-file $(ENV_FILE) up -d --build
+	$(COMPOSE) --env-file $(ENV_FILE) up -d --build --scale worker=3
 
 down:
 	$(COMPOSE) --env-file $(ENV_FILE) down
@@ -62,19 +62,22 @@ dev-ps:
 	$(COMPOSE) --env-file $(ENV_FILE) --profile dev ps
 
 oracle-config:
-	$(COMPOSE) --env-file $(ENV_FILE) -f compose.yaml -f compose.release.yaml -f deploy/oracle/compose.yaml config --quiet
+	$(COMPOSE) --env-file $(ENV_FILE) -f compose.yaml -f deploy/oracle/compose.yaml config --quiet
+
+oracle-setup:
+	./chooseyourtube setup
 
 oracle-deploy:
-	./deploy/oracle/bin/deploy.sh
+	./chooseyourtube restart
 
 oracle-health:
-	./deploy/oracle/bin/health.sh
+	./chooseyourtube status
 
 oracle-logs:
-	$(COMPOSE) --env-file $(ENV_FILE) -f compose.yaml -f compose.release.yaml -f deploy/oracle/compose.yaml logs -f
+	./chooseyourtube logs
 
 oracle-backup:
-	./deploy/oracle/bin/backup.sh
+	./chooseyourtube backup
 
 oracle-restore:
-	./deploy/oracle/bin/restore.sh
+	./chooseyourtube restore $(BACKUP_FILE)

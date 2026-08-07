@@ -7,7 +7,7 @@ __pycache__/
 .vercel
 .env*
 
-# Local Ansible inventory, encrypted secrets, and fetched database backups.
+# Ignore legacy Ansible production material so old local secrets never become untracked.
 deploy/ansible/inventory/production/hosts.yml
 deploy/ansible/inventory/production/group_vars/chooseyourtube/main.yml
 deploy/ansible/inventory/production/group_vars/chooseyourtube/vault.yml

@@ -201,6 +201,9 @@ async def test_enqueue_supports_defer_deduplication_and_queue_failure(
         "execute_sync_run", str(deferred.id), _job_id=str(deferred.id), _defer_by=42
     )
     mock_arq_redis.enqueue_job.reset_mock()
+    mock_arq_redis.enqueue_job.return_value = None
+    mock_arq_redis.exists = AsyncMock(return_value=True)
+    mock_arq_redis.zadd = AsyncMock()
     duplicate = await sync_service.enqueue_run(
         db_session,
         mock_arq_redis,
@@ -209,7 +212,12 @@ async def test_enqueue_supports_defer_deduplication_and_queue_failure(
         kind=SyncRunKind.CHANNEL_REFRESH,
     )
     assert duplicate.id == deferred.id
-    mock_arq_redis.enqueue_job.assert_not_awaited()
+    mock_arq_redis.enqueue_job.assert_awaited_once_with(
+        "execute_sync_run", str(deferred.id), _job_id=str(deferred.id)
+    )
+    mock_arq_redis.zadd.assert_awaited_once()
+    assert mock_arq_redis.zadd.call_args.args[1].keys() == {str(deferred.id)}
+    assert mock_arq_redis.zadd.call_args.kwargs == {"lt": True}
 
     deferred.status = SyncRunStatus.SUCCEEDED.value
     await db_session.commit()
@@ -231,6 +239,90 @@ async def test_enqueue_supports_defer_deduplication_and_queue_failure(
         kind=SyncRunKind.PLAYLIST_SYNC.value,
     )
     assert failed is None
+
+
+@pytest.mark.asyncio
+async def test_existing_queued_run_survives_reenqueue_failure(
+    db_session, channel, mock_arq_redis
+):
+    run, _ = await sync_service.create_or_get_active_run(
+        db_session,
+        owner_id=OWNER_1,
+        channel_id=channel.id,
+        kind=SyncRunKind.CHANNEL_REFRESH,
+    )
+    mock_arq_redis.enqueue_job.side_effect = ConnectionError("queue offline")
+
+    with pytest.raises(sync_service.ApplicationError) as error:
+        await sync_service.enqueue_run(
+            db_session,
+            mock_arq_redis,
+            owner_id=OWNER_1,
+            channel_id=channel.id,
+            kind=SyncRunKind.CHANNEL_REFRESH,
+        )
+
+    await db_session.refresh(run)
+    assert error.value.code == "QUEUE_UNAVAILABLE"
+    assert run.status == SyncRunStatus.QUEUED.value
+    assert run.error_code is None
+
+
+@pytest.mark.asyncio
+async def test_reenqueue_promotes_existing_job_to_requested_defer(
+    channel, mock_arq_redis
+):
+    run = SyncRun(
+        owner_id=OWNER_1,
+        channel_id=channel.id,
+        kind=SyncRunKind.CHANNEL_REFRESH.value,
+        status=SyncRunStatus.QUEUED.value,
+    )
+    mock_arq_redis.enqueue_job.return_value = None
+    mock_arq_redis.exists = AsyncMock(return_value=True)
+    mock_arq_redis.zadd = AsyncMock()
+    mock_arq_redis.default_queue_name = "arq:queue"
+
+    with patch("app.services.sync_service.time.time", return_value=1000):
+        created = await sync_service.reenqueue_run(
+            mock_arq_redis,
+            run,
+            defer_seconds=30,
+            promote_existing=True,
+        )
+
+    assert created is False
+    mock_arq_redis.zadd.assert_awaited_once_with(
+        "arq:queue", {str(run.id): 1_030_000}, lt=True
+    )
+
+
+@pytest.mark.asyncio
+async def test_enqueue_all_channel_refreshes_is_owned_and_evenly_staggered(
+    db_session, mock_arq_redis
+):
+    channels = [
+        Channel(
+            id=f"UC_bulk_{index}",
+            owner_id=owner,
+            title=f"Bulk {index}",
+            uploads_playlist_id=f"UU_bulk_{index}",
+        )
+        for index, owner in enumerate((OWNER_1, OWNER_1, OWNER_2))
+    ]
+    db_session.add_all(channels)
+    await db_session.commit()
+
+    result = await sync_service.enqueue_all_channel_refreshes(
+        db_session, mock_arq_redis, owner_id=OWNER_1
+    )
+
+    assert result.total_channels == result.queued_channels == 2
+    assert result.failed_channels == 0
+    assert [item.channel_id for item in result.items] == ["UC_bulk_0", "UC_bulk_1"]
+    calls = mock_arq_redis.enqueue_job.await_args_list
+    assert "_defer_by" not in calls[0].kwargs
+    assert calls[1].kwargs["_defer_by"] == 5
 
 
 @pytest.mark.asyncio

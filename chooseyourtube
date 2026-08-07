@@ -1,0 +1,74 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+COMMAND=${1:-}
+
+usage() {
+  cat <<'EOF'
+Usage: sudo ./chooseyourtube COMMAND
+
+Commands:
+  setup                 Install prerequisites, build, and host ChooseYourTube
+  status                Show services and run the production health check
+  logs                  Follow production logs
+  start                 Start the existing production containers
+  stop                  Stop containers without deleting data
+  restart               Recreate and health-check the production stack
+  backup                Create a PostgreSQL backup
+  restore BACKUP_FILE   Restore a backup (also requires CONFIRM=RESTORE)
+EOF
+}
+
+cd "$ROOT_DIR"
+
+case "$COMMAND" in
+  -h|--help|help|'')
+    usage
+    exit 0
+    ;;
+esac
+
+[ "$(id -u)" -eq 0 ] || {
+  printf '%s\n' "Error: run this command with sudo." >&2
+  exit 1
+}
+
+case "$COMMAND" in
+  setup)
+    exec "$ROOT_DIR/deploy/oracle/bin/setup.sh"
+    ;;
+  status)
+    exec "$ROOT_DIR/deploy/oracle/bin/health.sh"
+    ;;
+  logs)
+    exec "$ROOT_DIR/deploy/oracle/bin/logs.sh"
+    ;;
+  start)
+    exec "$ROOT_DIR/deploy/oracle/bin/start.sh"
+    ;;
+  stop)
+    exec "$ROOT_DIR/deploy/oracle/bin/stop.sh"
+    ;;
+  restart)
+    exec "$ROOT_DIR/deploy/oracle/bin/deploy.sh"
+    ;;
+  backup)
+    exec "$ROOT_DIR/deploy/oracle/bin/backup.sh"
+    ;;
+  restore)
+    [ "$#" -eq 2 ] || {
+      printf '%s\n' "Error: restore requires an absolute backup path." >&2
+      usage >&2
+      exit 1
+    }
+    BACKUP_FILE=$2
+    export BACKUP_FILE
+    exec "$ROOT_DIR/deploy/oracle/bin/restore.sh"
+    ;;
+  *)
+    printf 'Error: unknown command: %s\n' "$COMMAND" >&2
+    usage >&2
+    exit 1
+    ;;
+esac

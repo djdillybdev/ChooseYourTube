@@ -14,11 +14,11 @@ from sqlalchemy import text
 
 from ..core.config import settings
 from ..core.version import APP_VERSION
+from ..core.worker import WORKER_HEARTBEAT_KEY
 from ..dependencies import DBSessionDep
 
 router = APIRouter(prefix="/health", tags=["Health"])
 logger = logging.getLogger(__name__)
-WORKER_HEARTBEAT_KEY = "chooseyourtube:worker:heartbeat"
 
 
 def _identity() -> dict[str, str]:
