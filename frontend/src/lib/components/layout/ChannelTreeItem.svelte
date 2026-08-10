@@ -18,7 +18,7 @@
 		<!-- Channel link -->
 		<a
 			href={resolve('/channels/[id]', { id: channel.id })}
-			class="flex max-w-full min-w-0 flex-1 items-center gap-2 overflow-hidden rounded px-1 py-1 transition-colors"
+			class="flex max-w-full min-w-0 flex-1 items-center gap-2 overflow-hidden rounded px-2 py-1 transition-colors"
 			class:bg-base-200={isActive}
 			aria-current={isActive ? 'page' : undefined}
 		>
