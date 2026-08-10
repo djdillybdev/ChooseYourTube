@@ -3,6 +3,50 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="light dark" />
+		<script>
+			try {
+				const state = JSON.parse(localStorage.getItem('cyt:ui') || '{}');
+				const legacyPreference =
+					state.theme === 'light' ? 'latte' : state.theme === 'dark' ? 'mocha' : state.theme;
+				const preference = [
+					'latte',
+					'frappe',
+					'macchiato',
+					'mocha',
+					'dracula',
+					'everforest',
+					'everforest-light',
+					'gruvbox',
+					'gruvbox-light',
+					'rose-pine',
+					'rose-pine-moon',
+					'rose-pine-dawn',
+					'system'
+				].includes(legacyPreference)
+					? legacyPreference
+					: 'latte';
+				const theme =
+					preference === 'system'
+						? matchMedia('(prefers-color-scheme: dark)').matches
+							? 'mocha'
+							: 'latte'
+						: preference;
+				document.documentElement.dataset.theme = ['latte', 'frappe', 'macchiato', 'mocha'].includes(
+					theme
+				)
+					? `catppuccin-${theme}`
+					: theme;
+				document.documentElement.style.colorScheme = [
+					'latte',
+					'everforest-light',
+					'gruvbox-light',
+					'rose-pine-dawn'
+				].includes(theme)
+					? 'light'
+					: 'dark';
+			} catch {}
+		</script>
 		<script src="https://www.youtube.com/iframe_api"></script>
 		%sveltekit.head%
 	</head>

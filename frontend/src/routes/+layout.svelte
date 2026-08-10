@@ -18,6 +18,7 @@
 	import { uiState } from '$lib/stores/uiState.svelte';
 	import { navigating } from '$app/state';
 	import StatusHost from '$lib/components/ui/StatusHost.svelte';
+	import { applyTheme, type ThemePreference } from '$lib/theme';
 
 	interface Props {
 		children: Snippet;
@@ -37,6 +38,17 @@
 	const watchLaterState = provideWatchLater(null);
 	const isNavigating = $derived(navigating.to !== null);
 	$effect(() => watchLaterState.sync(data.watchLater));
+	$effect(() => {
+		const preference: ThemePreference = uiState.current.theme;
+		applyTheme(preference);
+	});
+	$effect(() => {
+		if (typeof window === 'undefined' || uiState.current.theme !== 'system') return;
+		const media = window.matchMedia('(prefers-color-scheme: dark)');
+		const update = () => applyTheme('system');
+		media.addEventListener('change', update);
+		return () => media.removeEventListener('change', update);
+	});
 </script>
 
 <svelte:head>

@@ -1,4 +1,5 @@
 export type VideoDisplayMode = 'list' | 'grid' | 'compact';
+import { defaultThemePreference, normalizeThemePreference, type ThemePreference } from '$lib/theme';
 
 const videoDisplayModes: VideoDisplayMode[] = ['list', 'grid', 'compact'];
 
@@ -15,6 +16,7 @@ interface UIState {
 	sidebarWidth: number;
 	pageSize: number;
 	videoDisplayMode: VideoDisplayMode;
+	theme: ThemePreference;
 }
 
 /**
@@ -25,7 +27,8 @@ const defaultState: UIState = {
 	mobileSidebarOpen: false,
 	sidebarWidth: 280,
 	pageSize: 24,
-	videoDisplayMode: 'list'
+	videoDisplayMode: 'list',
+	theme: defaultThemePreference
 };
 
 /**
@@ -44,7 +47,8 @@ function loadState(): UIState {
 			pageSize: parsed.pageSize ?? defaultState.pageSize,
 			videoDisplayMode: isVideoDisplayMode(parsed.videoDisplayMode)
 				? parsed.videoDisplayMode
-				: defaultState.videoDisplayMode
+				: defaultState.videoDisplayMode,
+			theme: normalizeThemePreference(parsed.theme)
 		};
 	} catch {
 		return defaultState;
@@ -137,5 +141,12 @@ export function setVideoDisplayMode(mode: VideoDisplayMode) {
 	uiState.update((state) => ({
 		...state,
 		videoDisplayMode: mode
+	}));
+}
+
+export function setTheme(theme: ThemePreference) {
+	uiState.update((state) => ({
+		...state,
+		theme
 	}));
 }

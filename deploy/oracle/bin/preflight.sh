@@ -13,15 +13,18 @@ printf '%s' "${APP_DOMAIN:-}" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9]
 [ "${APP_DOMAIN:-}" != "tube.example.com" ] || die "Replace the example APP_DOMAIN."
 printf '%s' "${ACME_EMAIL:-}" | grep -Eq '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' \
   || die "ACME_EMAIL must be a valid administrator email."
-[ "${ACME_EMAIL:-}" != "admin@example.com" ] \
-  && [ "${ACME_EMAIL:-}" != "your-email@example.com" ] \
-  || die "Replace the example ACME_EMAIL."
-[ -n "${YOUTUBE_API_KEY:-}" ] && [ "${YOUTUBE_API_KEY}" != "replace-me" ] \
-  || die "Set YOUTUBE_API_KEY."
-[ "${#AUTH_SECRET}" -ge 32 ] \
-  && [ "$AUTH_SECRET" != "replace-me" ] \
-  && [ "$AUTH_SECRET" != "change-me-in-production-with-at-least-32-characters" ] \
-  || die "AUTH_SECRET must contain at least 32 characters."
+if [ "${ACME_EMAIL:-}" = "admin@example.com" ] \
+  || [ "${ACME_EMAIL:-}" = "your-email@example.com" ]; then
+  die "Replace the example ACME_EMAIL."
+fi
+if [ -z "${YOUTUBE_API_KEY:-}" ] || [ "${YOUTUBE_API_KEY}" = "replace-me" ]; then
+  die "Set YOUTUBE_API_KEY."
+fi
+if [ "${#AUTH_SECRET}" -lt 32 ] \
+  || [ "$AUTH_SECRET" = "replace-me" ] \
+  || [ "$AUTH_SECRET" = "change-me-in-production-with-at-least-32-characters" ]; then
+  die "AUTH_SECRET must contain at least 32 characters."
+fi
 [ -n "${REGISTRATION_EMAIL_ALLOWLIST:-}" ] \
   || die "Set REGISTRATION_EMAIL_ALLOWLIST to one or more exact email addresses."
 old_ifs=$IFS

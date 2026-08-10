@@ -9,8 +9,9 @@ require_root
 [ -r /etc/os-release ] || die "Cannot identify the host operating system."
 # shellcheck disable=SC1091
 . /etc/os-release
-[ "${ID:-}" = "ubuntu" ] && [ "${VERSION_ID:-}" = "24.04" ] \
-  || die "This installer supports Ubuntu 24.04 only."
+if [ "${ID:-}" != "ubuntu" ] || [ "${VERSION_ID:-}" != "24.04" ]; then
+  die "This installer supports Ubuntu 24.04 only."
+fi
 
 apt-get update
 apt-get install -y ca-certificates curl git gnupg openssl

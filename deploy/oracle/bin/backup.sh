@@ -9,8 +9,9 @@ require_root
 load_env
 
 backup_dir=${BACKUP_DIR:-/var/backups/chooseyourtube}
-[ "${backup_dir#/}" != "$backup_dir" ] && [ "$backup_dir" != "/" ] \
-  || die "BACKUP_DIR must be a specific absolute directory."
+if [ "${backup_dir#/}" = "$backup_dir" ] || [ "$backup_dir" = "/" ]; then
+  die "BACKUP_DIR must be a specific absolute directory."
+fi
 
 umask 077
 mkdir -p "$backup_dir"

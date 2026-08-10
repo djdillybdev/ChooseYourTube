@@ -11,12 +11,14 @@ from sqlalchemy import select
 
 from app.auth.models import User
 from app.db.models.channel import Channel
+from app.db.models.association_tables import playlist_videos, video_tags
 from app.db.models.folder import Folder
 from app.db.models.playlist import Playlist
 from app.db.models.tag import Tag
 from app.db.models.video import Video
 from app.db.session import sessionmanager
 from app.services.playlist_service import ensure_watch_later
+from app.services.tag_service import sync_entity_tags
 
 
 PASSWORD = "Phase6-password-2026!"
@@ -43,9 +45,7 @@ async def seed_user(user_id: uuid.UUID, email: str) -> None:
 
         channel_id = "UC" + ("1" if user_id == USERS[0][0] else "2") * 22
         channel = await db.scalar(
-            select(Channel).where(
-                Channel.owner_id == owner_id, Channel.id == channel_id
-            )
+            select(Channel).where(Channel.id == channel_id)
         )
         if channel is None:
             folder = Folder(
@@ -56,6 +56,8 @@ async def seed_user(user_id: uuid.UUID, email: str) -> None:
             tag = Tag(
                 id=str(uuid.uuid5(user_id, "tag")), owner_id=owner_id, name="portfolio"
             )
+            db.add_all([folder, tag])
+            await db.flush()
             channel = Channel(
                 owner_id=owner_id,
                 id=channel_id,
@@ -63,8 +65,7 @@ async def seed_user(user_id: uuid.UUID, email: str) -> None:
                 handle=f"phase6-{email[7]}",
                 description="Deterministic full-stack browser fixture",
                 uploads_playlist_id="UU" + channel_id[2:],
-                folder=folder,
-                tags=[tag],
+                folder_id=folder.id,
             )
             db.add(channel)
             now = datetime.now(timezone.utc)
@@ -85,20 +86,38 @@ async def seed_user(user_id: uuid.UUID, email: str) -> None:
                 for index in range(1, 5)
             ]
             db.add_all(videos)
-            db.add(
-                Playlist(
-                    id=str(uuid.uuid5(user_id, "playlist")),
-                    owner_id=owner_id,
-                    name="Phase 6 Playlist",
-                    videos=videos[:2],
-                )
+            playlist = Playlist(
+                id=str(uuid.uuid5(user_id, "playlist")),
+                owner_id=owner_id,
+                name="Phase 6 Playlist",
             )
+            db.add(playlist)
+            await db.flush()
+            await sync_entity_tags(channel, [tag.id], db, owner_id)
+            await db.execute(
+                playlist_videos.insert(),
+                [
+                    {
+                        "user_id": user_id,
+                        "playlist_id": playlist.id,
+                        "video_id": video.id,
+                        "position": position,
+                    }
+                    for position, video in enumerate(videos[:2])
+                ],
+            )
+            for video in videos[:1]:
+                await db.execute(
+                    video_tags.insert().values(
+                        user_id=user_id, video_id=video.id, tag_id=tag.id
+                    )
+                )
         await db.commit()
 
     async with sessionmanager.session() as db:
         watch_later = await ensure_watch_later(db, owner_id=owner_id)
         first_video = await db.scalar(
-            select(Video).where(Video.owner_id == owner_id).order_by(Video.id)
+            select(Video).where(Video.channel_id == channel_id).order_by(Video.id)
         )
         if first_video is not None and first_video not in watch_later.videos:
             watch_later.videos.append(first_video)

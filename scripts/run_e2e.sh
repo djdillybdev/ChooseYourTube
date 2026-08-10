@@ -19,7 +19,7 @@ trap cleanup EXIT
 
 cleanup
 "${COMPOSE[@]}" up -d --build postgres redis migrate
-"${COMPOSE[@]}" run --rm seed-e2e
+"${COMPOSE[@]}" run --rm --build seed-e2e
 "${COMPOSE[@]}" up -d --build backend worker frontend
 python3 "$ROOT_DIR/scripts/compose_smoke.py"
 

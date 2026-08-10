@@ -23,6 +23,12 @@
 	>
 		<a
 			class="tab text-base-content"
+			class:tab-active={isCurrent('/settings/appearance')}
+			aria-current={isCurrent('/settings/appearance') ? 'page' : undefined}
+			href={resolve('/settings/appearance')}>Appearance</a
+		>
+		<a
+			class="tab text-base-content"
 			class:tab-active={isCurrent('/settings/imports')}
 			aria-current={isCurrent('/settings/imports') ? 'page' : undefined}
 			href={resolve('/settings/imports')}>Imports</a
